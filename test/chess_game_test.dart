@@ -92,6 +92,42 @@ void main() {
     );
   });
 
+  test('remote start ability applies even if not in local offer list', () {
+    final game = ChessGame(catalog: AbilityCatalog(random: Random(42)));
+    const remote = GameAbility.boardTroopFatigue;
+    expect(
+      game.startOffersFor(PieceColor.black).map((o) => o.ability),
+      isNot(contains(remote)),
+    );
+
+    game.applyStartAbility(
+      PieceColor.white,
+      GameAbility.boardSkipTurn,
+      remoteOffer: const AbilityOffer(
+        ability: GameAbility.boardSkipTurn,
+        applyMode: AbilityApplyMode.boardWide,
+        forColor: PieceColor.white,
+      ),
+    );
+    game.applyRemoteStartAbility(
+      PieceColor.black,
+      remote,
+      offer: const AbilityOffer(
+        ability: remote,
+        applyMode: AbilityApplyMode.boardWide,
+        forColor: PieceColor.black,
+      ),
+    );
+
+    expect(game.isReadyToPlay, isTrue);
+    expect(game.blackBoardAbility, remote);
+    expect(game.activeAbilitiesSnapshot().blackStart?.ability, remote);
+    expect(
+      game.makeMove(const Move(from: Square(4, 1), to: Square(4, 3))),
+      isNotNull,
+    );
+  });
+
   test('board ability applies to all pawns at start', () {
     late ChessGame game;
     late GameAbility ability;

@@ -1295,10 +1295,12 @@ class ChessGame {
     PieceColor color,
     GameAbility ability, {
     int? lavaRank,
+    AbilityOffer? remoteOffer,
   }) {
     if (!isAwaitingStartChoice(color)) return;
     final offers = startOffersFor(color);
-    AbilityOffer? offer = offers.cast<AbilityOffer?>().firstWhere(
+    AbilityOffer? offer = remoteOffer;
+    offer ??= offers.cast<AbilityOffer?>().firstWhere(
       (o) => o!.ability == ability,
       orElse: () => null,
     );
@@ -1313,7 +1315,14 @@ class ChessGame {
         forColor: color,
       );
     }
-    if (offer == null) return;
+    // Online: opponent's pick is almost never in our locally rolled offer
+    // list — still apply the ability so both sides reach isReadyToPlay.
+    offer ??= AbilityOffer(
+      ability: ability,
+      applyMode: AbilityApplyMode.boardWide,
+      lavaRank: lavaRank,
+      forColor: color,
+    );
 
     _applyOffer(color, offer, null);
 
@@ -1341,8 +1350,14 @@ class ChessGame {
     PieceColor color,
     GameAbility ability, {
     int? lavaRank,
+    AbilityOffer? offer,
   }) {
-    applyStartAbility(color, ability, lavaRank: lavaRank);
+    applyStartAbility(
+      color,
+      ability,
+      lavaRank: lavaRank ?? offer?.lavaRank,
+      remoteOffer: offer,
+    );
   }
 
   bool _canControl(Piece piece, [PieceColor? viewerColor]) {

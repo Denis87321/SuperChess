@@ -136,6 +136,7 @@ class _GameScreenState extends State<GameScreen> {
       color,
       chosen,
       lavaRank: offer.lavaRank,
+      offer: offer,
     );
   }
 
@@ -157,6 +158,7 @@ class _GameScreenState extends State<GameScreen> {
             event.color,
             event.ability,
             lavaRank: event.lavaRank,
+            offer: event.offer,
           );
         });
       case OnlineOpponentAbilityTarget():
@@ -292,6 +294,16 @@ class _GameScreenState extends State<GameScreen> {
 
   String? get _phaseBannerText {
     if (_showEndOverlay) return 'Игра окончена';
+    if (widget.isOnline && !_game.isReadyToPlay) {
+      final waitingOpp = widget.localColor != null &&
+          !_game.isAwaitingStartChoice(widget.localColor!) &&
+          (_game.isAwaitingStartChoice(PieceColor.white) ||
+              _game.isAwaitingStartChoice(PieceColor.black));
+      if (waitingOpp) {
+        return 'Ожидание выбора соперника';
+      }
+      return 'Выбор стартовых модификаций';
+    }
     if (_game.isAwaitingReaction) return 'Выкуп · реакция на взятие';
     if (_game.isAwaitingAbilityTarget) {
       final prompt = _game.pendingAbilityPrompt;

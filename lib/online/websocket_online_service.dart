@@ -42,13 +42,15 @@ class WebSocketOnlineService implements OnlineGameService {
     PieceColor color,
     GameAbility ability, {
     int? lavaRank,
+    AbilityOffer? offer,
   }) {
     _send({
       'type': 'start_ability',
       'gameId': _gameId,
       'color': color == PieceColor.white ? 'white' : 'black',
       'ability': gameAbilityToJson(ability),
-      'lavaRank': lavaRank,
+      'lavaRank': lavaRank ?? offer?.lavaRank,
+      'offer': ?offer?.toJson(),
     });
   }
 
@@ -198,11 +200,21 @@ class WebSocketOnlineService implements OnlineGameService {
         }
       case 'start_ability':
         if (data['gameId'] == _gameId) {
+          AbilityOffer? offer;
+          final offerJson = data['offer'];
+          if (offerJson is Map<String, dynamic>) {
+            offer = AbilityOffer.fromJson(offerJson);
+          } else if (offerJson is Map) {
+            offer = AbilityOffer.fromJson(
+              Map<String, dynamic>.from(offerJson),
+            );
+          }
           _events.add(
             OnlineOpponentStartAbility(
               data['color'] == 'white' ? PieceColor.white : PieceColor.black,
               gameAbilityFromJson(data['ability'] as String),
-              lavaRank: data['lavaRank'] as int?,
+              lavaRank: data['lavaRank'] as int? ?? offer?.lavaRank,
+              offer: offer,
             ),
           );
         }

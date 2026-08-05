@@ -38,11 +38,17 @@ class OnlineOpponentAbility extends OnlineEvent {
 }
 
 class OnlineOpponentStartAbility extends OnlineEvent {
-  OnlineOpponentStartAbility(this.color, this.ability, {this.lavaRank});
+  OnlineOpponentStartAbility(
+    this.color,
+    this.ability, {
+    this.lavaRank,
+    this.offer,
+  });
 
   final PieceColor color;
   final GameAbility ability;
   final int? lavaRank;
+  final AbilityOffer? offer;
 }
 
 class OnlineOpponentAbilityTarget extends OnlineEvent {
@@ -118,6 +124,7 @@ abstract class OnlineGameService {
     PieceColor color,
     GameAbility ability, {
     int? lavaRank,
+    AbilityOffer? offer,
   });
 
   void sendMove(Move move);
