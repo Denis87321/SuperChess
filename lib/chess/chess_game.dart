@@ -1126,6 +1126,9 @@ class ChessGame {
         final chooser = _pendingTargetColor ?? selected.piece.color;
         _pendingSelectOffer = null;
         _pendingSelectPieceType = null;
+        // End the "which piece gets the mod" phase before granting.
+        // `_grantAbility` may start a genuine secondary target (duel/guard/…).
+        _clearPendingTarget();
         if (selectOffer.ability == GameAbility.queenSplit) {
           _splitQueen(selected.square);
         } else {
@@ -1136,12 +1139,10 @@ class ChessGame {
             pieceIndex: selected.index,
           );
         }
-        // Secondary targeting (duel/guard/...) may start from grant.
         if (isAwaitingAbilityTarget) {
           _updateStatus();
           return true;
         }
-        _clearPendingTarget();
         _completeSkillChoiceResolution(chooser, offer: selectOffer);
         return true;
       }

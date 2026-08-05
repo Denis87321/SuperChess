@@ -99079,13 +99079,13 @@ b=a2.ek
 if(b!=null){j=a2.e6
 if(j==null)j=h.b.c
 a2.kz=a2.ek=null
+a2.Hf()
 q=b.a
 p=h.c
 if(q===B.hW)a2.K0(p)
 else a2.Aq(p,q,b,h.a)
 if(a2.gck()===B.aL){a2.dt()
-return!0}a2.Hf()
-a2.vZ(j,b)
+return!0}a2.vZ(j,b)
 return!0}switch(s.a){case 81:q=a2.mj
 p=h.b.a
 q.m(0,r,p)
