@@ -123,6 +123,13 @@ class _ClientConnection {
       case 'skip_turn':
       case 'game_over':
       case 'state_resync':
+      case 'chat':
+      case 'resign':
+      case 'draw_offer':
+      case 'draw_response':
+      case 'takeback_offer':
+      case 'takeback_response':
+      case 'clock_sync':
         final gameId = data['gameId'] as String?;
         final room = gameId != null ? _games[gameId] : null;
         if (room == null) return;

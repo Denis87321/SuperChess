@@ -36,6 +36,9 @@ enum GameEndReason {
   checkmate,
   stalemate,
   draw,
+  drawAgreed,
+  resign,
+  timeout,
   kingDestroyed,
   baskerville,
   exterminatus,
@@ -195,6 +198,7 @@ class ChessGame {
   PieceColor? _winnerColor;
   GameEndReason? _endReason;
   bool _isSimulatingLegality = false;
+  GameSnapshot? _undoSnapshot;
 
   bool _whiteStartChosen = false;
   bool _blackStartChosen = false;
@@ -1645,6 +1649,56 @@ class ChessGame {
     _executeLegalMove(move);
   }
 
+  void resign(PieceColor color) {
+    if (isGameOver) return;
+    _finishGame(
+      winner: color.opponent,
+      reason: GameEndReason.resign,
+    );
+  }
+
+  void agreeDraw() {
+    if (isGameOver) return;
+    _finishGame(
+      winner: null,
+      reason: GameEndReason.drawAgreed,
+      status: GameStatus.stalemate,
+    );
+  }
+
+  void flagTimeout(PieceColor color) {
+    if (isGameOver) return;
+    _finishGame(
+      winner: color.opponent,
+      reason: GameEndReason.timeout,
+    );
+  }
+
+  void applyRemoteEnd({
+    PieceColor? winner,
+    GameEndReason? reason,
+  }) {
+    if (isGameOver) return;
+    _finishGame(
+      winner: winner,
+      reason: reason ??
+          (winner == null ? GameEndReason.draw : GameEndReason.resign),
+      status: winner == null ? GameStatus.stalemate : GameStatus.checkmate,
+    );
+  }
+
+  bool get canTakeback =>
+      _undoSnapshot != null &&
+      !isGameOver &&
+      enginePhase == GameEnginePhase.play;
+
+  bool takeback() {
+    if (!canTakeback) return false;
+    restoreSnapshot(_undoSnapshot!);
+    _undoSnapshot = null;
+    return true;
+  }
+
   void applyRemoteAbility(GameAbility ability, {AbilityOffer? offer}) {
     if (!isAwaitingSkillChoice) return;
     if (offer != null) {
@@ -1704,6 +1758,9 @@ class ChessGame {
     if (_awaitingGallopFrom != null) {
       final legal = getLegalMoves(from: move.from);
       if (!legal.any((m) => _movesEqual(m, move))) return null;
+      if (!_isSimulatingLegality) {
+        _undoSnapshot = createSnapshot();
+      }
       _applyMove(move);
       _awaitingGallopFrom = null;
       _tickLava(_turn);
@@ -1754,6 +1811,9 @@ class ChessGame {
     final hadGallop =
         moverBefore != null && _hasEffect(moverBefore, AbilityEffect.gallop);
     final moverColor = _turn;
+    if (!_isSimulatingLegality) {
+      _undoSnapshot = createSnapshot();
+    }
     _applyMove(move);
     if (captured &&
         _rules.suicideCapturePending &&
@@ -4736,6 +4796,7 @@ class ChessGame {
     GameStatus status = GameStatus.checkmate,
   }) {
     if (isGameOver) return;
+    _undoSnapshot = null;
     _winnerColor = winner;
     _endReason = reason;
     _status = status;

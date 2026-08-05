@@ -128,6 +128,26 @@ void main() {
     );
   });
 
+  test('resign and takeback work', () {
+    final game = _readyGame();
+    expect(game.canTakeback, isFalse);
+    expect(
+      game.makeMove(const Move(from: Square(4, 1), to: Square(4, 3))),
+      isNotNull,
+    );
+    expect(game.canTakeback, isTrue);
+    expect(game.pieceAt(const Square(4, 3))?.type, PieceType.pawn);
+    expect(game.takeback(), isTrue);
+    expect(game.pieceAt(const Square(4, 1))?.type, PieceType.pawn);
+    expect(game.pieceAt(const Square(4, 3)), isNull);
+    expect(game.canTakeback, isFalse);
+
+    game.resign(PieceColor.white);
+    expect(game.isGameOver, isTrue);
+    expect(game.winnerColor, PieceColor.black);
+    expect(game.endReason, GameEndReason.resign);
+  });
+
   test('board ability applies to all pawns at start', () {
     late ChessGame game;
     late GameAbility ability;

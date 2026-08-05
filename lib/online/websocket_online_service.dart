@@ -150,9 +150,61 @@ class WebSocketOnlineService implements OnlineGameService {
     });
   }
 
+  @override
+  void sendChat(String text) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return;
+    _send({'type': 'chat', 'gameId': _gameId, 'text': trimmed});
+  }
+
+  @override
+  void sendResign() {
+    _send({'type': 'resign', 'gameId': _gameId});
+  }
+
+  @override
+  void sendDrawOffer() {
+    _send({'type': 'draw_offer', 'gameId': _gameId});
+  }
+
+  @override
+  void sendDrawResponse({required bool accepted}) {
+    _send({
+      'type': 'draw_response',
+      'gameId': _gameId,
+      'accepted': accepted,
+    });
+  }
+
+  @override
+  void sendTakebackOffer() {
+    _send({'type': 'takeback_offer', 'gameId': _gameId});
+  }
+
+  @override
+  void sendTakebackResponse({required bool accepted}) {
+    _send({
+      'type': 'takeback_response',
+      'gameId': _gameId,
+      'accepted': accepted,
+    });
+  }
+
+  @override
+  void sendClockSync({required int whiteMs, required int blackMs}) {
+    _send({
+      'type': 'clock_sync',
+      'gameId': _gameId,
+      'whiteMs': whiteMs,
+      'blackMs': blackMs,
+    });
+  }
+
   void _send(Map<String, dynamic> message) {
     _channel?.sink.add(jsonEncode(message));
   }
+
+  bool _inGame(Map<String, dynamic> data) => data['gameId'] == _gameId;
 
   void _onMessage(dynamic raw) {
     final data = jsonDecode(raw as String) as Map<String, dynamic>;
@@ -176,7 +228,7 @@ class WebSocketOnlineService implements OnlineGameService {
           ),
         );
       case 'move':
-        if (data['gameId'] == _gameId) {
+        if (_inGame(data)) {
           _events.add(
             OnlineOpponentMove(
               MoveCodec.fromJson(data['move'] as Map<String, dynamic>),
@@ -184,7 +236,7 @@ class WebSocketOnlineService implements OnlineGameService {
           );
         }
       case 'ability':
-        if (data['gameId'] == _gameId) {
+        if (_inGame(data)) {
           AbilityOffer? offer;
           final offerJson = data['offer'];
           if (offerJson is Map<String, dynamic>) {
@@ -203,7 +255,7 @@ class WebSocketOnlineService implements OnlineGameService {
           );
         }
       case 'start_ability':
-        if (data['gameId'] == _gameId) {
+        if (_inGame(data)) {
           AbilityOffer? offer;
           final offerJson = data['offer'];
           if (offerJson is Map<String, dynamic>) {
@@ -223,7 +275,7 @@ class WebSocketOnlineService implements OnlineGameService {
           );
         }
       case 'ability_target':
-        if (data['gameId'] == _gameId) {
+        if (_inGame(data)) {
           final squareJson = data['square'];
           Square? square;
           if (squareJson is Map) {
@@ -247,7 +299,7 @@ class WebSocketOnlineService implements OnlineGameService {
           );
         }
       case 'reaction':
-        if (data['gameId'] == _gameId) {
+        if (_inGame(data)) {
           final abilityRaw = data['ability'] as String?;
           _events.add(
             OnlineOpponentReaction(
@@ -260,7 +312,7 @@ class WebSocketOnlineService implements OnlineGameService {
           );
         }
       case 'reroll':
-        if (data['gameId'] == _gameId) {
+        if (_inGame(data)) {
           _events.add(
             OnlineOpponentReroll(
               data['color'] == 'white' ? PieceColor.white : PieceColor.black,
@@ -269,13 +321,13 @@ class WebSocketOnlineService implements OnlineGameService {
           );
         }
       case 'skip_turn':
-        if (data['gameId'] == _gameId) {
+        if (_inGame(data)) {
           _events.add(
             OnlineOpponentSkipTurn(stateHash: data['stateHash'] as String?),
           );
         }
       case 'game_over':
-        if (data['gameId'] == _gameId) {
+        if (_inGame(data)) {
           final winnerRaw = data['winner'] as String?;
           PieceColor? winner;
           if (winnerRaw == 'white') {
@@ -292,7 +344,7 @@ class WebSocketOnlineService implements OnlineGameService {
           );
         }
       case 'state_resync':
-        if (data['gameId'] == _gameId) {
+        if (_inGame(data)) {
           final snapshot = data['snapshot'];
           if (snapshot is Map<String, dynamic>) {
             _events.add(OnlineStateResync(snapshot));
@@ -301,6 +353,50 @@ class WebSocketOnlineService implements OnlineGameService {
               OnlineStateResync(Map<String, dynamic>.from(snapshot)),
             );
           }
+        }
+      case 'chat':
+        if (_inGame(data)) {
+          _events.add(
+            OnlineChatMessage(
+              data['text'] as String? ?? '',
+              fromOpponent: true,
+            ),
+          );
+        }
+      case 'resign':
+        if (_inGame(data)) {
+          _events.add(OnlineResign());
+        }
+      case 'draw_offer':
+        if (_inGame(data)) {
+          _events.add(OnlineDrawOffer());
+        }
+      case 'draw_response':
+        if (_inGame(data)) {
+          _events.add(
+            OnlineDrawResponse(accepted: data['accepted'] as bool? ?? false),
+          );
+        }
+      case 'takeback_offer':
+        if (_inGame(data)) {
+          _events.add(OnlineTakebackOffer());
+        }
+      case 'takeback_response':
+        if (_inGame(data)) {
+          _events.add(
+            OnlineTakebackResponse(
+              accepted: data['accepted'] as bool? ?? false,
+            ),
+          );
+        }
+      case 'clock_sync':
+        if (_inGame(data)) {
+          _events.add(
+            OnlineClockSync(
+              whiteMs: data['whiteMs'] as int? ?? 0,
+              blackMs: data['blackMs'] as int? ?? 0,
+            ),
+          );
         }
       case 'error':
         _events.add(

@@ -10,13 +10,19 @@ import '../chess/move.dart';
 import '../models/game_ability.dart';
 import '../models/piece.dart';
 import '../models/square.dart';
+import '../online/game_clock.dart';
 import '../online/online_game_service.dart';
 import '../theme/balatro_theme.dart';
 import '../widgets/chess_piece_widget.dart';
 import '../widgets/lava_death_overlay.dart';
+import '../widgets/online_chat_panel.dart';
+import '../widgets/online_game_menu.dart';
+import '../widgets/online_player_bar.dart';
+import '../widgets/online_side_panel.dart';
 import '../widgets/skill_choice_sheet.dart';
 
 const _prefsRotateForBlackKey = 'rotate_for_black';
+const _onlineWideBreakpoint = 800.0;
 
 class GameScreen extends StatefulWidget {
   const GameScreen({
@@ -54,6 +60,12 @@ class _GameScreenState extends State<GameScreen> {
   /// Локальная игра: при ходе чёрных переворачивать фигуры и текст на 180°.
   bool _rotateForBlack = false;
 
+  final GameClock _clock = GameClock();
+  Timer? _clockTimer;
+  final List<ChatLine> _chat = [];
+  bool _awaitingDrawResponse = false;
+  bool _awaitingTakebackResponse = false;
+
   @override
   void initState() {
     super.initState();
@@ -81,6 +93,7 @@ class _GameScreenState extends State<GameScreen> {
   @override
   void dispose() {
     _skillChoiceTimer?.cancel();
+    _clockTimer?.cancel();
     _onlineSub?.cancel();
     if (widget.isOnline) {
       widget.onlineService!.dispose();
@@ -102,6 +115,7 @@ class _GameScreenState extends State<GameScreen> {
 
     if (mounted) {
       setState(() => _startFlowDone = true);
+      _ensureClockRunning();
     }
   }
 
@@ -166,6 +180,7 @@ class _GameScreenState extends State<GameScreen> {
             offer: event.offer,
           );
         });
+        if (_game.isReadyToPlay) _ensureClockRunning();
       case OnlineOpponentAbilityTarget():
         setState(() {
           if (event.removeAbility != null) {
@@ -209,12 +224,58 @@ class _GameScreenState extends State<GameScreen> {
         });
         _checkStateHash(event.stateHash, 'skip_turn');
       case OnlineGameOver():
-        _checkStateHash(event.stateHash, 'game_over');
+        _applyRemoteGameOver(event);
       case OnlineStateResync():
         developer.log(
           'Online state_resync received (${event.snapshot.keys.length} keys)',
           name: 'online',
         );
+      case OnlineChatMessage():
+        setState(() {
+          _chat.add(ChatLine(text: event.text, mine: !event.fromOpponent));
+        });
+      case OnlineResign():
+        // Opponent resigned → we win.
+        setState(() {
+          _clock.pause();
+          _clockTimer?.cancel();
+          _game.resign(_other(widget.localColor!));
+        });
+      case OnlineDrawOffer():
+        unawaited(_onIncomingDrawOffer());
+      case OnlineDrawResponse():
+        _awaitingDrawResponse = false;
+        if (event.accepted) {
+          setState(() {
+            _clock.pause();
+            _clockTimer?.cancel();
+            _game.agreeDraw();
+          });
+        } else {
+          _showMessage('Соперник отклонил ничью');
+        }
+      case OnlineTakebackOffer():
+        unawaited(_onIncomingTakebackOffer());
+      case OnlineTakebackResponse():
+        _awaitingTakebackResponse = false;
+        if (event.accepted) {
+          setState(() {
+            _game.takeback();
+            _selectedSquare = null;
+            _selectedPieceIndex = 0;
+            _availableMoves = [];
+          });
+          _showMessage('Ход возвращён');
+        } else {
+          _showMessage('Соперник отклонил возврат хода');
+        }
+      case OnlineClockSync():
+        setState(() {
+          _clock.applySync(
+            whiteMs: event.whiteMs,
+            blackMs: event.blackMs,
+          );
+        });
       case OnlineOpponentDisconnected():
         _showMessage('Соперник отключился');
       case OnlineError():
@@ -223,6 +284,239 @@ class _GameScreenState extends State<GameScreen> {
       case OnlineMatched():
         break;
     }
+  }
+
+  void _applyRemoteGameOver(OnlineGameOver event) {
+    _checkStateHash(event.stateHash, 'game_over');
+    if (_game.isGameOver) return;
+    GameEndReason? reason;
+    final raw = event.reason;
+    if (raw != null) {
+      for (final value in GameEndReason.values) {
+        if (value.name == raw) {
+          reason = value;
+          break;
+        }
+      }
+    }
+    setState(() {
+      _clock.pause();
+      _clockTimer?.cancel();
+      _game.applyRemoteEnd(winner: event.winner, reason: reason);
+    });
+  }
+
+  void _ensureClockRunning() {
+    if (!widget.isOnline) return;
+    if (!_game.isReadyToPlay || _game.isGameOver) return;
+    _clockTimer?.cancel();
+    _clockTimer = Timer.periodic(const Duration(milliseconds: 200), (_) {
+      if (!mounted || _game.isGameOver || !_game.isReadyToPlay) {
+        _clockTimer?.cancel();
+        return;
+      }
+      // Pause clock during skill/target/reaction phases.
+      if (_game.enginePhase != GameEnginePhase.play) {
+        _clock.pause();
+        return;
+      }
+      final active = _game.turn;
+      final before = GameClock.formatMs(_clock.msFor(active));
+      final flagged = _clock.tick(active);
+      if (!mounted) return;
+      final after = GameClock.formatMs(_clock.msFor(active));
+      if (flagged || before != after) {
+        setState(() {});
+      }
+      if (flagged) {
+        _onFlagTimeout(active);
+      }
+    });
+  }
+
+  void _onFlagTimeout(PieceColor color) {
+    if (_game.isGameOver) return;
+    _clockTimer?.cancel();
+    _clock.pause();
+    setState(() {
+      _game.flagTimeout(color);
+    });
+    _maybeSendGameOver();
+  }
+
+  void _syncClockAfterMove() {
+    if (!widget.isOnline) return;
+    widget.onlineService?.sendClockSync(
+      whiteMs: _clock.whiteMs,
+      blackMs: _clock.blackMs,
+    );
+  }
+
+  Future<void> _onIncomingDrawOffer() async {
+    if (!mounted) return;
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: BalatroTheme.felt,
+          title: Text(
+            'Ничья?',
+            style: BalatroTheme.titleStyle.copyWith(fontSize: 16),
+          ),
+          content: Text(
+            'Соперник предлагает ничью',
+            style: BalatroTheme.statusStyle.copyWith(fontSize: 13),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(
+                'Отклонить',
+                style: BalatroTheme.statusStyle.copyWith(fontSize: 13),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(
+                'Принять',
+                style: BalatroTheme.statusStyle.copyWith(
+                  fontSize: 13,
+                  color: BalatroTheme.gold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+    final ok = accepted == true;
+    widget.onlineService?.sendDrawResponse(accepted: ok);
+    if (ok && mounted) {
+      setState(() {
+        _clock.pause();
+        _clockTimer?.cancel();
+        _game.agreeDraw();
+      });
+    }
+  }
+
+  Future<void> _onIncomingTakebackOffer() async {
+    if (!mounted) return;
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: BalatroTheme.felt,
+          title: Text(
+            'Вернуть ход?',
+            style: BalatroTheme.titleStyle.copyWith(fontSize: 16),
+          ),
+          content: Text(
+            'Соперник просит вернуть последний ход',
+            style: BalatroTheme.statusStyle.copyWith(fontSize: 13),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(
+                'Отклонить',
+                style: BalatroTheme.statusStyle.copyWith(fontSize: 13),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(
+                'Принять',
+                style: BalatroTheme.statusStyle.copyWith(
+                  fontSize: 13,
+                  color: BalatroTheme.gold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+    final ok = accepted == true;
+    widget.onlineService?.sendTakebackResponse(accepted: ok);
+    if (ok && mounted) {
+      setState(() {
+        _game.takeback();
+        _selectedSquare = null;
+        _selectedPieceIndex = 0;
+        _availableMoves = [];
+      });
+    }
+  }
+
+  Future<void> _offerDraw() async {
+    if (!widget.isOnline || _game.isGameOver) return;
+    if (_awaitingDrawResponse) {
+      _showMessage('Ожидаем ответ на ничью');
+      return;
+    }
+    _awaitingDrawResponse = true;
+    widget.onlineService?.sendDrawOffer();
+    _showMessage('Предложение ничьи отправлено');
+  }
+
+  Future<void> _offerTakeback() async {
+    if (!widget.isOnline || _game.isGameOver) return;
+    if (!_game.canTakeback) {
+      _showMessage('Нечего возвращать');
+      return;
+    }
+    if (_awaitingTakebackResponse) {
+      _showMessage('Ожидаем ответ на возврат хода');
+      return;
+    }
+    _awaitingTakebackResponse = true;
+    widget.onlineService?.sendTakebackOffer();
+    _showMessage('Запрос возврата хода отправлен');
+  }
+
+  Future<void> _resignLocal() async {
+    if (!widget.isOnline || _game.isGameOver) return;
+    final ok = await OnlineGameMenu.confirmResign(context);
+    if (!ok || !mounted) return;
+    widget.onlineService?.sendResign();
+    setState(() {
+      _clock.pause();
+      _clockTimer?.cancel();
+      _game.resign(widget.localColor!);
+    });
+    _maybeSendGameOver();
+  }
+
+  Future<void> _openMobileMenu() async {
+    final action = await OnlineGameMenu.showActions(context);
+    if (action == null || !mounted) return;
+    switch (action) {
+      case OnlineMenuAction.takeback:
+        await _offerTakeback();
+      case OnlineMenuAction.draw:
+        await _offerDraw();
+      case OnlineMenuAction.resign:
+        await _resignLocal();
+    }
+  }
+
+  void _sendChat(String text) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return;
+    setState(() {
+      _chat.add(ChatLine(text: trimmed, mine: true));
+    });
+    widget.onlineService?.sendChat(trimmed);
+  }
+
+  Future<void> _openChatSheet() async {
+    await OnlineChatPanel.showSheet(
+      context: context,
+      messages: _chat,
+      onSend: _sendChat,
+    );
+    if (mounted) setState(() {});
   }
 
   void _checkStateHash(String? remoteHash, String source) {
@@ -344,7 +638,12 @@ class _GameScreenState extends State<GameScreen> {
       case GameEndReason.stalemate:
         return 'пат';
       case GameEndReason.draw:
+      case GameEndReason.drawAgreed:
         return 'ничья';
+      case GameEndReason.resign:
+        return 'сдача';
+      case GameEndReason.timeout:
+        return 'время вышло';
       case GameEndReason.kingDestroyed:
         return 'король уничтожен';
       case GameEndReason.baskerville:
@@ -1090,6 +1389,8 @@ class _GameScreenState extends State<GameScreen> {
     if (result == null) return;
 
     widget.onlineService?.sendMove(move);
+    _syncClockAfterMove();
+    _ensureClockRunning();
 
     if (mounted) {
       if (_game.isAwaitingGallop) {
@@ -1155,6 +1456,7 @@ class _GameScreenState extends State<GameScreen> {
         _availableMoves = [];
       }
     });
+    _ensureClockRunning();
 
     await _playLavaDeaths(_game.consumeLavaDeaths());
   }
@@ -1298,18 +1600,18 @@ class _GameScreenState extends State<GameScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final youAre = widget.localColor == null
-        ? null
-        : widget.localColor == PieceColor.white
-        ? 'Белые'
-        : 'Чёрные';
     final bottomPad = MediaQuery.paddingOf(context).bottom;
     final modsOnTop = _uiFlipped;
+    final width = MediaQuery.sizeOf(context).width;
+    final onlineWide = widget.isOnline && width >= _onlineWideBreakpoint;
 
     return Scaffold(
       backgroundColor: BalatroTheme.background,
       appBar: AppBar(
-        title: Text('SUPERCHESS', style: BalatroTheme.titleStyle),
+        title: Text(
+          widget.isOnline ? '5+0 · Онлайн' : 'SUPERCHESS',
+          style: BalatroTheme.titleStyle.copyWith(fontSize: widget.isOnline ? 16 : 20),
+        ),
         centerTitle: true,
         backgroundColor: BalatroTheme.appBar,
         foregroundColor: BalatroTheme.cream,
@@ -1327,401 +1629,555 @@ class _GameScreenState extends State<GameScreen> {
         left: false,
         right: false,
         bottom: false,
-        child: Stack(
-          children: [
-            // Доска всегда по центру области под плашкой — кнопка её не сдвигает.
-            Positioned.fill(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  return Center(
-                    child: _ChessBoard(
-                      game: _game,
-                      selectedSquare: _selectedSquare,
-                      availableMoves: _availableMoves,
-                      animatingLavaDeaths: _animatingLavaDeaths,
-                      onLavaDeathFinished: _onLavaDeathFinished,
-                      onSquareTap: _onSquareTap,
-                      viewerColor: _viewerColor,
-                      maxWidth: MediaQuery.sizeOf(context).width,
-                      maxHeight: constraints.maxHeight,
-                      pieceFlight: _pieceFlight,
-                      onPieceFlightFinished: _onPieceFlightFinished,
-                      rotatePieces: _uiFlipped,
-                      flipBoard: _boardPerspectiveFlipped,
-                    ),
-                  );
-                },
-              ),
-            ),
-            if (widget.isOnline || _phaseBannerText != null)
-              Positioned(
-                top: modsOnTop ? 64 : 8,
-                left: 12,
-                right: 12,
-                child: _flipOverlay(
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (widget.isOnline)
-                        Text(
-                          'vs ${widget.opponentName ?? 'Соперник'} · вы: $youAre',
-                          textAlign: TextAlign.center,
-                          style: BalatroTheme.statusStyle.copyWith(fontSize: 13),
-                        ),
-                      if (_phaseBannerText != null) ...[
-                        if (widget.isOnline) const SizedBox(height: 4),
-                        Text(
-                          _phaseBannerText!,
-                          textAlign: TextAlign.center,
-                          style: BalatroTheme.statusStyle.copyWith(
-                            fontSize: 13,
-                            color: BalatroTheme.gold,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-            Positioned(
-              top: modsOnTop ? 8 : null,
-              bottom: modsOnTop ? null : math.max(12, bottomPad + 8),
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (_game.isAwaitingGallop && _isMyTurn)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: _flipOverlay(
-                          ElevatedButton(
-                            onPressed: _skipGallop,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: BalatroTheme.felt,
-                              foregroundColor: BalatroTheme.cream,
-                              side: BorderSide(
-                                color: BalatroTheme.gold.withValues(alpha: 0.6),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 18,
-                                vertical: 12,
-                              ),
-                            ),
-                            child: Text(
-                              'ПРОПУСТИТЬ ГАЛОП',
-                              style: BalatroTheme.statusStyle.copyWith(
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    if (_canLocalSkipTurn)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: _flipOverlay(
-                          ElevatedButton(
-                            onPressed: _localSkipTurn,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: BalatroTheme.felt,
-                              foregroundColor: BalatroTheme.cream,
-                              side: BorderSide(
-                                color: BalatroTheme.gold.withValues(alpha: 0.6),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 18,
-                                vertical: 12,
-                              ),
-                            ),
-                            child: Text(
-                              'ПРОПУСТИТЬ ХОД',
-                              style: BalatroTheme.statusStyle.copyWith(
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    if (_canPickAbilityTarget &&
-                        _game.legalCapturedAbilityTargets.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: _flipOverlay(
-                          ElevatedButton(
-                            onPressed: _promptCapturedAbilityTarget,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: BalatroTheme.gold,
-                              foregroundColor: BalatroTheme.felt,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 18,
-                                vertical: 12,
-                              ),
-                            ),
-                            child: Text(
-                              'ВЫБРАТЬ ИЗ КЛАДБИЩА',
-                              style: BalatroTheme.statusStyle.copyWith(
-                                fontSize: 13,
-                                color: BalatroTheme.felt,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    _modsButton(),
-                  ],
-                ),
-              ),
-            ),
-            if (_canReact)
-              Positioned.fill(
-                child: ColoredBox(
-                  color: BalatroTheme.background.withValues(alpha: 0.72),
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: _flipOverlay(
-                        Material(
-                          color: BalatroTheme.felt,
-                          borderRadius: BorderRadius.circular(16),
-                          child: Padding(
-                            padding: const EdgeInsets.all(20),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  'ВЫКУП',
-                                  style: BalatroTheme.titleStyle.copyWith(
-                                    fontSize: 20,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Отдайте модификацию или разрешите взятие',
-                                  textAlign: TextAlign.center,
-                                  style: BalatroTheme.statusStyle.copyWith(
-                                    fontSize: 13,
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
-                                for (final ability
-                                    in _game.pendingRansomAbilities)
-                                  ListTile(
-                                    title: Text(
-                                      ability.title,
-                                      style: BalatroTheme.statusStyle.copyWith(
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                    onTap: () => _localAcceptRansom(ability),
-                                  ),
-                                const SizedBox(height: 8),
-                                OutlinedButton(
-                                  onPressed: _localDeclineRansom,
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: BalatroTheme.cream,
-                                    side: BorderSide(
-                                      color: BalatroTheme.cream.withValues(
-                                        alpha: 0.4,
-                                      ),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    'ОТКЛОНИТЬ',
-                                    style: BalatroTheme.statusStyle.copyWith(
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
+        child: onlineWide
+            ? Row(
+                children: [
+                  SizedBox(
+                    width: 240,
+                    child: OnlineChatPanel(
+                      messages: _chat,
+                      onSend: _sendChat,
                     ),
                   ),
-                ),
-              ),
-            if (_showSkillChoiceOverlay)
-              Positioned.fill(
-                child: ColoredBox(
-                  color: BalatroTheme.background.withValues(alpha: 0.72),
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: _flipOverlay(
-                        SkillChoiceSheet(
-                          title: 'МОДИФИКАЦИЯ',
-                          subtitle: () {
-                            final offers = _game.pendingCaptureOffers;
-                            if (offers.isNotEmpty &&
-                                offers.every(
-                                  (o) =>
-                                      o.applyMode ==
-                                      AbilityApplyMode.playerKing,
-                                )) {
-                              return 'Золотой трон — мод для короля';
-                            }
-                            final chooser = _game.pendingSkillColor;
-                            if (chooser == PieceColor.white) {
-                              return 'Волна модификаций — ход белых: выбери 1 из ${offers.length}';
-                            }
-                            if (chooser == PieceColor.black) {
-                              return 'Волна модификаций — ход чёрных: выбери 1 из ${offers.length}';
-                            }
-                            return 'Выбери 1 из ${offers.length}';
-                          }(),
-                          offers: _game.pendingCaptureOffers,
-                          secondsLeft: _skillChoiceSecondsLeft,
-                          onSelected: _completeSkillChoice,
-                          canReroll: _canRerollSkill,
-                          permanentReroll: _game.hasPermanentRerollForPending,
-                          onReroll: _localRerollOffers,
-                        ),
-                      ),
+                  Expanded(
+                    child: _buildGameStack(
+                      bottomPad: bottomPad,
+                      modsOnTop: modsOnTop,
+                      showMobileChrome: false,
+                      reserveSidePanel: true,
                     ),
                   ),
-                ),
-              ),
-            if (_game.isAwaitingSkillChoice && _canPickSkill)
-              Positioned(
-                left: 0,
-                right: 0,
-                top: modsOnTop ? 64 : null,
-                bottom: modsOnTop ? null : math.max(64, bottomPad + 56),
-                child: Center(
-                  child: _flipOverlay(
-                    FloatingActionButton.extended(
-                      heroTag: 'skill_peek',
-                      backgroundColor: BalatroTheme.felt,
-                      foregroundColor: BalatroTheme.gold,
-                      onPressed: _toggleSkillChoicePeek,
-                      icon: Icon(
-                        _skillChoicePeek
-                            ? Icons.visibility_off_rounded
-                            : Icons.visibility_rounded,
-                      ),
-                      label: Text(
-                        _skillChoicePeek ? 'ВЫБРАТЬ' : 'ДОСКА',
-                        style: BalatroTheme.statusStyle.copyWith(fontSize: 13),
-                      ),
-                    ),
+                  OnlineSidePanel(
+                    opponentName: widget.opponentName ?? 'Соперник',
+                    localName: 'Вы',
+                    opponentMs: _clock.msFor(_other(widget.localColor!)),
+                    localMs: _clock.msFor(widget.localColor!),
+                    opponentActive: _game.isReadyToPlay &&
+                        !_game.isGameOver &&
+                        _game.turn == _other(widget.localColor!) &&
+                        _game.enginePhase == GameEnginePhase.play,
+                    localActive: _game.isReadyToPlay &&
+                        !_game.isGameOver &&
+                        _game.turn == widget.localColor &&
+                        _game.enginePhase == GameEnginePhase.play,
+                    canTakeback: _game.canTakeback,
+                    onTakeback: () => unawaited(_offerTakeback()),
+                    onDraw: () => unawaited(_offerDraw()),
+                    onResign: () => unawaited(_resignLocal()),
                   ),
-                ),
+                ],
+              )
+            : _buildGameStack(
+                bottomPad: bottomPad,
+                modsOnTop: modsOnTop,
+                showMobileChrome: widget.isOnline,
+                reserveSidePanel: false,
               ),
-            if (_phaseBannerText != null && !_showEndOverlay)
-              Positioned(
-                top: widget.isOnline
-                    ? (modsOnTop ? 96 : 36)
-                    : (modsOnTop ? 56 : 8),
-                left: 16,
-                right: 16,
-                child: _flipOverlay(
-                  Material(
-                    color: BalatroTheme.felt.withValues(alpha: 0.92),
-                    borderRadius: BorderRadius.circular(10),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 10,
-                      ),
-                      child: Text(
-                        _phaseBannerText!,
-                        textAlign: TextAlign.center,
-                        style: BalatroTheme.statusStyle.copyWith(
-                          fontSize: 13,
-                          color: BalatroTheme.gold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            if (_showEndOverlay)
-              Positioned.fill(
-                child: ColoredBox(
-                  color: BalatroTheme.background.withValues(alpha: 0.82),
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: _flipOverlay(
-                        Material(
-                          color: BalatroTheme.felt,
-                          borderRadius: BorderRadius.circular(16),
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(24, 28, 24, 22),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  _endOverlayTitle,
-                                  textAlign: TextAlign.center,
-                                  style: BalatroTheme.titleStyle.copyWith(
-                                    fontSize: 28,
-                                  ),
-                                ),
-                                if (_endOverlaySubtitle.isNotEmpty) ...[
-                                  const SizedBox(height: 10),
-                                  Text(
-                                    _endOverlaySubtitle,
-                                    textAlign: TextAlign.center,
-                                    style: BalatroTheme.statusStyle.copyWith(
-                                      fontSize: 14,
-                                      color: BalatroTheme.cream.withValues(
-                                        alpha: 0.8,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                                if (!widget.isOnline &&
-                                    _game.winnerColor != null) ...[
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    _game.winnerColor == PieceColor.white
-                                        ? 'Белые'
-                                        : 'Чёрные',
-                                    style: BalatroTheme.statusStyle.copyWith(
-                                      fontSize: 13,
-                                      color: BalatroTheme.gold,
-                                    ),
-                                  ),
-                                ],
-                                const SizedBox(height: 22),
-                                ElevatedButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: BalatroTheme.gold,
-                                    foregroundColor: BalatroTheme.felt,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 28,
-                                      vertical: 14,
-                                    ),
-                                  ),
-                                  child: Text(
-                                    'НАЗАД',
-                                    style: BalatroTheme.statusStyle.copyWith(
-                                      fontSize: 14,
-                                      color: BalatroTheme.felt,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
       ),
     );
   }
 
+  Widget _buildBoard(double maxWidth, double maxHeight) {
+    return _ChessBoard(
+      game: _game,
+      selectedSquare: _selectedSquare,
+      availableMoves: _availableMoves,
+      animatingLavaDeaths: _animatingLavaDeaths,
+      onLavaDeathFinished: _onLavaDeathFinished,
+      onSquareTap: _onSquareTap,
+      viewerColor: _viewerColor,
+      maxWidth: maxWidth,
+      maxHeight: maxHeight,
+      pieceFlight: _pieceFlight,
+      onPieceFlightFinished: _onPieceFlightFinished,
+      rotatePieces: _uiFlipped,
+      flipBoard: _boardPerspectiveFlipped,
+    );
+  }
+
+  Widget _buildGameStack({
+    required double bottomPad,
+    required bool modsOnTop,
+    required bool showMobileChrome,
+    required bool reserveSidePanel,
+  }) {
+    final youAre = widget.localColor == null
+        ? null
+        : widget.localColor == PieceColor.white
+            ? 'Белые'
+            : 'Чёрные';
+    final oppColor =
+        widget.localColor == null ? null : _other(widget.localColor!);
+    final localColor = widget.localColor;
+
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: showMobileChrome
+              ? Column(
+                  children: [
+                    OnlinePlayerBar(
+                      name: widget.opponentName ?? 'Соперник',
+                      clockMs: oppColor == null ? 0 : _clock.msFor(oppColor),
+                      active: oppColor != null &&
+                          _game.isReadyToPlay &&
+                          !_game.isGameOver &&
+                          _game.turn == oppColor &&
+                          _game.enginePhase == GameEnginePhase.play,
+                      compact: true,
+                    ),
+                    Expanded(
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          return Center(
+                            child: _buildBoard(
+                              constraints.maxWidth,
+                              constraints.maxHeight,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    OnlinePlayerBar(
+                      name: 'Вы',
+                      clockMs:
+                          localColor == null ? 0 : _clock.msFor(localColor),
+                      active: localColor != null &&
+                          _game.isReadyToPlay &&
+                          !_game.isGameOver &&
+                          _game.turn == localColor &&
+                          _game.enginePhase == GameEnginePhase.play,
+                      compact: true,
+                    ),
+                    Padding(
+                      padding: EdgeInsets.only(
+                        left: 4,
+                        right: 4,
+                        bottom: math.max(4, bottomPad),
+                      ),
+                      child: Row(
+                        children: [
+                          IconButton(
+                            tooltip: 'Меню',
+                            onPressed: _game.isGameOver
+                                ? null
+                                : () => unawaited(_openMobileMenu()),
+                            icon: const Icon(
+                              Icons.menu_rounded,
+                              color: BalatroTheme.cream,
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: 'Чат',
+                            onPressed: () => unawaited(_openChatSheet()),
+                            icon: Badge(
+                              isLabelVisible: _chat.any((c) => !c.mine),
+                              child: const Icon(
+                                Icons.chat_bubble_outline_rounded,
+                                color: BalatroTheme.cream,
+                              ),
+                            ),
+                          ),
+                          const Spacer(),
+                          if (_game.isAwaitingGallop && _isMyTurn)
+                            TextButton(
+                              onPressed: _skipGallop,
+                              child: Text(
+                                'Галоп',
+                                style: BalatroTheme.statusStyle.copyWith(
+                                  fontSize: 12,
+                                  color: BalatroTheme.gold,
+                                ),
+                              ),
+                            ),
+                          _modsButton(),
+                        ],
+                      ),
+                    ),
+                  ],
+                )
+              : LayoutBuilder(
+                  builder: (context, constraints) {
+                    return Center(
+                      child: _buildBoard(
+                        constraints.maxWidth,
+                        constraints.maxHeight,
+                      ),
+                    );
+                  },
+                ),
+        ),
+        if (!showMobileChrome && (widget.isOnline || _phaseBannerText != null))
+          Positioned(
+            top: modsOnTop ? 64 : 8,
+            left: 12,
+            right: 12,
+            child: _flipOverlay(
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (widget.isOnline && !reserveSidePanel)
+                    Text(
+                      'vs ${widget.opponentName ?? 'Соперник'} · вы: $youAre',
+                      textAlign: TextAlign.center,
+                      style: BalatroTheme.statusStyle.copyWith(fontSize: 13),
+                    ),
+                  if (_phaseBannerText != null && !widget.isOnline) ...[
+                    Text(
+                      _phaseBannerText!,
+                      textAlign: TextAlign.center,
+                      style: BalatroTheme.statusStyle.copyWith(
+                        fontSize: 13,
+                        color: BalatroTheme.gold,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        if (!showMobileChrome)
+          Positioned(
+            top: modsOnTop ? 8 : null,
+            bottom: modsOnTop ? null : math.max(12, bottomPad + 8),
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_game.isAwaitingGallop && _isMyTurn)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: _flipOverlay(
+                        ElevatedButton(
+                          onPressed: _skipGallop,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: BalatroTheme.felt,
+                            foregroundColor: BalatroTheme.cream,
+                            side: BorderSide(
+                              color: BalatroTheme.gold.withValues(alpha: 0.6),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 18,
+                              vertical: 12,
+                            ),
+                          ),
+                          child: Text(
+                            'ПРОПУСТИТЬ ГАЛОП',
+                            style: BalatroTheme.statusStyle.copyWith(
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  if (_canLocalSkipTurn)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: _flipOverlay(
+                        ElevatedButton(
+                          onPressed: _localSkipTurn,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: BalatroTheme.felt,
+                            foregroundColor: BalatroTheme.cream,
+                            side: BorderSide(
+                              color: BalatroTheme.gold.withValues(alpha: 0.6),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 18,
+                              vertical: 12,
+                            ),
+                          ),
+                          child: Text(
+                            'ПРОПУСТИТЬ ХОД',
+                            style: BalatroTheme.statusStyle.copyWith(
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  if (_canPickAbilityTarget &&
+                      _game.legalCapturedAbilityTargets.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: _flipOverlay(
+                        ElevatedButton(
+                          onPressed: _promptCapturedAbilityTarget,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: BalatroTheme.gold,
+                            foregroundColor: BalatroTheme.felt,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 18,
+                              vertical: 12,
+                            ),
+                          ),
+                          child: Text(
+                            'ВЫБРАТЬ ИЗ КЛАДБИЩА',
+                            style: BalatroTheme.statusStyle.copyWith(
+                              fontSize: 13,
+                              color: BalatroTheme.felt,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  if (!reserveSidePanel) _modsButton(),
+                ],
+              ),
+            ),
+          ),
+        if (_canReact)
+          Positioned.fill(
+            child: ColoredBox(
+              color: BalatroTheme.background.withValues(alpha: 0.72),
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: _flipOverlay(
+                    Material(
+                      color: BalatroTheme.felt,
+                      borderRadius: BorderRadius.circular(16),
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'ВЫКУП',
+                              style: BalatroTheme.titleStyle.copyWith(
+                                fontSize: 20,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Отдайте модификацию или разрешите взятие',
+                              textAlign: TextAlign.center,
+                              style: BalatroTheme.statusStyle.copyWith(
+                                fontSize: 13,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            for (final ability
+                                in _game.pendingRansomAbilities)
+                              ListTile(
+                                title: Text(
+                                  ability.title,
+                                  style: BalatroTheme.statusStyle.copyWith(
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                onTap: () => _localAcceptRansom(ability),
+                              ),
+                            const SizedBox(height: 8),
+                            OutlinedButton(
+                              onPressed: _localDeclineRansom,
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: BalatroTheme.cream,
+                                side: BorderSide(
+                                  color: BalatroTheme.cream.withValues(
+                                    alpha: 0.4,
+                                  ),
+                                ),
+                              ),
+                              child: Text(
+                                'ОТКЛОНИТЬ',
+                                style: BalatroTheme.statusStyle.copyWith(
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        if (_showSkillChoiceOverlay)
+          Positioned.fill(
+            child: ColoredBox(
+              color: BalatroTheme.background.withValues(alpha: 0.72),
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: _flipOverlay(
+                    SkillChoiceSheet(
+                      title: 'МОДИФИКАЦИЯ',
+                      subtitle: () {
+                        final offers = _game.pendingCaptureOffers;
+                        if (offers.isNotEmpty &&
+                            offers.every(
+                              (o) =>
+                                  o.applyMode == AbilityApplyMode.playerKing,
+                            )) {
+                          return 'Золотой трон — мод для короля';
+                        }
+                        final chooser = _game.pendingSkillColor;
+                        if (chooser == PieceColor.white) {
+                          return 'Волна модификаций — ход белых: выбери 1 из ${offers.length}';
+                        }
+                        if (chooser == PieceColor.black) {
+                          return 'Волна модификаций — ход чёрных: выбери 1 из ${offers.length}';
+                        }
+                        return 'Выбери 1 из ${offers.length}';
+                      }(),
+                      offers: _game.pendingCaptureOffers,
+                      secondsLeft: _skillChoiceSecondsLeft,
+                      onSelected: _completeSkillChoice,
+                      canReroll: _canRerollSkill,
+                      permanentReroll: _game.hasPermanentRerollForPending,
+                      onReroll: _localRerollOffers,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        if (_game.isAwaitingSkillChoice && _canPickSkill)
+          Positioned(
+            left: 0,
+            right: 0,
+            top: modsOnTop ? 64 : null,
+            bottom: modsOnTop ? null : math.max(64, bottomPad + 56),
+            child: Center(
+              child: _flipOverlay(
+                FloatingActionButton.extended(
+                  heroTag: 'skill_peek',
+                  backgroundColor: BalatroTheme.felt,
+                  foregroundColor: BalatroTheme.gold,
+                  onPressed: _toggleSkillChoicePeek,
+                  icon: Icon(
+                    _skillChoicePeek
+                        ? Icons.visibility_off_rounded
+                        : Icons.visibility_rounded,
+                  ),
+                  label: Text(
+                    _skillChoicePeek ? 'ВЫБРАТЬ' : 'ДОСКА',
+                    style: BalatroTheme.statusStyle.copyWith(fontSize: 13),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        if (_phaseBannerText != null && !_showEndOverlay)
+          Positioned(
+            top: showMobileChrome
+                ? 4
+                : widget.isOnline
+                    ? (modsOnTop ? 96 : 36)
+                    : (modsOnTop ? 56 : 8),
+            left: 16,
+            right: 16,
+            child: _flipOverlay(
+              Material(
+                color: BalatroTheme.felt.withValues(alpha: 0.92),
+                borderRadius: BorderRadius.circular(10),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  child: Text(
+                    _phaseBannerText!,
+                    textAlign: TextAlign.center,
+                    style: BalatroTheme.statusStyle.copyWith(
+                      fontSize: 13,
+                      color: BalatroTheme.gold,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        if (_showEndOverlay)
+          Positioned.fill(
+            child: ColoredBox(
+              color: BalatroTheme.background.withValues(alpha: 0.82),
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: _flipOverlay(
+                    Material(
+                      color: BalatroTheme.felt,
+                      borderRadius: BorderRadius.circular(16),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 28, 24, 22),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              _endOverlayTitle,
+                              textAlign: TextAlign.center,
+                              style: BalatroTheme.titleStyle.copyWith(
+                                fontSize: 28,
+                              ),
+                            ),
+                            if (_endOverlaySubtitle.isNotEmpty) ...[
+                              const SizedBox(height: 10),
+                              Text(
+                                _endOverlaySubtitle,
+                                textAlign: TextAlign.center,
+                                style: BalatroTheme.statusStyle.copyWith(
+                                  fontSize: 14,
+                                  color: BalatroTheme.cream.withValues(
+                                    alpha: 0.8,
+                                  ),
+                                ),
+                              ),
+                            ],
+                            if (!widget.isOnline &&
+                                _game.winnerColor != null) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                _game.winnerColor == PieceColor.white
+                                    ? 'Белые'
+                                    : 'Чёрные',
+                                style: BalatroTheme.statusStyle.copyWith(
+                                  fontSize: 13,
+                                  color: BalatroTheme.gold,
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 22),
+                            ElevatedButton(
+                              onPressed: () => Navigator.pop(context),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: BalatroTheme.gold,
+                                foregroundColor: BalatroTheme.felt,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 28,
+                                  vertical: 14,
+                                ),
+                              ),
+                              child: Text(
+                                'НАЗАД',
+                                style: BalatroTheme.statusStyle.copyWith(
+                                  fontSize: 14,
+                                  color: BalatroTheme.felt,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
   PieceColor get _viewerColor => widget.localColor ?? _game.turn;
+
+  PieceColor _other(PieceColor color) =>
+      color == PieceColor.white ? PieceColor.black : PieceColor.white;
 
   void _showActiveAbilities() {
     final snapshot = _game.activeAbilitiesSnapshot();

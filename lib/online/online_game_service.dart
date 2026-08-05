@@ -111,6 +111,36 @@ class OnlineStateResync extends OnlineEvent {
   final Map<String, dynamic> snapshot;
 }
 
+class OnlineChatMessage extends OnlineEvent {
+  OnlineChatMessage(this.text, {this.fromOpponent = true});
+
+  final String text;
+  final bool fromOpponent;
+}
+
+class OnlineResign extends OnlineEvent {}
+
+class OnlineDrawOffer extends OnlineEvent {}
+
+class OnlineDrawResponse extends OnlineEvent {
+  OnlineDrawResponse({required this.accepted});
+  final bool accepted;
+}
+
+class OnlineTakebackOffer extends OnlineEvent {}
+
+class OnlineTakebackResponse extends OnlineEvent {
+  OnlineTakebackResponse({required this.accepted});
+  final bool accepted;
+}
+
+class OnlineClockSync extends OnlineEvent {
+  OnlineClockSync({required this.whiteMs, required this.blackMs});
+
+  final int whiteMs;
+  final int blackMs;
+}
+
 class OnlineOpponentDisconnected extends OnlineEvent {}
 
 class OnlineError extends OnlineEvent {
@@ -163,6 +193,20 @@ abstract class OnlineGameService {
     String? reason,
     String? stateHash,
   });
+
+  void sendChat(String text);
+
+  void sendResign();
+
+  void sendDrawOffer();
+
+  void sendDrawResponse({required bool accepted});
+
+  void sendTakebackOffer();
+
+  void sendTakebackResponse({required bool accepted});
+
+  void sendClockSync({required int whiteMs, required int blackMs});
 
   void dispose();
 }
