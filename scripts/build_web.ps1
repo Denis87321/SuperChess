@@ -6,13 +6,16 @@ $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot\..
 
 Write-Host "Building Flutter web with SUPERCHESS_SERVER_URL=$ServerUrl"
+flutter build web --release --dart-define=SUPERCHESS_SERVER_URL=$ServerUrl
 
-flutter build web --release `
-  --dart-define=SUPERCHESS_SERVER_URL=$ServerUrl
+if (Test-Path public) {
+  Remove-Item -Recurse -Force public
+}
+Copy-Item -Recurse build\web public
+"/*    /index.html   200" | Set-Content -Path "public\_redirects" -Encoding utf8
 
-# SPA fallback for deep links on Cloudflare / static hosts
-$redirects = Join-Path "build\web" "_redirects"
-"/*    /index.html   200" | Set-Content -Path $redirects -Encoding utf8
-
-Write-Host "Web build ready: build/web"
-Write-Host "Deploy: wrangler pages deploy build/web --project-name=superchess"
+Write-Host ""
+Write-Host "Done. Commit and push public/ then redeploy the Render Static Site."
+Write-Host "  git add public"
+Write-Host "  git commit -m `"Update web build for Render`""
+Write-Host "  git push"

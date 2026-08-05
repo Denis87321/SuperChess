@@ -1,6 +1,6 @@
-# Render Blueprint — free Web Service for matchmaking
-# Dashboard: https://dashboard.render.com → New → Blueprint
-# Or create a Web Service manually pointing at this repo / server/Dockerfile
+# Render Blueprint
+# - Web Service: matchmaking WebSocket
+# - Static Site: Flutter web (prebuilt in /public — no Flutter on Render)
 
 services:
   - type: web
@@ -11,4 +11,12 @@ services:
     dockerfilePath: ./server/Dockerfile
     dockerContext: ./server
     healthCheckPath: /health
-    # Render injects PORT; our server reads Platform.environment['PORT']
+
+  - type: web
+    name: superchess-web
+    runtime: static
+    plan: free
+    region: frankfurt
+    # Prebuilt Flutter web in /public (Render has no Flutter SDK).
+    buildCommand: "echo Using prebuilt public/"
+    staticPublishPath: ./public
