@@ -1,21 +1,20 @@
 import '../models/piece.dart';
 import '../models/square.dart';
 import 'chess_game.dart';
-import 'computer_player.dart';
 import 'fen_export.dart';
 import 'move.dart';
 import 'stockfish_engine.dart';
 
-/// Opponent that prefers Stockfish UCI moves when they are legal under
-/// SuperChess rules (player mods may change legality). Falls back to the
-/// built-in search when Stockfish is unavailable or the move is illegal.
+/// Opponent that uses Stockfish only (no ComputerPlayer fallback).
+///
+/// Experimental: if the position is not classical 8×8 FEN, or Stockfish has no
+/// legal SuperChess mapping, [chooseMove] returns null and the bot skips.
+///
+/// To restore fallback: re-add `ComputerPlayer` and
+/// `return _fallback.chooseMove(...)` when Stockfish cannot move.
 class StockfishPlayer {
-  StockfishPlayer({
-    ComputerPlayer? fallback,
-    this.movetimeMs = 900,
-  }) : _fallback = fallback ?? ComputerPlayer(searchDepth: 3);
+  StockfishPlayer({this.movetimeMs = 900});
 
-  final ComputerPlayer _fallback;
   final int movetimeMs;
   StockfishEngine? _engine;
   Future<void>? _init;
@@ -42,19 +41,18 @@ class StockfishPlayer {
     if (legal.isEmpty) return null;
 
     final engine = _engine;
+    if (engine == null) return null;
+
     final fen = tryBuildFen(game);
-    if (engine != null && fen != null) {
-      final uci = await engine.goBestMove(fen: fen, movetimeMs: movetimeMs);
-      final mapped = _mapUci(uci, legal);
-      if (mapped != null) return mapped;
+    // Non-8×8 / non-classical geometry: Stockfish cannot see the board.
+    if (fen == null) return null;
 
-      // Stockfish move illegal under mods — try MultiPV-style: ask again with
-      // restricted search by scoring candidates via one-ply Stockfish reply.
-      final scored = await _pickByStockfishEval(game, engine, legal, forColor);
-      if (scored != null) return scored;
-    }
+    final uci = await engine.goBestMove(fen: fen, movetimeMs: movetimeMs);
+    final mapped = _mapUci(uci, legal);
+    if (mapped != null) return mapped;
 
-    return _fallback.chooseMove(game, forColor: forColor);
+    // Stockfish move illegal under mods — score a few legal candidates.
+    return _pickByStockfishEval(game, engine, legal, forColor);
   }
 
   Future<Move?> _pickByStockfishEval(
