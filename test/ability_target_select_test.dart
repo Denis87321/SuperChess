@@ -2,7 +2,6 @@ import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:super_chess/chess/chess_game.dart';
-import 'package:super_chess/chess/move.dart';
 import 'package:super_chess/models/ability_catalog.dart';
 import 'package:super_chess/models/game_ability.dart';
 import 'package:super_chess/models/piece.dart';
@@ -10,10 +9,9 @@ import 'package:super_chess/models/square.dart';
 
 ChessGame _readyPlain() {
   final game = ChessGame(catalog: AbilityCatalog(random: Random(1)));
-  final white = game.startOffersFor(PieceColor.white).first;
-  final black = game.startOffersFor(PieceColor.black).first;
-  game.applyStartAbility(PieceColor.white, white.ability, remoteOffer: white);
-  game.applyStartAbility(PieceColor.black, black.ability, remoteOffer: black);
+  // Skip random start mods so piece-type targeting stays predictable.
+  game.skipStartAbility(PieceColor.white);
+  game.skipStartAbility(PieceColor.black);
   return game;
 }
 

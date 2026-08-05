@@ -58,6 +58,12 @@ enum GameAbility {
   boardOnlyEqualsKill,
   boardMarseillesChess,
   boardInitiativeFear,
+  boardSwamp,
+  boardCollectiveMyopia,
+  boardTerritoryExpand,
+  boardFrostMap,
+  boardScorchingSun,
+  boardTurncoats,
 
   pawnSideways,
   pawnInverted,
@@ -183,6 +189,7 @@ enum GameAbility {
   randomTimeCapsule,
   randomSuicideCapture,
   randomMeatGrinder,
+  randomQuicksand,
 }
 
 extension GameAbilityInfo on GameAbility {
@@ -242,6 +249,12 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.boardOnlyEqualsKill:
       case GameAbility.boardMarseillesChess:
       case GameAbility.boardInitiativeFear:
+      case GameAbility.boardSwamp:
+      case GameAbility.boardCollectiveMyopia:
+      case GameAbility.boardTerritoryExpand:
+      case GameAbility.boardFrostMap:
+      case GameAbility.boardScorchingSun:
+      case GameAbility.boardTurncoats:
         return AbilityGroup.board;
       case GameAbility.pawnSideways:
       case GameAbility.pawnInverted:
@@ -367,6 +380,7 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.randomTimeCapsule:
       case GameAbility.randomSuicideCapture:
       case GameAbility.randomMeatGrinder:
+      case GameAbility.randomQuicksand:
         return AbilityGroup.random;
     }
   }
@@ -481,6 +495,18 @@ extension GameAbilityInfo on GameAbility {
         return 'Марсельские шахматы';
       case GameAbility.boardInitiativeFear:
         return 'Боязнь инициативы';
+      case GameAbility.boardSwamp:
+        return 'What are you doing in my swamp';
+      case GameAbility.boardCollectiveMyopia:
+        return 'Коллективное близорукое';
+      case GameAbility.boardTerritoryExpand:
+        return 'Расширение территории';
+      case GameAbility.boardFrostMap:
+        return 'Морозная карта';
+      case GameAbility.boardScorchingSun:
+        return 'Палящее солнце';
+      case GameAbility.boardTurncoats:
+        return 'Отступники';
       case GameAbility.pawnSideways:
         return 'Карцинизация';
       case GameAbility.pawnInverted:
@@ -711,6 +737,8 @@ extension GameAbilityInfo on GameAbility {
         return 'Смертник';
       case GameAbility.randomMeatGrinder:
         return 'Мясорубка';
+      case GameAbility.randomQuicksand:
+        return 'Зыбучие пески';
     }
   }
 
@@ -826,6 +854,18 @@ extension GameAbilityInfo on GameAbility {
         return 'За один ход игрок делает два последовательных движения. В сбалансированном варианте белые на первом ходу делают только одно движение';
       case GameAbility.boardInitiativeFear:
         return 'Первый игрок, чья фигура будет съедена, дополнительно выбирает мод вне обычной волны раз в 3 хода';
+      case GameAbility.boardSwamp:
+        return 'Фигура увязает после хода: следующим своим ходом ею ходить нельзя (другими — можно)';
+      case GameAbility.boardCollectiveMyopia:
+        return 'Слоны, ладьи и ферзи не могут ходить дальше 3 клеток';
+      case GameAbility.boardTerritoryExpand:
+        return 'На доске появляются вертикали Z и I сразу';
+      case GameAbility.boardFrostMap:
+        return 'Фигуры замерзают после 3 ходов на морозе. У каждого игрока 3 факела: они не мёрзнут и согревают соседей. Съеденный факел передаётся ближайшему союзнику';
+      case GameAbility.boardScorchingSun:
+        return 'Солнце палит 3–6 клеток (меняет каждые 5 ходов). Нагрев 0→3: на 3 фигура погибает. Вне солнца нагрев падает';
+      case GameAbility.boardTurncoats:
+        return 'У каждого игрока один шпион среди лёгких фигур. Вы видите вражеского шпиона и можете сходить им, раскрыв его на свою сторону. Шпион не может поставить мат «своему» королю';
       case GameAbility.pawnSideways:
         return 'Выбранная пешка может сходить на 1 клетку вбок';
       case GameAbility.pawnInverted:
@@ -1056,6 +1096,8 @@ extension GameAbilityInfo on GameAbility {
         return 'Следующее взятие уничтожает и взятую фигуру, и фигуру, которая её взяла';
       case GameAbility.randomMeatGrinder:
         return 'Следующий ход обоих игроков должен быть взятием, если взятие возможно';
+      case GameAbility.randomQuicksand:
+        return '2–5 скрытых клеток — зыбучие пески. Вставшая фигура не ходит 2–5 ходов; клетка раскрывается навсегда';
     }
   }
 
@@ -1210,6 +1252,12 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.boardOnlyEqualsKill:
       case GameAbility.boardMarseillesChess:
       case GameAbility.boardInitiativeFear:
+      case GameAbility.boardSwamp:
+      case GameAbility.boardCollectiveMyopia:
+      case GameAbility.boardTerritoryExpand:
+      case GameAbility.boardFrostMap:
+      case GameAbility.boardScorchingSun:
+      case GameAbility.boardTurncoats:
       case GameAbility.randomShift:
       case GameAbility.randomCalm:
       case GameAbility.randomQuarantine:
@@ -1239,6 +1287,7 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.randomTimeCapsule:
       case GameAbility.randomSuicideCapture:
       case GameAbility.randomMeatGrinder:
+      case GameAbility.randomQuicksand:
         return null;
     }
   }
@@ -1293,6 +1342,12 @@ extension GameAbilityInfo on GameAbility {
       this == GameAbility.boardOnlyEqualsKill ||
       this == GameAbility.boardMarseillesChess ||
       this == GameAbility.boardInitiativeFear ||
+      this == GameAbility.boardSwamp ||
+      this == GameAbility.boardCollectiveMyopia ||
+      this == GameAbility.boardTerritoryExpand ||
+      this == GameAbility.boardFrostMap ||
+      this == GameAbility.boardScorchingSun ||
+      this == GameAbility.boardTurncoats ||
       this == GameAbility.randomShift ||
       this == GameAbility.randomCalm ||
       this == GameAbility.randomQuarantine ||

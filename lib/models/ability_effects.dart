@@ -342,6 +342,13 @@ extension GameAbilityEffects on GameAbility {
       case GameAbility.boardOnlyEqualsKill:
       case GameAbility.boardMarseillesChess:
       case GameAbility.boardInitiativeFear:
+      case GameAbility.boardSwamp:
+      case GameAbility.boardCollectiveMyopia:
+      case GameAbility.boardTerritoryExpand:
+      case GameAbility.boardFrostMap:
+      case GameAbility.boardScorchingSun:
+      case GameAbility.boardTurncoats:
+      case GameAbility.randomQuicksand:
       case GameAbility.randomShift:
       case GameAbility.randomCalm:
       case GameAbility.randomQuarantine:

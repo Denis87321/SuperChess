@@ -108,6 +108,33 @@ class BoardCataclysmState {
 
   int meatGrinderTurnsLeft = 0;
 
+  // --- New board / cataclysm batch ---
+  bool swampActive = false;
+  bool collectiveMyopiaActive = false;
+
+  bool frostMapActive = false;
+  final Map<PieceColor, Set<String>> torchPieceIds = {
+    PieceColor.white: {},
+    PieceColor.black: {},
+  };
+  final Map<String, int> frostIdleTurns = {}; // pieceId -> consecutive cold turns
+  final Set<String> frozenPieceIds = {};
+
+  bool scorchingSunActive = false;
+  final Set<Square> sunSquares = {};
+  int sunPliesUntilRotate = 10; // 5 full moves * 2 plies
+
+  bool turncoatsActive = false;
+  /// Visible color -> pieceId of the spy that secretly belongs to the opponent.
+  final Map<PieceColor, String> turncoatSpyIds = {};
+  final Set<String> revealedTurncoats = {};
+
+  final Set<Square> quicksandHidden = {};
+  final Set<Square> quicksandRevealed = {};
+  /// After landing: turns remaining immobilized (owner plies).
+  final Map<Square, int> quicksandDuration = {};
+  final Map<String, int> quicksandSkipLeft = {}; // pieceId -> skips
+
   int queuedSkillChoices = 0;
 
   /// Full turns completed by each side since the last ability wave (or start).
@@ -248,6 +275,45 @@ class BoardCataclysmState {
     magicHoovesFrom = other.magicHoovesFrom;
     magicHoovesTo = other.magicHoovesTo;
     meatGrinderTurnsLeft = other.meatGrinderTurnsLeft;
+    swampActive = other.swampActive;
+    collectiveMyopiaActive = other.collectiveMyopiaActive;
+    frostMapActive = other.frostMapActive;
+    torchPieceIds
+      ..clear()
+      ..addAll({
+        for (final e in other.torchPieceIds.entries)
+          e.key: Set<String>.from(e.value),
+      });
+    frostIdleTurns
+      ..clear()
+      ..addAll(other.frostIdleTurns);
+    frozenPieceIds
+      ..clear()
+      ..addAll(other.frozenPieceIds);
+    scorchingSunActive = other.scorchingSunActive;
+    sunSquares
+      ..clear()
+      ..addAll(other.sunSquares);
+    sunPliesUntilRotate = other.sunPliesUntilRotate;
+    turncoatsActive = other.turncoatsActive;
+    turncoatSpyIds
+      ..clear()
+      ..addAll(other.turncoatSpyIds);
+    revealedTurncoats
+      ..clear()
+      ..addAll(other.revealedTurncoats);
+    quicksandHidden
+      ..clear()
+      ..addAll(other.quicksandHidden);
+    quicksandRevealed
+      ..clear()
+      ..addAll(other.quicksandRevealed);
+    quicksandDuration
+      ..clear()
+      ..addAll(other.quicksandDuration);
+    quicksandSkipLeft
+      ..clear()
+      ..addAll(other.quicksandSkipLeft);
     queuedSkillChoices = other.queuedSkillChoices;
     whiteMovesSinceAbilityWave = other.whiteMovesSinceAbilityWave;
     blackMovesSinceAbilityWave = other.blackMovesSinceAbilityWave;

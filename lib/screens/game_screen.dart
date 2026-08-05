@@ -13,6 +13,7 @@ import '../l10n/app_strings.dart';
 import '../models/game_ability.dart';
 import '../models/piece.dart';
 import '../models/square.dart';
+import '../models/stockfish_ability_filter.dart';
 import '../online/game_clock.dart';
 import '../online/online_game_service.dart';
 import '../theme/balatro_theme.dart';
@@ -26,6 +27,17 @@ import '../widgets/skill_choice_sheet.dart';
 
 const _prefsRotateForBlackKey = 'rotate_for_black';
 const _onlineWideBreakpoint = 800.0;
+
+String _pieceTypeRu(PieceType type) {
+  return switch (type) {
+    PieceType.pawn => 'Пешка',
+    PieceType.knight => 'Конь',
+    PieceType.bishop => 'Слон',
+    PieceType.rook => 'Ладья',
+    PieceType.queen => 'Ферзь',
+    PieceType.king => 'Король',
+  };
+}
 
 class GameScreen extends StatefulWidget {
   const GameScreen({
@@ -106,6 +118,7 @@ class _GameScreenState extends State<GameScreen> {
     if (widget.vsComputer && widget.localColor != null) {
       _game = ChessGame(
         abilityChoosingColors: {widget.localColor!},
+        excludedAbilities: stockfishExcludedAbilities,
       );
       _stockfish = StockfishPlayer();
       unawaited(_stockfish!.ensureReady());
@@ -1394,7 +1407,7 @@ class _GameScreenState extends State<GameScreen> {
                     ListTile(
                       leading: ChessPieceWidget(piece: record.piece, size: 36),
                       title: Text(
-                        record.piece.type.name,
+                        _pieceTypeRu(record.piece.type),
                         style: BalatroTheme.statusStyle.copyWith(fontSize: 14),
                       ),
                       onTap: () => Navigator.pop(context, record),
@@ -2660,6 +2673,7 @@ class _ChessBoard extends StatelessWidget {
     required Set<String> sanctuaryProtected,
     required Set<String> curfewIds,
     required Map<String, int> siegeByTarget,
+    String? visibleEnemyTurncoatId,
   }) {
     final visited = game.knightTourVisited(piece.pieceId);
     final showTour = visited.isNotEmpty && !game.knightTourRewardUsed(piece.pieceId);
@@ -2673,6 +2687,9 @@ class _ChessBoard extends StatelessWidget {
       underCurfew: curfewIds.contains(piece.pieceId),
       siegeCounter: siegeByTarget[piece.pieceId],
       tourBadge: showTour ? '${visited.length}/8' : null,
+      hasTorch: game.hasTorch(piece.pieceId),
+      isFrozen: game.isFrozenPiece(piece.pieceId),
+      isEnemyTurncoat: visibleEnemyTurncoatId == piece.pieceId,
     );
     if (!rotatePieces) return child;
     return Transform.rotate(angle: math.pi, child: child);
@@ -2773,10 +2790,30 @@ class _ChessBoard extends StatelessWidget {
     }
 
     if (isVisible && territoryOwner != null && !inCheck && !isSelected) {
-      final tint = territoryOwner == PieceColor.white
-          ? const Color(0x33F5E6C8)
-          : const Color(0x33202A3A);
-      backgroundColor = Color.alphaBlend(tint, backgroundColor);
+      // Царь горы: claimed squares become exact light/dark board colors
+      // (a2 / a1 shades), not a translucent tint.
+      backgroundColor = territoryOwner == PieceColor.white
+          ? BalatroTheme.lightSquare
+          : BalatroTheme.darkSquare;
+    }
+    if (isVisible &&
+        game.scorchingSunActive &&
+        game.sunSquares.contains(square) &&
+        !inCheck &&
+        !isSelected) {
+      backgroundColor = Color.alphaBlend(
+        const Color(0x55F59E0B),
+        backgroundColor,
+      );
+    }
+    if (isVisible &&
+        game.quicksandRevealed.contains(square) &&
+        !inCheck &&
+        !isSelected) {
+      backgroundColor = Color.alphaBlend(
+        const Color(0x664A3728),
+        backgroundColor,
+      );
     }
     if (isVisible && isCustoms && !inCheck && !isSelected) {
       backgroundColor = Color.alphaBlend(
@@ -2979,6 +3016,8 @@ class _ChessBoard extends StatelessWidget {
                 sanctuaryProtected: sanctuaryProtected,
                 curfewIds: curfewIds,
                 siegeByTarget: siegeByTarget,
+                visibleEnemyTurncoatId:
+                    game.visibleEnemyTurncoatId(viewerColor),
               ),
             if (showPieces && visiblePieces.length > 1) ...[
               Positioned(
@@ -2990,6 +3029,8 @@ class _ChessBoard extends StatelessWidget {
                   sanctuaryProtected: sanctuaryProtected,
                   curfewIds: curfewIds,
                   siegeByTarget: siegeByTarget,
+                  visibleEnemyTurncoatId:
+                      game.visibleEnemyTurncoatId(viewerColor),
                 ),
               ),
               Positioned(
@@ -3001,6 +3042,8 @@ class _ChessBoard extends StatelessWidget {
                   sanctuaryProtected: sanctuaryProtected,
                   curfewIds: curfewIds,
                   siegeByTarget: siegeByTarget,
+                  visibleEnemyTurncoatId:
+                      game.visibleEnemyTurncoatId(viewerColor),
                 ),
               ),
             ],

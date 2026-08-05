@@ -12,13 +12,19 @@ class LavaDeathEvent {
 /// Шахматная горизонталь 1–8+ для отображения игроку.
 int chessRankLabel(int rankIndex) => rankIndex + 1;
 
-enum ExtraFilePlacement { none, left, right }
+enum ExtraFilePlacement { none, left, right, both }
 
 String fileLabel(
   int file, {
   int fileCount = 8,
   ExtraFilePlacement extraFile = ExtraFilePlacement.none,
 }) {
+  if (fileCount == 10 || extraFile == ExtraFilePlacement.both) {
+    // z a b c d e f g h i
+    if (file == 0) return 'z';
+    if (file == fileCount - 1) return 'i';
+    return String.fromCharCode(96 + file); // file 1 -> 'a'
+  }
   if (fileCount == 9 && extraFile == ExtraFilePlacement.left) {
     return file == 0 ? 'z' : String.fromCharCode(96 + file);
   }

@@ -16,6 +16,9 @@ class ChessPieceWidget extends StatelessWidget {
     this.underCurfew = false,
     this.siegeCounter,
     this.tourBadge,
+    this.hasTorch = false,
+    this.isFrozen = false,
+    this.isEnemyTurncoat = false,
   });
 
   final Piece piece;
@@ -27,6 +30,9 @@ class ChessPieceWidget extends StatelessWidget {
   final bool underCurfew;
   final int? siegeCounter;
   final String? tourBadge;
+  final bool hasTorch;
+  final bool isFrozen;
+  final bool isEnemyTurncoat;
 
   static String assetFor(PieceColor color, PieceType type) {
     final prefix = color == PieceColor.white ? 'w' : 'b';
@@ -53,6 +59,9 @@ class ChessPieceWidget extends StatelessWidget {
       underCurfew: underCurfew,
       siegeCounter: siegeCounter,
       tourBadge: tourBadge,
+      hasTorch: hasTorch,
+      isFrozen: isFrozen,
+      isEnemyTurncoat: isEnemyTurncoat,
     );
   }
 }
@@ -68,6 +77,9 @@ class _ChessPieceRender extends StatefulWidget {
     required this.underCurfew,
     required this.siegeCounter,
     required this.tourBadge,
+    required this.hasTorch,
+    required this.isFrozen,
+    required this.isEnemyTurncoat,
   });
 
   final Piece piece;
@@ -79,6 +91,9 @@ class _ChessPieceRender extends StatefulWidget {
   final bool underCurfew;
   final int? siegeCounter;
   final String? tourBadge;
+  final bool hasTorch;
+  final bool isFrozen;
+  final bool isEnemyTurncoat;
 
   @override
   State<_ChessPieceRender> createState() => _ChessPieceRenderState();
@@ -428,6 +443,73 @@ class _ChessPieceRenderState extends State<_ChessPieceRender>
                       height: 1,
                       color: Colors.white,
                     ),
+                  ),
+                ),
+              ),
+            ),
+          if (widget.hasTorch)
+            Positioned(
+              left: widget.size * 0.02,
+              bottom: widget.size * 0.02,
+              child: Icon(
+                Icons.local_fire_department_rounded,
+                size: widget.size * 0.28,
+                color: const Color(0xFFFBBF24),
+                shadows: const [
+                  Shadow(color: Colors.black54, blurRadius: 2),
+                ],
+              ),
+            ),
+          if (widget.isFrozen)
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0x667DD3FC),
+                  border: Border.all(
+                    color: const Color(0xFF38BDF8),
+                    width: widget.size * 0.04,
+                  ),
+                ),
+              ),
+            ),
+          if (widget.isEnemyTurncoat)
+            Positioned(
+              right: widget.size * 0.02,
+              bottom: widget.size * 0.28,
+              child: Icon(
+                Icons.visibility_rounded,
+                size: widget.size * 0.24,
+                color: const Color(0xFFA78BFA),
+                shadows: const [
+                  Shadow(color: Colors.black54, blurRadius: 2),
+                ],
+              ),
+            ),
+          if (widget.piece.heatLevel > 0)
+            Positioned(
+              left: widget.size * 0.30,
+              top: widget.size * 0.02,
+              child: Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: widget.size * 0.04,
+                  vertical: widget.size * 0.01,
+                ),
+                decoration: BoxDecoration(
+                  color: switch (widget.piece.heatLevel) {
+                    1 => const Color(0xFFF59E0B),
+                    2 => const Color(0xFFEA580C),
+                    _ => const Color(0xFFB91C1C),
+                  },
+                  borderRadius: BorderRadius.circular(widget.size * 0.06),
+                ),
+                child: Text(
+                  'H${widget.piece.heatLevel}',
+                  style: TextStyle(
+                    fontSize: widget.size * 0.10,
+                    fontWeight: FontWeight.w800,
+                    height: 1,
+                    color: Colors.white,
                   ),
                 ),
               ),

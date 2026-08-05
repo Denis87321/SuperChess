@@ -39,6 +39,7 @@ class Piece {
     this.doppelgangerOnceUsed = false,
     this.stompPending = false,
     this.magicHoovesPending = false,
+    this.heatLevel = 0,
   });
 
   /// Stable identity assigned by [ChessGame].
@@ -99,6 +100,9 @@ class Piece {
   final bool stompPending;
   final bool magicHoovesPending;
 
+  /// 0..3 for «Палящее солнце».
+  final int heatLevel;
+
   bool get hasModifiedMoveSet {
     for (final ability in abilities) {
       if (ability.effects.isNotEmpty) return true;
@@ -154,6 +158,7 @@ class Piece {
     bool? doppelgangerOnceUsed,
     bool? stompPending,
     bool? magicHoovesPending,
+    int? heatLevel,
   }) {
     return Piece(
       pieceId: pieceId ?? this.pieceId,
@@ -191,6 +196,7 @@ class Piece {
       doppelgangerOnceUsed: doppelgangerOnceUsed ?? this.doppelgangerOnceUsed,
       stompPending: stompPending ?? this.stompPending,
       magicHoovesPending: magicHoovesPending ?? this.magicHoovesPending,
+      heatLevel: heatLevel ?? this.heatLevel,
     );
   }
 

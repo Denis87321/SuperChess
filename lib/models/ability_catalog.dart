@@ -67,6 +67,12 @@ class AbilityCatalog {
     GameAbility.boardOnlyEqualsKill,
     GameAbility.boardMarseillesChess,
     GameAbility.boardInitiativeFear,
+    GameAbility.boardSwamp,
+    GameAbility.boardCollectiveMyopia,
+    GameAbility.boardTerritoryExpand,
+    GameAbility.boardFrostMap,
+    GameAbility.boardScorchingSun,
+    GameAbility.boardTurncoats,
   ];
 
   static const randomAbilities = [
@@ -100,6 +106,7 @@ class AbilityCatalog {
     GameAbility.randomTimeCapsule,
     GameAbility.randomSuicideCapture,
     GameAbility.randomMeatGrinder,
+    GameAbility.randomQuicksand,
   ];
 
   static const pawnAbilities = [
@@ -257,6 +264,8 @@ class AbilityCatalog {
     bool minesActive = false,
     bool mirrorActive = false,
     bool offerFourChoices = false,
+    bool chooserDeliversCheck = false,
+    bool hasFriendlyPrisoners = false,
   }) {
     final fileCount = board.isEmpty ? 8 : board.first.length;
     final availableTypes = <PieceType>{};
@@ -319,6 +328,15 @@ class AbilityCatalog {
     }
     if (!_hasEnemyAbilityPiece(board, rankCount, fileCount, forColor)) {
       pool.remove(GameAbility.kingRemoveEnemyMod);
+    }
+    if (!_bishopHasAllyOnDiagonal(board, rankCount, fileCount, forColor)) {
+      pool.remove(GameAbility.bishopParallelWorlds);
+    }
+    if (chooserDeliversCheck) {
+      pool.remove(GameAbility.randomRightToMove);
+    }
+    if (!hasFriendlyPrisoners) {
+      pool.remove(GameAbility.kingPrisonerExchange);
     }
     // Setup rearrangements only make sense before the first move.
     pool
@@ -470,6 +488,14 @@ class AbilityCatalog {
       );
     }
 
+    if (ability == GameAbility.randomQuicksand) {
+      return AbilityOffer(
+        ability: ability,
+        applyMode: AbilityApplyMode.boardWide,
+        mineCount: 2 + _random.nextInt(4),
+        durationMoves: 2 + _random.nextInt(4),
+      );
+    }
     if (ability == GameAbility.randomShift) {
       final options = <AbilityOffer>[];
       for (var file = 0; file < fileCount; file++) {
@@ -1469,6 +1495,43 @@ class AbilityCatalog {
         if (piece == null) continue;
         if (piece.color == capturingColor) continue;
         if (piece.abilities.isNotEmpty) return true;
+      }
+    }
+    return false;
+  }
+
+  /// True if [forColor] has a bishop that sees an allied non-king on a diagonal.
+  bool _bishopHasAllyOnDiagonal(
+    List<List<Piece?>> board,
+    int rankCount,
+    int fileCount,
+    PieceColor forColor,
+  ) {
+    for (var rank = 0; rank < rankCount; rank++) {
+      for (var file = 0; file < fileCount; file++) {
+        final bishop = board[rank][file];
+        if (bishop == null ||
+            bishop.color != forColor ||
+            bishop.type != PieceType.bishop) {
+          continue;
+        }
+        for (final df in const [-1, 1]) {
+          for (final dr in const [-1, 1]) {
+            var f = file + df;
+            var r = rank + dr;
+            while (f >= 0 && f < fileCount && r >= 0 && r < rankCount) {
+              final other = board[r][f];
+              if (other != null) {
+                if (other.color == forColor && other.type != PieceType.king) {
+                  return true;
+                }
+                break;
+              }
+              f += df;
+              r += dr;
+            }
+          }
+        }
       }
     }
     return false;

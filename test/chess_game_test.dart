@@ -733,7 +733,7 @@ void main() {
   test('double start allows a one-time triple step', () {
     late ChessGame game;
     var found = false;
-    for (var seed = 0; seed < 200; seed++) {
+    for (var seed = 0; seed < 2000; seed++) {
       game = ChessGame(catalog: AbilityCatalog(random: Random(seed)));
       if (!game
           .startOffersFor(PieceColor.white)
@@ -973,17 +973,17 @@ void main() {
     expect(game, isNotNull);
     expect(game!.lightSquaresOnly, isTrue);
 
-    // d2 — светлая, d3 — тёмная, d4 — светлая.
-    const d2 = Square(3, 1);
-    const d3 = Square(3, 2);
-    const d4 = Square(3, 3);
-    expect((d2.file + d2.rank).isEven, isTrue);
-    expect((d3.file + d3.rank).isEven, isFalse);
-    expect((d4.file + d4.rank).isEven, isTrue);
+    // a1 is dark. e2 — светлая, e3 — тёмная, e4 — светлая.
+    const e2 = Square(4, 1);
+    const e3 = Square(4, 2);
+    const e4 = Square(4, 3);
+    expect(game.isSquareLight(e2), isTrue);
+    expect(game.isSquareLight(e3), isFalse);
+    expect(game.isSquareLight(e4), isTrue);
 
-    final moves = game.getLegalMoves(from: d2);
-    expect(moves.any((m) => m.to == d3), isFalse);
-    expect(moves.any((m) => m.to == d4), isTrue);
+    final moves = game.getLegalMoves(from: e2);
+    expect(moves.any((m) => m.to == e3), isFalse);
+    expect(moves.any((m) => m.to == e4), isTrue);
   });
 
   group('piece ability engine phases', () {

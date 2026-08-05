@@ -178,14 +178,22 @@ class ChessGame {
     AbilityCatalog? catalog,
     Random? random,
     Set<PieceColor>? abilityChoosingColors,
+    Set<GameAbility>? excludedAbilities,
   }) : _catalog = catalog ?? AbilityCatalog(),
        _random = random ?? Random(),
        _abilityChoosingColors =
            abilityChoosingColors ??
-           const {PieceColor.white, PieceColor.black} {
+           const {PieceColor.white, PieceColor.black},
+       _excludedAbilities = excludedAbilities ?? const {} {
     _board = _createInitialBoard();
-    _whiteStartOffers = _catalog.pickStartOffers(forColor: PieceColor.white);
-    _blackStartOffers = _catalog.pickStartOffers(forColor: PieceColor.black);
+    _whiteStartOffers = _catalog.pickStartOffers(
+      forColor: PieceColor.white,
+      excludedAbilities: _excludedAbilities,
+    );
+    _blackStartOffers = _catalog.pickStartOffers(
+      forColor: PieceColor.black,
+      excludedAbilities: _excludedAbilities,
+    );
     // Sides that never pick mods (e.g. computer) skip start selection.
     if (!_abilityChoosingColors.contains(PieceColor.white)) {
       _whiteStartChosen = true;
@@ -198,6 +206,7 @@ class ChessGame {
   final AbilityCatalog _catalog;
   final Random _random;
   final Set<PieceColor> _abilityChoosingColors;
+  final Set<GameAbility> _excludedAbilities;
   final BoardCataclysmState _rules = BoardCataclysmState();
 
   late List<List<Piece?>> _board;
@@ -248,6 +257,8 @@ class ChessGame {
   bool _blackOneShotReroll = false;
   bool _whitePermanentReroll = false;
   bool _blackPermanentReroll = false;
+  /// How many times the current skill-choice screen was refreshed (max 1).
+  int _skillChoiceRerollsUsed = 0;
   final Set<int> _lavaRanks = {};
   final List<LavaDeathEvent> _pendingLavaDeaths = [];
   bool _fogOfWar = false;
@@ -502,6 +513,8 @@ class ChessGame {
   PieceColor? get pendingSkillColor => _pendingSkillColor;
   bool canRerollPendingOffers(PieceColor color) {
     if (!isAwaitingSkillChoice || pendingSkillColor != color) return false;
+    // «Перевыбор» / one-shot: at most one refresh per choice screen.
+    if (_skillChoiceRerollsUsed >= 1) return false;
     return color == PieceColor.white
         ? (_whitePermanentReroll || _whiteOneShotReroll)
         : (_blackPermanentReroll || _blackOneShotReroll);
@@ -557,6 +570,29 @@ class ChessGame {
   bool get kingOfHillActive => _rules.kingOfHillActive;
   Map<Square, PieceColor> get territory =>
       Map<Square, PieceColor>.from(_rules.territory);
+  bool get swampActive => _rules.swampActive;
+  bool get collectiveMyopiaActive => _rules.collectiveMyopiaActive;
+  bool get frostMapActive => _rules.frostMapActive;
+  bool get scorchingSunActive => _rules.scorchingSunActive;
+  bool get turncoatsActive => _rules.turncoatsActive;
+  Set<Square> get sunSquares => Set<Square>.from(_rules.sunSquares);
+  Set<Square> get quicksandRevealed =>
+      Set<Square>.from(_rules.quicksandRevealed);
+  bool isFrozenPiece(String pieceId) =>
+      _rules.frozenPieceIds.contains(pieceId);
+  bool hasTorch(String pieceId) {
+    for (final ids in _rules.torchPieceIds.values) {
+      if (ids.contains(pieceId)) return true;
+    }
+    return false;
+  }
+  /// Enemy spy id visible to [viewer] (unrevealed).
+  String? visibleEnemyTurncoatId(PieceColor viewer) {
+    if (!_rules.turncoatsActive) return null;
+    final id = _rules.turncoatSpyIds[viewer.opponent];
+    if (id == null || _rules.revealedTurncoats.contains(id)) return null;
+    return id;
+  }
   bool get royalPilgrimageActive => _rules.royalPilgrimageActive;
   bool get mightMakesRightActive => _rules.mightMakesRightActive;
   bool get expeditionaryCorpsActive => _rules.expeditionaryCorpsActive;
@@ -621,7 +657,8 @@ class ChessGame {
         square.file < shuffled[square.rank].length) {
       return shuffled[square.rank][square.file];
     }
-    return (square.file + square.rank).isEven;
+    // a1 (file 0, rank 0) is dark — standard chess coloring.
+    return (square.file + square.rank).isOdd;
   }
 
   /// Пешка соперника скрыта эффектом «Невидимый полк».
@@ -679,6 +716,7 @@ class ChessGame {
   }
 
   ExtraFilePlacement get extraFilePlacement {
+    if (_fileCount >= 10) return ExtraFilePlacement.both;
     if (_fileCount <= defaultFileCount) return ExtraFilePlacement.none;
     return _extraFileOnLeft == true
         ? ExtraFilePlacement.left
@@ -1448,8 +1486,24 @@ class ChessGame {
   }
 
   bool _canControl(Piece piece, [PieceColor? viewerColor]) {
+    final side = viewerColor ?? _turn;
     if (_zebrasActive && piece.type == PieceType.knight) return true;
-    return piece.color == (viewerColor ?? _turn);
+    if (_isUnrevealedEnemySpy(piece, side)) return true;
+    return piece.color == side;
+  }
+
+  bool _isUnrevealedEnemySpy(Piece piece, [PieceColor? sideToMove]) {
+    final side = sideToMove ?? _turn;
+    if (!_rules.turncoatsActive) return false;
+    if (_rules.revealedTurncoats.contains(piece.pieceId)) return false;
+    return piece.color == side.opponent &&
+        _rules.turncoatSpyIds[piece.color] == piece.pieceId;
+  }
+
+  PieceColor _actingColor(Piece piece, [PieceColor? sideToMove]) {
+    final side = sideToMove ?? _turn;
+    if (_isUnrevealedEnemySpy(piece, side)) return side;
+    return piece.color;
   }
 
   bool get _truceActive => _truceMovesLeft > 0;
@@ -1612,7 +1666,11 @@ class ChessGame {
     return _chebyshevDistance(from, to) > 3;
   }
 
-  bool isSquareAttacked(Square square, PieceColor byColor) {
+  bool isSquareAttacked(
+    Square square,
+    PieceColor byColor, {
+    bool includeTurncoatSpies = false,
+  }) {
     for (var rank = 0; rank < _rankCount; rank++) {
       for (var file = 0; file < _fileCount; file++) {
         final from = Square(file, rank);
@@ -1620,6 +1678,13 @@ class ChessGame {
         for (final piece in piecesAt(from)) {
           if (piece.color != byColor) continue;
           if (_zebrasActive && piece.type == PieceType.knight) continue;
+          if (!includeTurncoatSpies &&
+              _rules.turncoatsActive &&
+              !_rules.revealedTurncoats.contains(piece.pieceId) &&
+              _rules.turncoatSpyIds[byColor] == piece.pieceId) {
+            // Unrevealed spy secretly serves the opponent — no attacks.
+            continue;
+          }
           if (_throneBlocksAttack(from, square, byColor)) continue;
           if (_canAttack(from, square, piece)) return true;
         }
@@ -1642,10 +1707,17 @@ class ChessGame {
     return null;
   }
 
-  bool isInCheck(PieceColor color) {
+  bool isInCheck(
+    PieceColor color, {
+    bool includeTurncoatSpies = false,
+  }) {
     final kingSquare = findKing(color);
     if (kingSquare == null) return false;
-    return isSquareAttacked(kingSquare, color.opponent);
+    return isSquareAttacked(
+      kingSquare,
+      color.opponent,
+      includeTurncoatSpies: includeTurncoatSpies,
+    );
   }
 
   List<Move> getLegalMoves({Square? from}) {
@@ -1680,10 +1752,17 @@ class ChessGame {
           final piece = pieces[index];
           if (!_canControl(piece)) continue;
           if (piece.skipTurnsLeft > 0) continue;
+          if (_rules.frozenPieceIds.contains(piece.pieceId)) continue;
+          if ((_rules.quicksandSkipLeft[piece.pieceId] ?? 0) > 0) continue;
           if (_isFaceControlled(piece, square)) continue;
           if (!_pieceAllowedToMoveThisTurn(piece)) continue;
 
-          moves.addAll(_getPseudoLegalMoves(square, piece, pieceIndex: index));
+          final movePiece = _isUnrevealedEnemySpy(piece)
+              ? piece.copyWith(color: _turn)
+              : piece;
+          moves.addAll(
+            _getPseudoLegalMoves(square, movePiece, pieceIndex: index),
+          );
         }
       }
     }
@@ -1716,9 +1795,14 @@ class ChessGame {
             final piece = pieces[index];
             if (!_canControl(piece)) continue;
             if (piece.skipTurnsLeft > 0) continue;
+            if (_rules.frozenPieceIds.contains(piece.pieceId)) continue;
+            if ((_rules.quicksandSkipLeft[piece.pieceId] ?? 0) > 0) continue;
             if (!_pieceAllowedToMoveThisTurn(piece)) continue;
+            final movePiece = _isUnrevealedEnemySpy(piece)
+                ? piece.copyWith(color: _turn)
+                : piece;
             retry.addAll(
-              _getPseudoLegalMoves(square, piece, pieceIndex: index),
+              _getPseudoLegalMoves(square, movePiece, pieceIndex: index),
             );
           }
         }
@@ -1819,6 +1903,7 @@ class ChessGame {
     final permanent = color == PieceColor.white
         ? _whitePermanentReroll
         : _blackPermanentReroll;
+    _skillChoiceRerollsUsed++;
     if (!permanent) {
       if (color == PieceColor.white) {
         _whiteOneShotReroll = false;
@@ -1864,7 +1949,7 @@ class ChessGame {
     final moverBefore = pieceAt(move.from, index: move.pieceIndex);
     PieceColor? initiativeFearVictim;
     if (captured && moverBefore != null) {
-      final victim = _captureVictim(move, moverBefore.color);
+      final victim = _captureVictim(move, _actingColor(moverBefore));
       if (!skipReaction &&
           victim != null &&
           victim.piece.hasAbility(GameAbility.pawnRansom) &&
@@ -2126,6 +2211,7 @@ class ChessGame {
     _pendingSkillSquare = null;
     _pendingSkillPieceId = null;
     _pendingSkillColor = color;
+    _skillChoiceRerollsUsed = 0;
     _pendingCaptureOffers = _catalog.pickPeriodicOffers(
       forColor: color,
       board: _board,
@@ -2133,10 +2219,18 @@ class ChessGame {
       extraFilePlacement: extraFilePlacement,
       blockedSquares: _captureBlockedSquares(),
       chosenAbilities: _chosenAbilitiesFor(color),
+      excludedAbilities: _excludedAbilities,
       fogOfWarActive: _fogOfWar,
       minesActive: _mines.isNotEmpty,
       mirrorActive: _mirrorActive,
       offerFourChoices: _rules.bigAssortmentActive,
+      chooserDeliversCheck: isInCheck(color.opponent),
+      hasFriendlyPrisoners: _graveyard.any(
+        (r) =>
+            r.originalOwner == color &&
+            r.capturingColor == color.opponent &&
+            r.wasCapturedByOpponent,
+      ),
     );
   }
 
@@ -2275,6 +2369,7 @@ class ChessGame {
       return;
     }
     _pendingSkillPieceId = king.pieceId;
+    _skillChoiceRerollsUsed = 0;
     _pendingCaptureOffers = _catalog.pickKingOffers(
       king: king,
       board: _board,
@@ -2613,6 +2708,18 @@ class ChessGame {
         } else if (offer.ability == GameAbility.boardInitiativeFear) {
           _rules.initiativeFearActive = true;
           _rules.initiativeFearConsumed = false;
+        } else if (offer.ability == GameAbility.boardSwamp) {
+          _rules.swampActive = true;
+        } else if (offer.ability == GameAbility.boardCollectiveMyopia) {
+          _rules.collectiveMyopiaActive = true;
+        } else if (offer.ability == GameAbility.boardTerritoryExpand) {
+          _insertTerritoryExpand();
+        } else if (offer.ability == GameAbility.boardFrostMap) {
+          _activateFrostMap();
+        } else if (offer.ability == GameAbility.boardScorchingSun) {
+          _activateScorchingSun();
+        } else if (offer.ability == GameAbility.boardTurncoats) {
+          _activateTurncoats();
         } else if (offer.ability == GameAbility.boardMarseillesChess) {
           final firstActivation = !_rules.marseillesActive;
           _rules.marseillesActive = true;
@@ -2626,6 +2733,11 @@ class ChessGame {
               : 2;
         } else if (offer.ability == GameAbility.randomMeatGrinder) {
           _rules.meatGrinderTurnsLeft = 2;
+        } else if (offer.ability == GameAbility.randomQuicksand) {
+          _activateQuicksand(
+            cellCount: offer.mineCount ?? (2 + _random.nextInt(4)),
+            duration: offer.durationMoves ?? (2 + _random.nextInt(4)),
+          );
         }
         return;
       case AbilityApplyMode.capturingPiece:
@@ -4142,12 +4254,13 @@ class ChessGame {
   }
 
   void _insertExtraFileLeft() {
-    if (_fileCount >= 9) return;
+    if (_fileCount >= 10) return;
+    if (_extraFileOnLeft == true) return;
     for (var rank = 0; rank < _rankCount; rank++) {
       _board[rank].insert(0, null);
     }
     _rekeyStackExtras(fileDelta: 1);
-    _fileCount = 9;
+    _fileCount += 1;
     _extraFileOnLeft = true;
     _whiteThrone = Square(_whiteThrone.file + 1, _whiteThrone.rank);
     _blackThrone = Square(_blackThrone.file + 1, _blackThrone.rank);
@@ -4155,13 +4268,40 @@ class ChessGame {
   }
 
   void _insertExtraFileRight() {
-    if (_fileCount >= 9) return;
+    if (_fileCount >= 10) return;
+    if (_fileCount > defaultFileCount && _extraFileOnLeft == false) {
+      // Already have a right-only extra file.
+      return;
+    }
+    // When expanding from 9 with left file, still allow a right file.
+    if (_fileCount > defaultFileCount &&
+        _extraFileOnLeft == true &&
+        _fileCount >= 10) {
+      return;
+    }
     for (var rank = 0; rank < _rankCount; rank++) {
       _board[rank].add(null);
     }
-    _fileCount = 9;
-    _extraFileOnLeft = false;
+    _fileCount += 1;
+    if (_extraFileOnLeft != true) {
+      _extraFileOnLeft = false;
+    }
     _shiftSpecialSquaresFile(insertOnLeft: false);
+  }
+
+  void _insertTerritoryExpand() {
+    if (_fileCount >= 10) return;
+    if (_extraFileOnLeft != true) {
+      _insertExtraFileLeft();
+    }
+    if (_fileCount < 10) {
+      // Force right insert even if left is present.
+      for (var rank = 0; rank < _rankCount; rank++) {
+        _board[rank].add(null);
+      }
+      _fileCount += 1;
+      _shiftSpecialSquaresFile(insertOnLeft: false);
+    }
   }
 
   void _applyFileShift(int file, int direction) {
@@ -4757,6 +4897,7 @@ class ChessGame {
         _rules.avengeVictimColor = piece.color;
         _rules.avengePlyLeft = 2;
       }
+      _transferTorchOnDeath(piece, deathSquare);
     }
 
     if (!triggersInheritance || !_resolvingInheritance.add(piece.pieceId)) {
@@ -4882,16 +5023,17 @@ class ChessGame {
 
     final mover = pieceAt(move.from, index: move.pieceIndex);
     if (mover == null) return false;
+    final acting = _actingColor(mover);
 
     final destinationPieces = piecesAt(move.to);
     if (_fourHorsemenActive &&
         mover.type == PieceType.knight &&
         !mover.horsemenCaptureUsed &&
-        destinationPieces.any((piece) => piece.color != mover.color)) {
+        destinationPieces.any((piece) => piece.color != acting)) {
       return false;
     }
 
-    return destinationPieces.any((piece) => piece.color != mover.color);
+    return destinationPieces.any((piece) => piece.color != acting);
   }
 
   void _finishGame({
@@ -4947,6 +5089,10 @@ class ChessGame {
 
     if (legalMoves.isEmpty) {
       if (inCheck) {
+        if (_tryRevealTurncoatToAvoidMate(_turn)) {
+          _updateStatus();
+          return;
+        }
         final kingSquare = findKing(_turn);
         final king = kingSquare == null ? null : pieceAt(kingSquare);
         if (king != null &&
@@ -4975,11 +5121,66 @@ class ChessGame {
           status: GameStatus.stalemate,
         );
       }
+    } else if (_wouldBeMatedCountingTurncoatSpies(_turn)) {
+      // Mate only holds because an unrevealed spy "attacks" — reveal and redo.
+      if (_tryRevealTurncoatToAvoidMate(_turn)) {
+        _updateStatus();
+        return;
+      }
+      _status = inCheck ? GameStatus.check : GameStatus.playing;
     } else if (inCheck) {
       _status = GameStatus.check;
     } else {
       _status = GameStatus.playing;
     }
+  }
+
+  bool _wouldBeMatedCountingTurncoatSpies(PieceColor color) {
+    if (!_rules.turncoatsActive || _truceActive) return false;
+    final spyId = _rules.turncoatSpyIds[color.opponent];
+    if (spyId == null || _rules.revealedTurncoats.contains(spyId)) {
+      return false;
+    }
+    final savedTurn = _turn;
+    _turn = color;
+    _rules.revealedTurncoats.add(spyId);
+    try {
+      final inCheck = isInCheck(color, includeTurncoatSpies: true);
+      if (!inCheck) return false;
+      return getLegalMoves().isEmpty;
+    } finally {
+      _rules.revealedTurncoats.remove(spyId);
+      _turn = savedTurn;
+    }
+  }
+
+  bool _tryRevealTurncoatToAvoidMate(PieceColor matedColor) {
+    if (!_rules.turncoatsActive) return false;
+    final matingColor = matedColor.opponent;
+    final spyId = _rules.turncoatSpyIds[matingColor];
+    if (spyId == null || _rules.revealedTurncoats.contains(spyId)) {
+      return false;
+    }
+    final ref = _pieceById(spyId);
+    if (ref == null) return false;
+
+    final snapshot = createSnapshot();
+    _rules.revealedTurncoats.add(spyId);
+    _replacePieceAt(
+      ref.square,
+      ref.index,
+      ref.piece.copyWith(color: matedColor),
+    );
+    final savedTurn = _turn;
+    _turn = matedColor;
+    final stillMated =
+        isInCheck(matedColor) && getLegalMoves().isEmpty;
+    _turn = savedTurn;
+    if (stillMated) {
+      restoreSnapshot(snapshot);
+      return false;
+    }
+    return true;
   }
 
   bool _isOnlyCheckedByPawns(PieceColor color) {
@@ -5034,11 +5235,16 @@ class ChessGame {
   bool _isLegalMove(Move move) {
     final mover = pieceAt(move.from, index: move.pieceIndex);
     if (mover == null) return false;
+    final acting = _actingColor(mover);
     if (_isCapture(move)) {
-      final victim = _captureVictim(move, mover.color);
-      if (victim != null && !_captureAllowed(mover, victim.piece)) return false;
+      final victim = _captureVictim(move, acting);
+      if (victim != null && !_captureAllowed(mover.copyWith(color: acting), victim.piece)) {
+        return false;
+      }
     }
-    if (!_isLandingAllowed(move.to, forPiece: mover)) return false;
+    if (!_isLandingAllowed(move.to, forPiece: mover.copyWith(color: acting))) {
+      return false;
+    }
     if (!_curfewAllowsMove(mover, move.from, move.to)) return false;
     if (_truceActive && _isCapture(move)) return false;
     if (move.isKnightRearSwap && !_isLandingAllowed(move.from)) return false;
@@ -5051,15 +5257,15 @@ class ChessGame {
     }
 
     final snapshot = createSnapshot();
-    _turn = mover.color;
+    _turn = acting;
     _suppressCaptureSideEffects = true;
     _isSimulatingLegality = true;
     late final bool legal;
     try {
       _applyMove(move);
-      _tickLava(mover.color, recordDeaths: false);
-      final kingAlive = findKing(mover.color) != null;
-      legal = kingAlive && !isInCheck(mover.color);
+      _tickLava(acting, recordDeaths: false);
+      final kingAlive = findKing(acting) != null;
+      legal = kingAlive && !isInCheck(acting);
     } finally {
       _suppressCaptureSideEffects = false;
       _isSimulatingLegality = false;
@@ -6146,6 +6352,8 @@ class ChessGame {
     _pendingTargetPassesTurn = true;
     _pendingExchangeOwnSequence = null;
     _pendingRemoveModTargetId = null;
+    _pendingSelectOffer = null;
+    _pendingSelectPieceType = null;
   }
 
   Piece _effectivePiece(Piece piece) {
@@ -6457,7 +6665,16 @@ class ChessGame {
       return;
     }
 
-    final piece = _takePieceAt(move.from, move.pieceIndex)!;
+    final pieceRaw = _takePieceAt(move.from, move.pieceIndex)!;
+    // Opponent moving an unrevealed enemy spy: reveal and flip allegiance.
+    var piece = pieceRaw;
+    if (_rules.turncoatsActive &&
+        !_rules.revealedTurncoats.contains(piece.pieceId) &&
+        _rules.turncoatSpyIds[piece.color] == piece.pieceId &&
+        piece.color != _turn) {
+      _rules.revealedTurncoats.add(piece.pieceId);
+      piece = piece.copyWith(color: _turn);
+    }
     final pushedAlly = move.isRookPush ? pieceAt(move.to) : null;
     final destinationPieces = piecesAt(move.to);
     final horsemenConvert =
@@ -7036,6 +7253,7 @@ class ChessGame {
   bool _rangedQuietStepAllowed(Piece piece, int steps) {
     if (!_isRangedSlider(piece.type)) return true;
     if (_rules.myopiaTurnsLeft > 0 && steps > 2) return false;
+    if (_rules.collectiveMyopiaActive && steps > 3) return false;
     if (_rules.combatOpticsActive &&
         _rules.abilityEffectsActive &&
         steps > 3) {
@@ -7047,6 +7265,7 @@ class ChessGame {
   bool _rangedCaptureStepAllowed(Piece piece, int steps) {
     if (!_isRangedSlider(piece.type)) return true;
     if (_rules.myopiaTurnsLeft > 0 && steps > 2) return false;
+    if (_rules.collectiveMyopiaActive && steps > 3) return false;
     // Combat optics: captures unlimited.
     return true;
   }
@@ -7144,7 +7363,131 @@ class ChessGame {
         _rules.avengeVictimColor = null;
       }
     }
+    _tickQuicksandSkips(finished);
+    _tickFrostMap(finished);
+    _tickScorchingSun();
     _tickIdleTurns(finished);
+  }
+
+  void _tickQuicksandSkips(PieceColor finished) {
+    final ids = _rules.quicksandSkipLeft.keys.toList();
+    for (final id in ids) {
+      final ref = _pieceById(id);
+      if (ref == null) {
+        _rules.quicksandSkipLeft.remove(id);
+        continue;
+      }
+      if (ref.piece.color != finished) continue;
+      final left = (_rules.quicksandSkipLeft[id] ?? 0) - 1;
+      if (left <= 0) {
+        _rules.quicksandSkipLeft.remove(id);
+      } else {
+        _rules.quicksandSkipLeft[id] = left;
+      }
+    }
+  }
+
+  void _tickFrostMap(PieceColor finished) {
+    if (!_rules.frostMapActive) return;
+    final torchSet = <String>{
+      ..._rules.torchPieceIds[PieceColor.white] ?? const {},
+      ..._rules.torchPieceIds[PieceColor.black] ?? const {},
+    };
+    final torchSquares = <Square>{};
+    for (final id in torchSet) {
+      final ref = _pieceById(id);
+      if (ref != null) torchSquares.add(ref.square);
+    }
+
+    for (var rank = 0; rank < _rankCount; rank++) {
+      for (var file = 0; file < _fileCount; file++) {
+        final square = Square(file, rank);
+        final pieces = piecesAt(square);
+        for (var i = 0; i < pieces.length; i++) {
+          final piece = pieces[i];
+          if (piece.color != finished) continue;
+          if (piece.type == PieceType.king) continue;
+          if (torchSet.contains(piece.pieceId)) {
+            _rules.frostIdleTurns[piece.pieceId] = 0;
+            _rules.frozenPieceIds.remove(piece.pieceId);
+            continue;
+          }
+          final nearTorch = torchSquares.any(
+            (t) => _chebyshevDistance(t, square) == 1,
+          );
+          if (nearTorch) {
+            _rules.frostIdleTurns[piece.pieceId] = 0;
+            _rules.frozenPieceIds.remove(piece.pieceId);
+            continue;
+          }
+          // Skip idle increment for the piece that just moved this turn.
+          final last = finished == PieceColor.white
+              ? _rules.whiteLastMovedPieceId
+              : _rules.blackLastMovedPieceId;
+          if (last == piece.pieceId) {
+            _rules.frostIdleTurns[piece.pieceId] = 0;
+            continue;
+          }
+          final idle = (_rules.frostIdleTurns[piece.pieceId] ?? 0) + 1;
+          _rules.frostIdleTurns[piece.pieceId] = idle;
+          if (idle >= 3) {
+            _rules.frozenPieceIds.add(piece.pieceId);
+          }
+        }
+      }
+    }
+  }
+
+  void _tickScorchingSun() {
+    if (!_rules.scorchingSunActive) return;
+    final toKillIds = <String>[];
+    for (var rank = 0; rank < _rankCount; rank++) {
+      for (var file = 0; file < _fileCount; file++) {
+        final square = Square(file, rank);
+        final pieces = piecesAt(square);
+        final onSun = _rules.sunSquares.contains(square);
+        for (var i = 0; i < pieces.length; i++) {
+          final piece = pieces[i];
+          if (piece.type == PieceType.king) continue;
+          var heat = piece.heatLevel;
+          if (onSun) {
+            heat = (heat + 1).clamp(0, 3);
+          } else if (heat > 0) {
+            heat = heat - 1;
+          }
+          if (heat != piece.heatLevel) {
+            _replacePieceAt(square, i, piece.copyWith(heatLevel: heat));
+          }
+          if (heat >= 3) {
+            toKillIds.add(piece.pieceId);
+          }
+        }
+      }
+    }
+    // Remove overheated pieces one by one.
+    for (final id in toKillIds) {
+      final ref = _pieceById(id);
+      if (ref == null) continue;
+      if (ref.piece.heatLevel < 3) continue;
+      _onFinalDeath(
+        ref.piece,
+        ref.square,
+        reason: GraveyardReason.ability,
+      );
+      final stack = piecesAt(ref.square).toList();
+      stack.removeWhere((p) => p.pieceId == id);
+      if (stack.isEmpty) {
+        _clearSquare(ref.square);
+      } else {
+        _setCell(ref.square, stack);
+      }
+    }
+
+    _rules.sunPliesUntilRotate--;
+    if (_rules.sunPliesUntilRotate <= 0) {
+      _rules.sunPliesUntilRotate = 10;
+      _rotateSunSquares(count: 3 + _random.nextInt(4));
+    }
   }
 
   void _resolvePassiveAggression(
@@ -7248,10 +7591,12 @@ class ChessGame {
     ({Square square, int index, Piece piece}) current, {
     required bool captured,
   }) {
-    final color = moverBefore.color;
+    final color = current.piece.color;
     final moverId = moverBefore.pieceId;
 
-    if (_rules.troopFatigueActive) {
+    if (_rules.troopFatigueActive ||
+        _rules.frostMapActive ||
+        _rules.swampActive) {
       if (color == PieceColor.white) {
         _rules.whiteLastMovedPieceId = moverId;
       } else {
@@ -7451,6 +7796,38 @@ class ChessGame {
       }
     }
 
+    if (_rules.swampActive) {
+      final refreshed = _pieceById(moverId);
+      if (refreshed != null) {
+        // sticky-style: tick at end of this turn → skip next owner turn.
+        _replacePieceAt(
+          refreshed.square,
+          refreshed.index,
+          refreshed.piece.copyWith(
+            skipTurnsLeft: max(refreshed.piece.skipTurnsLeft, 2),
+          ),
+        );
+      }
+    }
+
+    if (_rules.quicksandHidden.contains(current.square) ||
+        _rules.quicksandRevealed.contains(current.square)) {
+      if (_rules.quicksandHidden.remove(current.square)) {
+        _rules.quicksandRevealed.add(current.square);
+      }
+      final duration = _rules.quicksandDuration[current.square] ?? 3;
+      // +1 because end-of-turn tick runs after this move.
+      _rules.quicksandSkipLeft[moverId] = max(
+        _rules.quicksandSkipLeft[moverId] ?? 0,
+        duration + 1,
+      );
+    }
+
+    if (_rules.frostMapActive) {
+      _rules.frostIdleTurns[moverId] = 0;
+      _rules.frozenPieceIds.remove(moverId);
+    }
+
     if (moverBefore.magicHoovesPending ||
         (_hasEffect(moverBefore, AbilityEffect.magicHooves) &&
             moverBefore.magicHoovesPending)) {
@@ -7609,6 +7986,123 @@ class ChessGame {
     }
   }
 
+  void _activateQuicksand({required int cellCount, required int duration}) {
+    final candidates = <Square>[];
+    for (var rank = 0; rank < _rankCount; rank++) {
+      for (var file = 0; file < _fileCount; file++) {
+        final square = Square(file, rank);
+        if (piecesAt(square).isNotEmpty) continue;
+        if (isGhostCell(square) || isBlocked(square)) continue;
+        candidates.add(square);
+      }
+    }
+    candidates.shuffle(_random);
+    final picked = candidates.take(cellCount.clamp(2, 5)).toList();
+    _rules.quicksandHidden
+      ..clear()
+      ..addAll(picked);
+    for (final square in picked) {
+      _rules.quicksandDuration[square] = duration.clamp(2, 5);
+    }
+  }
+
+  void _activateFrostMap() {
+    _rules.frostMapActive = true;
+    _rules.frostIdleTurns.clear();
+    _rules.frozenPieceIds.clear();
+    for (final color in PieceColor.values) {
+      final eligible = <String>[];
+      for (var rank = 0; rank < _rankCount; rank++) {
+        for (var file = 0; file < _fileCount; file++) {
+          final square = Square(file, rank);
+          for (final piece in piecesAt(square)) {
+            if (piece.color != color || piece.type == PieceType.king) continue;
+            // Exclude edge starting pawns a2/h2 / a7/h7 (and shifted equivalents).
+            if (piece.type == PieceType.pawn) {
+              final homeRank = color == PieceColor.white ? 1 : _rankCount - 2;
+              final edgeFiles = {0, _fileCount - 1};
+              if (square.rank == homeRank && edgeFiles.contains(square.file)) {
+                continue;
+              }
+            }
+            eligible.add(piece.pieceId);
+          }
+        }
+      }
+      eligible.shuffle(_random);
+      _rules.torchPieceIds[color] = eligible.take(3).toSet();
+    }
+  }
+
+  void _transferTorchOnDeath(Piece dead, Square deathSquare) {
+    if (!_rules.frostMapActive) return;
+    final ownerTorches = _rules.torchPieceIds[dead.color];
+    if (ownerTorches == null || !ownerTorches.remove(dead.pieceId)) return;
+
+    final candidates = <({String id, int dist})>[];
+    for (var rank = 0; rank < _rankCount; rank++) {
+      for (var file = 0; file < _fileCount; file++) {
+        final square = Square(file, rank);
+        for (final piece in piecesAt(square)) {
+          if (piece.color != dead.color) continue;
+          if (piece.pieceId == dead.pieceId) continue;
+          if (piece.type == PieceType.king) continue;
+          if (ownerTorches.contains(piece.pieceId)) continue;
+          candidates.add((
+            id: piece.pieceId,
+            dist: _chebyshevDistance(deathSquare, square),
+          ));
+        }
+      }
+    }
+    if (candidates.isEmpty) return;
+    candidates.sort((a, b) => a.dist.compareTo(b.dist));
+    final nearestDist = candidates.first.dist;
+    final nearest = candidates.where((c) => c.dist == nearestDist).toList();
+    ownerTorches.add(nearest[_random.nextInt(nearest.length)].id);
+  }
+
+  void _activateScorchingSun() {
+    _rules.scorchingSunActive = true;
+    _rules.sunPliesUntilRotate = 10;
+    _rotateSunSquares(count: 3 + _random.nextInt(4));
+  }
+
+  void _rotateSunSquares({required int count}) {
+    final all = <Square>[];
+    for (var rank = 0; rank < _rankCount; rank++) {
+      for (var file = 0; file < _fileCount; file++) {
+        all.add(Square(file, rank));
+      }
+    }
+    all.shuffle(_random);
+    _rules.sunSquares
+      ..clear()
+      ..addAll(all.take(count.clamp(3, 6)));
+  }
+
+  void _activateTurncoats() {
+    _rules.turncoatsActive = true;
+    _rules.turncoatSpyIds.clear();
+    _rules.revealedTurncoats.clear();
+    for (final color in PieceColor.values) {
+      final light = <String>[];
+      for (var rank = 0; rank < _rankCount; rank++) {
+        for (var file = 0; file < _fileCount; file++) {
+          for (final piece in piecesAt(Square(file, rank))) {
+            if (piece.color != color) continue;
+            if (piece.type == PieceType.knight ||
+                piece.type == PieceType.bishop) {
+              light.add(piece.pieceId);
+            }
+          }
+        }
+      }
+      if (light.isEmpty) continue;
+      _rules.turncoatSpyIds[color] = light[_random.nextInt(light.length)];
+    }
+  }
+
   void _activateArchitectWalls(int count) {
     final candidates = <String>[];
     for (var rank = 0; rank < _rankCount; rank++) {
@@ -7628,28 +8122,25 @@ class ChessGame {
 
   bool _moveCrossesArchitectWall(Square from, Square to) {
     if (_rules.architectWalls.isEmpty) return false;
-    final df = (to.file - from.file).sign;
-    final dr = (to.rank - from.rank).sign;
+    final df = to.file - from.file;
+    final dr = to.rank - from.rank;
+    // Only sliding rays (rook / bishop / queen). Knights etc. never cross walls.
+    final ortho = df == 0 || dr == 0;
+    final diag = df.abs() == dr.abs();
+    if ((!ortho && !diag) || (df == 0 && dr == 0)) return false;
+
+    final stepF = df.sign;
+    final stepR = dr.sign;
     var f = from.file;
     var r = from.rank;
+    // Walk cell-by-cell until we reach [to]; walls sit between adjacent cells.
     while (f != to.file || r != to.rank) {
-      final next = Square(f + df, r + dr);
+      final nextF = f + stepF;
+      final nextR = r + stepR;
+      final next = Square(nextF, nextR);
       if (_rules.hasWallBetween(Square(f, r), next)) return true;
-      f = next.file;
-      r = next.rank;
-      if ((to.file - from.file).abs() > 1 &&
-          (to.rank - from.rank).abs() > 1 &&
-          df != 0 &&
-          dr != 0 &&
-          (f - from.file).abs() != (r - from.rank).abs()) {
-        break;
-      }
-    }
-    // Adjacent step
-    if ((to.file - from.file).abs() + (to.rank - from.rank).abs() == 1 ||
-        ((to.file - from.file).abs() == 1 &&
-            (to.rank - from.rank).abs() == 1)) {
-      return _rules.hasWallBetween(from, to);
+      f = nextF;
+      r = nextR;
     }
     return false;
   }
