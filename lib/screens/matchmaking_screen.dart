@@ -56,8 +56,14 @@ class _MatchmakingScreenState extends State<MatchmakingScreen> {
 
   void _onEvent(OnlineEvent event) {
     switch (event) {
-      case OnlineSearching():
-        setState(() => _status = 'Поиск соперника...');
+      case OnlineSearching(:final count):
+        setState(() {
+          if (count == null) {
+            _status = 'Поиск соперника...';
+          } else {
+            _status = 'Поиск соперника...\nСейчас ищут: $count';
+          }
+        });
       case OnlineMatched():
         _subscription?.cancel();
         if (!mounted) return;

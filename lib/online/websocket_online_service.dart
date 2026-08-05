@@ -33,7 +33,6 @@ class WebSocketOnlineService implements OnlineGameService {
 
   @override
   Future<void> findGame({String playerName = 'Player'}) async {
-    _events.add(OnlineSearching());
     _send({'type': 'find_game', 'name': playerName});
   }
 
@@ -158,6 +157,11 @@ class WebSocketOnlineService implements OnlineGameService {
   void _onMessage(dynamic raw) {
     final data = jsonDecode(raw as String) as Map<String, dynamic>;
     switch (data['type'] as String) {
+      case 'queue_size':
+      case 'searching':
+        _events.add(
+          OnlineSearching(count: data['count'] as int? ?? 0),
+        );
       case 'matched':
         _gameId = data['gameId'] as String;
         _events.add(

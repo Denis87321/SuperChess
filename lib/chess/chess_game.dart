@@ -2209,7 +2209,11 @@ class ChessGame {
         } else if (offer.ability == GameAbility.boardMirror) {
           _mirrorActive = true;
         } else if (offer.ability == GameAbility.boardGhostCells) {
-          _applyGhostCells(offer.ghostCellCount ?? (2 + _random.nextInt(4)));
+          final rng = _rngForOffer(offer);
+          _applyGhostCells(
+            offer.ghostCellCount ?? (2 + rng.nextInt(4)),
+            rng,
+          );
         } else if (offer.ability == GameAbility.boardAttraction) {
           _attractionActive = true;
           _attractionMoveCounter = 0;
@@ -2218,13 +2222,18 @@ class ChessGame {
         } else if (offer.ability == GameAbility.boardInvisibleRegiment) {
           _applyInvisibleRegiment();
         } else if (offer.ability == GameAbility.boardShuffle) {
-          _applyShuffle();
+          _applyShuffle(_rngForOffer(offer));
         } else if (offer.ability == GameAbility.boardTeleport) {
-          _applyTeleport(offer.teleportA, offer.teleportB);
+          _applyTeleport(
+            offer.teleportA,
+            offer.teleportB,
+            _rngForOffer(offer),
+          );
         } else if (offer.ability == GameAbility.boardVanityFair) {
           _applyVanityFair(color);
         } else if (offer.ability == GameAbility.boardMinefield) {
-          _applyMinefield(offer.mineCount ?? (1 + _random.nextInt(3)));
+          final rng = _rngForOffer(offer);
+          _applyMinefield(offer.mineCount ?? (1 + rng.nextInt(3)), rng);
         } else if (offer.ability == GameAbility.boardGolconda) {
           _golcondaActive = true;
         } else if (offer.ability == GameAbility.boardUnbridledHorse) {
@@ -2243,9 +2252,9 @@ class ChessGame {
         } else if (offer.ability == GameAbility.boardZebras) {
           _zebrasActive = true;
         } else if (offer.ability == GameAbility.boardFisher) {
-          _applyFisher(madness: false);
+          _applyFisher(madness: false, rngSeed: offer.rngSeed);
         } else if (offer.ability == GameAbility.boardFisherMadness) {
-          _applyFisher(madness: true);
+          _applyFisher(madness: true, rngSeed: offer.rngSeed);
         } else if (offer.ability == GameAbility.boardFourHorsemen) {
           _fourHorsemenActive = true;
         } else if (offer.ability == GameAbility.randomShift &&
@@ -2543,19 +2552,23 @@ class ChessGame {
     );
   }
 
-  void _applyFisher({required bool madness}) {
+  Random _rngForOffer(AbilityOffer offer) =>
+      offer.rngSeed != null ? Random(offer.rngSeed!) : _random;
+
+  void _applyFisher({required bool madness, int? rngSeed}) {
+    final rng = rngSeed != null ? Random(rngSeed) : _random;
     if (madness) {
-      _applyFisherMadness(PieceColor.white);
-      _applyFisherMadness(PieceColor.black);
+      _applyFisherMadness(PieceColor.white, rng);
+      _applyFisherMadness(PieceColor.black, rng);
     } else {
-      _applyClassicFisher();
+      _applyClassicFisher(rng);
     }
   }
 
   /// Классические шахматы Фишера (Chess960):
   /// пешки на 2/7, одна и та же расстановка сзади у обоих (зеркало по файлам),
   /// слоны на разнопольных клетках, король между ладьями.
-  void _applyClassicFisher() {
+  void _applyClassicFisher(Random rng) {
     final whiteBack = 0;
     final blackBack = _rankCount - 1;
 
@@ -2575,7 +2588,7 @@ class ChessGame {
     var arrangement = List<PieceType>.from(types);
     var valid = false;
     for (var attempt = 0; attempt < 5000 && !valid; attempt++) {
-      arrangement.shuffle(_random);
+      arrangement.shuffle(rng);
       valid = _isValidChess960Arrangement(arrangement, whiteSlots, whiteBack);
     }
     if (!valid) return;
@@ -2661,7 +2674,7 @@ class ChessGame {
   /// между этими 16 клетками. Слоны на разных цветах; король не обязан
   /// быть между ладьями; расстановки сторон независимы; рокировки нет.
   /// Король после перемешивания не должен оказаться под шахом.
-  void _applyFisherMadness(PieceColor color) {
+  void _applyFisherMadness(PieceColor color, Random rng) {
     final backRank = color == PieceColor.white ? 0 : _rankCount - 1;
     final pawnRank = color == PieceColor.white ? 1 : _rankCount - 2;
 
@@ -2688,7 +2701,7 @@ class ChessGame {
     var placed = List<Piece>.from(pieces);
     var valid = false;
     for (var attempt = 0; attempt < 8000 && !valid; attempt++) {
-      placed.shuffle(_random);
+      placed.shuffle(rng);
       if (!_bishopsOnOppositeColors(placed, squares)) continue;
 
       for (final square in squares) {
@@ -3659,7 +3672,8 @@ class ChessGame {
     }
   }
 
-  void _applyMinefield(int count) {
+  void _applyMinefield(int count, [Random? rng]) {
+    final random = rng ?? _random;
     final candidates = <Square>[];
     for (var rank = 0; rank < _rankCount; rank++) {
       for (var file = 0; file < _fileCount; file++) {
@@ -3671,7 +3685,7 @@ class ChessGame {
         candidates.add(square);
       }
     }
-    candidates.shuffle(_random);
+    candidates.shuffle(random);
     _mines.addAll(candidates.take(min(count, candidates.length)));
   }
 
@@ -3701,7 +3715,8 @@ class ChessGame {
     return move.to;
   }
 
-  void _applyGhostCells(int count) {
+  void _applyGhostCells(int count, [Random? rng]) {
+    final random = rng ?? _random;
     final candidates = <Square>[];
     for (var rank = 0; rank < _rankCount; rank++) {
       for (var file = 0; file < _fileCount; file++) {
@@ -3713,24 +3728,26 @@ class ChessGame {
         candidates.add(square);
       }
     }
-    candidates.shuffle(_random);
+    candidates.shuffle(random);
     final n = min(count, candidates.length);
     _ghostCells.addAll(candidates.take(n));
   }
 
-  void _applyShuffle() {
+  void _applyShuffle([Random? rng]) {
+    final random = rng ?? _random;
     _shuffledSquareLight = [
       for (var rank = 0; rank < _rankCount; rank++)
-        [for (var file = 0; file < _fileCount; file++) _random.nextBool()],
+        [for (var file = 0; file < _fileCount; file++) random.nextBool()],
     ];
   }
 
-  void _applyTeleport(Square? a, Square? b) {
+  void _applyTeleport(Square? a, Square? b, [Random? rng]) {
     if (a != null && b != null && a != b) {
       _teleportA = a;
       _teleportB = b;
       return;
     }
+    final random = rng ?? _random;
     final candidates = <Square>[];
     for (var rank = 0; rank < _rankCount; rank++) {
       for (var file = 0; file < _fileCount; file++) {
@@ -3740,7 +3757,7 @@ class ChessGame {
       }
     }
     if (candidates.length < 2) return;
-    candidates.shuffle(_random);
+    candidates.shuffle(random);
     _teleportA = candidates[0];
     _teleportB = candidates[1];
   }

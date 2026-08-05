@@ -1561,6 +1561,7 @@ class AbilityOffer {
     this.route = const [],
     this.hiddenData = const {},
     this.forColor,
+    this.rngSeed,
   });
 
   final GameAbility ability;
@@ -1598,6 +1599,9 @@ class AbilityOffer {
   /// Цвет игрока, которому предлагают / который выбирает модификацию.
   final PieceColor? forColor;
 
+  /// Seed для детерминированного RNG при применении (онлайн-синхронизация).
+  final int? rngSeed;
+
   AbilityOffer withChooser(PieceColor color, {int? rankCount}) {
     return AbilityOffer(
       ability: ability,
@@ -1632,6 +1636,7 @@ class AbilityOffer {
       route: route,
       hiddenData: hiddenData,
       forColor: color,
+      rngSeed: rngSeed,
     );
   }
 
@@ -1696,6 +1701,7 @@ class AbilityOffer {
     'route': route.map(_squareToJson).toList(),
     'hiddenData': hiddenData,
     'forColor': forColor?.name,
+    'rngSeed': rngSeed,
   };
 
   factory AbilityOffer.fromJson(Map<String, dynamic> json) {
@@ -1753,6 +1759,7 @@ class AbilityOffer {
         json['hiddenData'] as Map? ?? const {},
       ),
       forColor: enumValue(PieceColor.values, json['forColor']),
+      rngSeed: json['rngSeed'] as int?,
     );
   }
 }

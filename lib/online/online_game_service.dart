@@ -17,7 +17,12 @@ class OnlineMatch {
 
 sealed class OnlineEvent {}
 
-class OnlineSearching extends OnlineEvent {}
+class OnlineSearching extends OnlineEvent {
+  OnlineSearching({this.count});
+
+  /// Сколько игроков сейчас в очереди поиска (включая себя).
+  final int? count;
+}
 
 class OnlineMatched extends OnlineEvent {
   OnlineMatched(this.match);

@@ -855,6 +855,52 @@ void main() {
     expect(game.isInCheck(PieceColor.black), isFalse);
   });
 
+  test('fisher madness same rngSeed yields identical boards', () {
+    const seed = 424242;
+    final offer = AbilityOffer(
+      ability: GameAbility.boardFisherMadness,
+      applyMode: AbilityApplyMode.boardWide,
+      rngSeed: seed,
+      forColor: PieceColor.white,
+    );
+    final safeBlack = AbilityOffer(
+      ability: GameAbility.boardSprint,
+      applyMode: AbilityApplyMode.boardWide,
+      forColor: PieceColor.black,
+    );
+
+    PieceType? typeAt(ChessGame g, Square s) => g.pieceAt(s)?.type;
+
+    ChessGame build() {
+      final game = ChessGame(catalog: AbilityCatalog(random: Random(1)));
+      game.applyStartAbility(
+        PieceColor.white,
+        offer.ability,
+        remoteOffer: offer,
+      );
+      game.applyStartAbility(
+        PieceColor.black,
+        safeBlack.ability,
+        remoteOffer: safeBlack,
+      );
+      return game;
+    }
+
+    final a = build();
+    final b = build();
+    for (var rank = 0; rank < 8; rank++) {
+      for (var file = 0; file < 8; file++) {
+        final square = Square(file, rank);
+        expect(typeAt(a, square), typeAt(b, square), reason: '$square');
+        expect(
+          a.pieceAt(square)?.color,
+          b.pieceAt(square)?.color,
+          reason: '$square color',
+        );
+      }
+    }
+  });
+
   test('long step onto last rank offers promotion', () {
     final game = _readyGame();
     for (var rank = 0; rank < 8; rank++) {

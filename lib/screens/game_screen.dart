@@ -130,7 +130,12 @@ class _GameScreenState extends State<GameScreen> {
 
     final offer = offers.firstWhere((o) => o.ability == chosen);
     setState(() {
-      _game.applyStartAbility(color, chosen!, lavaRank: offer.lavaRank);
+      _game.applyStartAbility(
+        color,
+        chosen!,
+        lavaRank: offer.lavaRank,
+        remoteOffer: offer,
+      );
     });
     widget.onlineService?.sendStartAbility(
       color,
@@ -1194,6 +1199,10 @@ class _GameScreenState extends State<GameScreen> {
   bool get _uiFlipped =>
       !widget.isOnline && _rotateForBlack && _game.turn == PieceColor.black;
 
+  /// Онлайн за чёрных: 8-я горизонталь снизу (как на Lichess).
+  bool get _boardPerspectiveFlipped =>
+      widget.isOnline && widget.localColor == PieceColor.black;
+
   Widget _flipOverlay(Widget child) {
     if (!_uiFlipped) return child;
     return Transform.rotate(angle: math.pi, child: child);
@@ -1338,6 +1347,7 @@ class _GameScreenState extends State<GameScreen> {
                       pieceFlight: _pieceFlight,
                       onPieceFlightFinished: _onPieceFlightFinished,
                       rotatePieces: _uiFlipped,
+                      flipBoard: _boardPerspectiveFlipped,
                     ),
                   );
                 },
@@ -1859,6 +1869,7 @@ class _ChessBoard extends StatelessWidget {
     this.pieceFlight,
     this.onPieceFlightFinished,
     this.rotatePieces = false,
+    this.flipBoard = false,
   });
 
   final ChessGame game;
@@ -1873,6 +1884,7 @@ class _ChessBoard extends StatelessWidget {
   final _PieceFlight? pieceFlight;
   final VoidCallback? onPieceFlightFinished;
   final bool rotatePieces;
+  final bool flipBoard;
 
   bool _isHighlighted(Square square) {
     return availableMoves.any((move) => move.to == square);
@@ -2326,8 +2338,8 @@ class _ChessBoard extends StatelessWidget {
     }
     final boardWidth = cellSize * fileCount;
     final boardHeight = cellSize * rankCount;
-    final bottomRank = 0;
-    final rightFile = fileCount - 1;
+    final bottomRank = flipBoard ? rankCount - 1 : 0;
+    final rightFile = flipBoard ? 0 : fileCount - 1;
 
     return SizedBox(
       width: boardWidth,
@@ -2337,9 +2349,11 @@ class _ChessBoard extends StatelessWidget {
         children: [
           Column(
             children: List.generate(rankCount, (displayRow) {
-              final rank = rankCount - 1 - displayRow;
+              final rank = flipBoard ? displayRow : rankCount - 1 - displayRow;
               return Row(
-                children: List.generate(fileCount, (file) {
+                children: List.generate(fileCount, (displayCol) {
+                  final file =
+                      flipBoard ? fileCount - 1 - displayCol : displayCol;
                   final square = Square(file, rank);
                   return _buildCell(
                     cellSize: cellSize,
@@ -2377,6 +2391,8 @@ class _ChessBoard extends StatelessWidget {
               flight: pieceFlight!,
               cellSize: cellSize,
               rankCount: rankCount,
+              fileCount: fileCount,
+              flipBoard: flipBoard,
               rotatePiece: rotatePieces,
               onFinished: onPieceFlightFinished ?? () {},
             ),
@@ -2393,12 +2409,16 @@ class _FlyingPiece extends StatefulWidget {
     required this.cellSize,
     required this.rankCount,
     required this.onFinished,
+    this.fileCount = 8,
+    this.flipBoard = false,
     this.rotatePiece = false,
   });
 
   final _PieceFlight flight;
   final double cellSize;
   final int rankCount;
+  final int fileCount;
+  final bool flipBoard;
   final VoidCallback onFinished;
   final bool rotatePiece;
 
@@ -2412,10 +2432,11 @@ class _FlyingPieceState extends State<_FlyingPiece>
   late final Animation<Offset> _position;
 
   Offset _offsetFor(Square square) {
-    return Offset(
-      square.file * widget.cellSize,
-      (widget.rankCount - 1 - square.rank) * widget.cellSize,
-    );
+    final displayFile =
+        widget.flipBoard ? widget.fileCount - 1 - square.file : square.file;
+    final displayRank =
+        widget.flipBoard ? square.rank : widget.rankCount - 1 - square.rank;
+    return Offset(displayFile * widget.cellSize, displayRank * widget.cellSize);
   }
 
   @override

@@ -43,6 +43,18 @@ Future<void> main() async {
 final _waiting = <_QueuedPlayer>[];
 final _games = <String, _GameRoom>{};
 
+void _broadcastQueueSize() {
+  final payload = jsonEncode({
+    'type': 'queue_size',
+    'count': _waiting.length,
+  });
+  for (final player in _waiting) {
+    try {
+      player.channel.sink.add(payload);
+    } catch (_) {}
+  }
+}
+
 class _QueuedPlayer {
   _QueuedPlayer({
     required this.channel,
@@ -145,13 +157,21 @@ class _ClientConnection {
         'color': 'black',
         'opponentName': opponent.name,
       }));
+
+      _broadcastQueueSize();
     } else {
       _waiting.add(player);
+      _broadcastQueueSize();
     }
   }
 
   void _onDisconnect() {
+    final wasWaiting =
+        _waiting.any((p) => p.channel == _channel);
     _waiting.removeWhere((p) => p.channel == _channel);
+    if (wasWaiting) {
+      _broadcastQueueSize();
+    }
     for (final room in _games.values.toList()) {
       if (room.white.channel == _channel || room.black.channel == _channel) {
         room.close();

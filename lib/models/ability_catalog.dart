@@ -812,9 +812,17 @@ class AbilityCatalog {
         ability == GameAbility.boardBloodOath ||
         ability == GameAbility.boardSilentFile ||
         ability == GameAbility.boardFourHorsemen) {
+      final needsSeed =
+          ability == GameAbility.boardFisher ||
+          ability == GameAbility.boardFisherMadness ||
+          ability == GameAbility.boardShuffle ||
+          ability == GameAbility.boardTeleport ||
+          ability == GameAbility.boardGhostCells ||
+          ability == GameAbility.boardMinefield;
       return AbilityOffer(
         ability: ability,
         applyMode: AbilityApplyMode.boardWide,
+        rngSeed: needsSeed ? _random.nextInt(1 << 30) : null,
       );
     }
     return AbilityOffer(
