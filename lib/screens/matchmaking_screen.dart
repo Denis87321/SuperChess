@@ -60,8 +60,12 @@ class _MatchmakingScreenState extends State<MatchmakingScreen> {
         setState(() {
           if (count == null) {
             _status = 'Поиск соперника...';
+          } else if (count <= 1) {
+            _status =
+                'Поиск соперника...\nСейчас ищут: $count (Это Вы)';
           } else {
-            _status = 'Поиск соперника...\nСейчас ищут: $count';
+            _status =
+                'Поиск соперника...\nСейчас ищут: $count';
           }
         });
       case OnlineMatched():

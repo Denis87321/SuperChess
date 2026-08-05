@@ -58,10 +58,18 @@ cd server
 dart run bin/server.dart
 ```
 
+По умолчанию клиент ходит на Render (`wss://superchess-api.onrender.com/ws`).
+Для локального сервера явно укажи URL:
+
 ```powershell
-flutter run -d edge
+# ПК / Edge
+flutter run -d edge --dart-define=SUPERCHESS_SERVER_URL=ws://127.0.0.1:8080/ws
+
+# Android-эмулятор → сервер на хосте
+flutter run --dart-define=SUPERCHESS_SERVER_URL=ws://10.0.2.2:8080/ws
 ```
 
+Без `--dart-define` приложение и сайт ищут игру на том же Render API.
 ---
 
 ## Файлы

@@ -63,6 +63,9 @@ class _GameScreenState extends State<GameScreen> {
   final GameClock _clock = GameClock();
   Timer? _clockTimer;
   final List<ChatLine> _chat = [];
+  int _unreadChat = 0;
+  String? _chatToastText;
+  Timer? _chatToastTimer;
   bool _awaitingDrawResponse = false;
   bool _awaitingTakebackResponse = false;
 
@@ -94,6 +97,7 @@ class _GameScreenState extends State<GameScreen> {
   void dispose() {
     _skillChoiceTimer?.cancel();
     _clockTimer?.cancel();
+    _chatToastTimer?.cancel();
     _onlineSub?.cancel();
     if (widget.isOnline) {
       widget.onlineService!.dispose();
@@ -233,6 +237,10 @@ class _GameScreenState extends State<GameScreen> {
       case OnlineChatMessage():
         setState(() {
           _chat.add(ChatLine(text: event.text, mine: !event.fromOpponent));
+          if (event.fromOpponent) {
+            _unreadChat++;
+            _showChatToast(event.text);
+          }
         });
       case OnlineResign():
         // Opponent resigned → we win.
@@ -510,13 +518,32 @@ class _GameScreenState extends State<GameScreen> {
     widget.onlineService?.sendChat(trimmed);
   }
 
+  void _showChatToast(String text) {
+    _chatToastTimer?.cancel();
+    _chatToastText = text;
+    _chatToastTimer = Timer(const Duration(seconds: 3), () {
+      if (!mounted) return;
+      setState(() => _chatToastText = null);
+    });
+  }
+
   Future<void> _openChatSheet() async {
+    setState(() {
+      _unreadChat = 0;
+      _chatToastText = null;
+    });
+    _chatToastTimer?.cancel();
     await OnlineChatPanel.showSheet(
       context: context,
       messages: _chat,
       onSend: _sendChat,
     );
-    if (mounted) setState(() {});
+    if (mounted) {
+      setState(() {
+        _unreadChat = 0;
+        _chatToastText = null;
+      });
+    }
   }
 
   void _checkStateHash(String? remoteHash, String source) {
@@ -641,6 +668,11 @@ class _GameScreenState extends State<GameScreen> {
       case GameEndReason.drawAgreed:
         return 'ничья';
       case GameEndReason.resign:
+        if (widget.isOnline && widget.localColor != null) {
+          return _game.winnerColor == widget.localColor
+              ? 'Ваш соперник сдался'
+              : 'Вы сдались';
+        }
         return 'сдача';
       case GameEndReason.timeout:
         return 'время вышло';
@@ -1755,42 +1787,85 @@ class _GameScreenState extends State<GameScreen> {
                         right: 4,
                         bottom: math.max(4, bottomPad),
                       ),
-                      child: Row(
+                      child: Stack(
+                        clipBehavior: Clip.none,
                         children: [
-                          IconButton(
-                            tooltip: 'Меню',
-                            onPressed: _game.isGameOver
-                                ? null
-                                : () => unawaited(_openMobileMenu()),
-                            icon: const Icon(
-                              Icons.menu_rounded,
-                              color: BalatroTheme.cream,
-                            ),
-                          ),
-                          IconButton(
-                            tooltip: 'Чат',
-                            onPressed: () => unawaited(_openChatSheet()),
-                            icon: Badge(
-                              isLabelVisible: _chat.any((c) => !c.mine),
-                              child: const Icon(
-                                Icons.chat_bubble_outline_rounded,
-                                color: BalatroTheme.cream,
+                          Row(
+                            children: [
+                              IconButton(
+                                tooltip: 'Меню',
+                                onPressed: _game.isGameOver
+                                    ? null
+                                    : () => unawaited(_openMobileMenu()),
+                                icon: const Icon(
+                                  Icons.menu_rounded,
+                                  color: BalatroTheme.cream,
+                                ),
                               ),
-                            ),
+                              IconButton(
+                                tooltip: 'Чат',
+                                onPressed: () => unawaited(_openChatSheet()),
+                                icon: Badge(
+                                  isLabelVisible: _unreadChat > 0,
+                                  backgroundColor: const Color(0xFFE53935),
+                                  smallSize: 10,
+                                  child: const Icon(
+                                    Icons.chat_bubble_outline_rounded,
+                                    color: BalatroTheme.cream,
+                                  ),
+                                ),
+                              ),
+                              const Spacer(),
+                              if (_game.isAwaitingGallop && _isMyTurn)
+                                TextButton(
+                                  onPressed: _skipGallop,
+                                  child: Text(
+                                    'Галоп',
+                                    style: BalatroTheme.statusStyle.copyWith(
+                                      fontSize: 12,
+                                      color: BalatroTheme.gold,
+                                    ),
+                                  ),
+                                ),
+                              _modsButton(),
+                            ],
                           ),
-                          const Spacer(),
-                          if (_game.isAwaitingGallop && _isMyTurn)
-                            TextButton(
-                              onPressed: _skipGallop,
-                              child: Text(
-                                'Галоп',
-                                style: BalatroTheme.statusStyle.copyWith(
-                                  fontSize: 12,
-                                  color: BalatroTheme.gold,
+                          if (_chatToastText != null)
+                            Positioned(
+                              left: 52,
+                              bottom: 48,
+                              child: IgnorePointer(
+                                child: AnimatedOpacity(
+                                  opacity: 1,
+                                  duration: const Duration(milliseconds: 200),
+                                  child: ConstrainedBox(
+                                    constraints: const BoxConstraints(
+                                      maxWidth: 220,
+                                    ),
+                                    child: Material(
+                                      color: BalatroTheme.felt,
+                                      elevation: 6,
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 8,
+                                        ),
+                                        child: Text(
+                                          _chatToastText!,
+                                          maxLines: 3,
+                                          overflow: TextOverflow.ellipsis,
+                                          style:
+                                              BalatroTheme.statusStyle.copyWith(
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
-                          _modsButton(),
                         ],
                       ),
                     ),
