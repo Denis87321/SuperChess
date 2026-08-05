@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_strings.dart';
 import '../theme/balatro_theme.dart';
 
 class ChatLine {
@@ -86,6 +87,7 @@ class _OnlineChatPanelState extends State<OnlineChatPanel> {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     return Material(
       color: BalatroTheme.felt,
       child: Column(
@@ -94,7 +96,7 @@ class _OnlineChatPanelState extends State<OnlineChatPanel> {
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
             child: Text(
-              'Чат',
+              s.chat,
               style: BalatroTheme.titleStyle.copyWith(fontSize: 14),
             ),
           ),
@@ -103,7 +105,7 @@ class _OnlineChatPanelState extends State<OnlineChatPanel> {
             child: widget.messages.isEmpty
                 ? Center(
                     child: Text(
-                      'Пока тихо',
+                      s.chatEmpty,
                       style: BalatroTheme.statusStyle.copyWith(
                         fontSize: 12,
                         color: BalatroTheme.cream.withValues(alpha: 0.45),
@@ -153,7 +155,7 @@ class _OnlineChatPanelState extends State<OnlineChatPanel> {
                     style: BalatroTheme.statusStyle.copyWith(fontSize: 13),
                     decoration: InputDecoration(
                       isDense: true,
-                      hintText: 'Сообщение…',
+                      hintText: s.messageHint,
                       hintStyle: BalatroTheme.statusStyle.copyWith(
                         fontSize: 13,
                         color: BalatroTheme.cream.withValues(alpha: 0.35),

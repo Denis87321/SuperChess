@@ -1,6 +1,13 @@
 # Render Blueprint
-# - Web Service: matchmaking WebSocket
-# - Static Site: Flutter web (prebuilt in /public — no Flutter on Render)
+# - Postgres: accounts
+# - Web Service: matchmaking WebSocket + auth HTTP
+# - Static Site: Flutter web (prebuilt in /public)
+
+databases:
+  - name: superchess-db
+    plan: free
+    region: frankfurt
+    postgresMajorVersion: "16"
 
 services:
   - type: web
@@ -11,12 +18,18 @@ services:
     dockerfilePath: ./server/Dockerfile
     dockerContext: ./server
     healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: superchess-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
 
   - type: web
     name: superchess-web
     runtime: static
     plan: free
     region: frankfurt
-    # Prebuilt Flutter web in /public (Render has no Flutter SDK).
     buildCommand: "echo Using prebuilt public/"
     staticPublishPath: ./public

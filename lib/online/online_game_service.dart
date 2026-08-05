@@ -8,11 +8,19 @@ class OnlineMatch {
     required this.gameId,
     required this.localColor,
     required this.opponentName,
+    this.rated = false,
+    this.yourRating,
+    this.opponentRating,
+    this.opponentLoggedIn = false,
   });
 
   final String gameId;
   final PieceColor localColor;
   final String opponentName;
+  final bool rated;
+  final int? yourRating;
+  final int? opponentRating;
+  final bool opponentLoggedIn;
 }
 
 sealed class OnlineEvent {}
@@ -153,7 +161,10 @@ abstract class OnlineGameService {
 
   Future<void> connect();
 
-  Future<void> findGame({String playerName = 'Player'});
+  Future<void> findGame({
+    String playerName = 'Player',
+    String? token,
+  });
 
   void sendStartAbility(
     PieceColor color,

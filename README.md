@@ -1,6 +1,6 @@
 # super_chess
 
-Chess with capture abilities — SuperChess (Flutter).
+Chess with mods — SuperChess (Flutter).
 
 ## Play online (local)
 

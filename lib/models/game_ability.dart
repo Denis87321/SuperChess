@@ -737,7 +737,7 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.boardDoubleStart:
         return 'Пешки с начальной линии один раз за партию могут пройти 3 клетки вперёд';
       case GameAbility.boardSprint:
-        return 'На выбор модификации даётся 10 секунд вместо 30';
+        return 'На выбор мода даётся 10 секунд вместо 30';
       case GameAbility.boardZebras:
         return 'Все кони становятся общими: оба игрока ходят ими в свой ход. Этими конями нельзя дать шах или мат';
       case GameAbility.boardFisher:
@@ -763,7 +763,7 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.boardAttraction:
         return 'Каждые 10 ходов все фигуры сдвигаются на 1 клетку к центру доски (d4, d5, e4, e5), если это возможно';
       case GameAbility.boardVirus:
-        return 'После взятия фигура заражает соседнюю вражескую: та теряет одну модификацию';
+        return 'После взятия фигура заражает соседнюю вражескую: та теряет одну мод';
       case GameAbility.boardInvisibleRegiment:
         return 'Оба игрока не видят пешки соперника, пока те не сделают взятие или не дойдут до 4-й линии (для чёрных — до 5-й)';
       case GameAbility.boardShuffle:
@@ -787,7 +787,7 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.boardFourHorsemen:
         return 'Первое взятие каждого коня превращает жертву в вашу фигуру: оба остаются на клетке, пока кто-то не уйдёт';
       case GameAbility.boardReroll:
-        return 'Все игроки до конца игры могут обновлять предложенные модификации';
+        return 'Все игроки до конца игры могут обновлять предложенные моды';
       case GameAbility.boardPassiveAggression:
         return 'Каждый игрок должен поставить шах хотя бы раз за 10 своих ходов, иначе он проигрывает; после шаха счётчик снова равен 10';
       case GameAbility.boardSkipTurn:
@@ -817,15 +817,15 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.boardArchitect:
         return 'Между случайными соседними клетками появляются 3–8 стен: через них нельзя ходить и атаковать';
       case GameAbility.boardBigAssortment:
-        return 'До конца игры вы выбираете из 4 модификаций';
+        return 'До конца игры вы выбираете из 4 модов';
       case GameAbility.boardBlindSpot:
-        return 'Модификации соперника скрыты знаками вопроса; свои видны как обычно';
+        return 'Моды соперника скрыты знаками вопроса; свои видны как обычно';
       case GameAbility.boardOnlyEqualsKill:
         return 'Пять взятий фигур того же типа, что и взявшая, приносят победу';
       case GameAbility.boardMarseillesChess:
         return 'За один ход игрок делает два последовательных движения. В сбалансированном варианте белые на первом ходу делают только одно движение';
       case GameAbility.boardInitiativeFear:
-        return 'Первый игрок, чья фигура будет съедена, дополнительно выбирает модификацию вне обычной волны раз в 3 хода';
+        return 'Первый игрок, чья фигура будет съедена, дополнительно выбирает мод вне обычной волны раз в 3 хода';
       case GameAbility.pawnSideways:
         return 'Выбранная пешка может сходить на 1 клетку вбок';
       case GameAbility.pawnInverted:
@@ -849,11 +849,11 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.pawnPolymorph:
         return 'После взятия выбранная пешка на 1 следующий ход становится типом съеденной фигуры и ходит как она';
       case GameAbility.pawnInheritance:
-        return 'После гибели выбранной пешки все её модификации переходят ближайшей своей пешке';
+        return 'После гибели выбранной пешки все её моды переходят ближайшей своей пешке';
       case GameAbility.pawnRansom:
-        return 'При попытке взять выбранную пешку можно уничтожить одну её модификацию и отменить взятие';
+        return 'При попытке взять выбранную пешку можно уничтожить одну её мод и отменить взятие';
       case GameAbility.pawnForTheKing:
-        return 'Если выбранная пешка погибает на мине, ваш король получает выбор модификации';
+        return 'Если выбранная пешка погибает на мине, ваш король получает выбор мода';
       case GameAbility.pawnCamouflageNet:
         return 'Фигура, окружённая тремя или более вашими пешками, невидима для соперника';
       case GameAbility.pawnTrench:
@@ -888,7 +888,7 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.knightGuard:
         return 'Выбранный конь выбирает доступную клетку и 3 хода защищает её: вставшую туда вражескую фигуру он сразу берёт вне хода';
       case GameAbility.knightTour:
-        return 'Посетив 8 разных клеток, выбранный конь получает дополнительную модификацию';
+        return 'Посетив 8 разных клеток, выбранный конь получает дополнительную мод';
       case GameAbility.knightDoppelgangerOnce:
         return 'После хода выбранный конь один раз оставляет иллюзию на стартовой клетке; её видит только соперник';
       case GameAbility.knightDoppelgangers:
@@ -913,7 +913,7 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.bishopColorChaos:
         return 'Один раз выбранный слон может встать на соседнюю пустую клетку, сменив цвет поля';
       case GameAbility.bishopInquisitor:
-        return 'Вместо взятия выбранный слон может снять одну модификацию с атакуемой вражеской фигуры, оставаясь на месте';
+        return 'Вместо взятия выбранный слон может снять одну мод с атакуемой вражеской фигуры, оставаясь на месте';
       case GameAbility.bishopColorVow:
         return 'Выбранный слон привязан к цвету своей клетки и погибает на другом цвете; зато может рикошетить на 1 клетку от края доски';
       case GameAbility.bishopBrothers:
@@ -923,13 +923,13 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.bishopExcommunication:
         return 'После взятия фигуры выбранным слоном другие враги того же типа до следующего хода этого слона не могут брать его';
       case GameAbility.bishopTithe:
-        return 'Модифицированный враг, покинувший диагональ выбранного слона, до следующего хода этого слона теряет одну модификацию';
+        return 'Модифицированный враг, покинувший диагональ выбранного слона, до следующего хода этого слона теряет одну мод';
       case GameAbility.bishopPilgrimage:
         return 'Посетив все четыре четверти доски, выбранный слон выбирает союзника и защищает его от следующего взятия';
       case GameAbility.bishopCrusade:
         return 'После двух взятий выбранным слоном на доске срабатывает случайный катаклизм';
       case GameAbility.bishopPost:
-        return 'Три хода выбранного слона без взятий дают два выбора модификаций подряд';
+        return 'Три хода выбранного слона без взятий дают два выбора модов подряд';
       case GameAbility.bishopParallelWorlds:
         return 'Выбранный слон один раз меняется местами с союзной фигурой на той же диагонали';
       case GameAbility.bishopAlcove:
@@ -945,7 +945,7 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.rookFortress:
         return 'Клетка перед выбранной ладьёй — укрепление: вражеские пешки и лёгкие фигуры не могут съесть фигуру на ней';
       case GameAbility.rookStandardBearer:
-        return 'Фигуры на восьми клетках вокруг выбранной ладьи нельзя перемещать принудительными эффектами модификаций';
+        return 'Фигуры на восьми клетках вокруг выбранной ладьи нельзя перемещать принудительными эффектами модов';
       case GameAbility.rookCustoms:
         return 'Следующие 3 хода враги не могут вставать на выбранную случайно горизонталь или вертикаль ладьи, если уже не находятся на ней';
       case GameAbility.rookDrawbridge:
@@ -973,7 +973,7 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.queenDelayedSentence:
         return 'Выбранный ферзь отмечает атакуемого врага; после хода соперника тот погибает, если всё ещё находится под атакой ферзя';
       case GameAbility.queenTrophyEmbargo:
-        return 'Взятие на клетке под контролем выбранного ферзя больше не даёт награды (правило совместимости; волны модификаций от взятий не зависят)';
+        return 'Взятие на клетке под контролем выбранного ферзя больше не даёт награды (правило совместимости; волны модов от взятий не зависят)';
       case GameAbility.queenYouShallNotPass:
         return 'Вражеская фигура, взявшая выбранного ферзя, тоже уничтожается';
       case GameAbility.kingRoyalDecree:
@@ -993,7 +993,7 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.kingPrisonerExchange:
         return 'Вы выбираете взятую соперником свою фигуру, а соперник — взятую вами; обе возвращаются на случайные свободные клетки';
       case GameAbility.kingRemoveEnemyMod:
-        return 'Вы выбираете и удаляете одну модификацию у любой вражеской фигуры';
+        return 'Вы выбираете и удаляете одну мод у любой вражеской фигуры';
       case GameAbility.kingAssemblyHall:
         return 'Фигуры рядом с выбранным королём не могут быть целью случайного выбора катаклизма';
       case GameAbility.randomShift:
@@ -1017,11 +1017,11 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.randomMeteorRain:
         return 'На 3 случайные клетки падают метеориты, уничтожая все фигуры, кроме королей';
       case GameAbility.randomCensus:
-        return 'У случайной вражеской фигуры с модификациями исчезает одна случайная модификация';
+        return 'У случайной вражеской фигуры с модами исчезает одна случайная мод';
       case GameAbility.randomExterminatus:
         return 'В течение следующего хода у обоих игроков: шах вражескому королю мгновенно убивает его';
       case GameAbility.randomGoldenThrone:
-        return 'Если ваша пешка погибает, ваш король выбирает себе модификацию';
+        return 'Если ваша пешка погибает, ваш король выбирает себе мод';
       case GameAbility.randomLottery:
         return 'Две ваши случайные фигуры не-короли меняются типами';
       case GameAbility.randomPlague:
@@ -1029,13 +1029,13 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.randomMutation:
         return 'Случайная ваша пешка становится случайной лёгкой фигурой (конь или слон) того же цвета';
       case GameAbility.randomAuction:
-        return 'Случайная клетка становится аукционной: кто первым на неё встанет, получит модификацию';
+        return 'Случайная клетка становится аукционной: кто первым на неё встанет, получит мод';
       case GameAbility.randomRightToMove:
         return 'Выберите вражескую фигуру: в следующий ход соперник обязан сходить ей, если может';
       case GameAbility.randomFurtherMore:
-        return 'Сейчас ничего не происходит; при следующем выборе вы сможете один раз обновить предложенные модификации';
+        return 'Сейчас ничего не происходит; при следующем выборе вы сможете один раз обновить предложенные моды';
       case GameAbility.randomWordOfHonor:
-        return 'Выберите клетку: если в следующий свой ход встанете на неё, получите модификацию, иначе потеряете одну случайную модификацию';
+        return 'Выберите клетку: если в следующий свой ход встанете на неё, получите мод, иначе потеряете одну случайную мод';
       case GameAbility.randomSymmetry:
         return 'Следующие 3 хода соперник обязан ходить теми же типами фигур, которыми перед ним ходили вы';
       case GameAbility.randomVeto:
@@ -1049,9 +1049,9 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.randomMyopia:
         return 'Слоны, ладьи и ферзи временно видят и ходят не дальше 2 клеток';
       case GameAbility.randomMagicShutdown:
-        return 'Следующие 3–10 ходов все модификации отключены';
+        return 'Следующие 3–10 ходов все моды отключены';
       case GameAbility.randomTimeCapsule:
-        return 'Позиция сохраняется; после двух ходов каждого игрока доска возвращается к ней, но заработанные модификации сохраняются';
+        return 'Позиция сохраняется; после двух ходов каждого игрока доска возвращается к ней, но заработанные моды сохраняются';
       case GameAbility.randomSuicideCapture:
         return 'Следующее взятие уничтожает и взятую фигуру, и фигуру, которая её взяла';
       case GameAbility.randomMeatGrinder:
@@ -1351,7 +1351,7 @@ extension GameAbilityInfo on GameAbility {
           'следующие $durationMoves ${_movesWord(durationMoves)}';
     }
     if (this == GameAbility.randomMagicShutdown && durationMoves != null) {
-      return 'Все модификации отключены на $durationMoves '
+      return 'Все моды отключены на $durationMoves '
           '${_movesWord(durationMoves)}';
     }
     if (this == GameAbility.boardTide && forColor != null) {
@@ -1462,7 +1462,7 @@ extension GameAbilityInfo on GameAbility {
     if (this == GameAbility.randomAuction && auctionSquare != null) {
       return 'Клетка '
           '${squareLabel(auctionSquare, fileCount: boardFileCount ?? 8, extraFile: boardExtraFile)} '
-          '— аукцион: кто первым встанет, получит модификацию';
+          '— аукцион: кто первым встанет, получит мод';
     }
     return description;
   }
@@ -1596,7 +1596,7 @@ class AbilityOffer {
   final List<Square> route;
   final Map<String, dynamic> hiddenData;
 
-  /// Цвет игрока, которому предлагают / который выбирает модификацию.
+  /// Цвет игрока, которому предлагают / который выбирает мод.
   final PieceColor? forColor;
 
   /// Seed для детерминированного RNG при применении (онлайн-синхронизация).
@@ -1775,7 +1775,7 @@ Square? _squareFromJson(Object? value) {
   return Square(file, rank);
 }
 
-/// Модификация с названием и текстом для экрана активных модификаций.
+/// Мод с названием и текстом для экрана активных модов.
 class ChosenAbilityInfo {
   const ChosenAbilityInfo({
     required this.ability,
@@ -1788,7 +1788,7 @@ class ChosenAbilityInfo {
   final String description;
 }
 
-/// Снимок стартовых модификаций доски и выбранных по ходу модификаций.
+/// Снимок стартовых модов доски и выбранных по ходу модов.
 class ActiveAbilitiesSnapshot {
   const ActiveAbilitiesSnapshot({
     this.whiteStart,

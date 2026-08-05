@@ -16,6 +16,8 @@ class OnlineSidePanel extends StatelessWidget {
     required this.onDraw,
     required this.onResign,
     this.canTakeback = true,
+    this.opponentRating,
+    this.localRating,
   });
 
   final String opponentName;
@@ -28,6 +30,8 @@ class OnlineSidePanel extends StatelessWidget {
   final VoidCallback onDraw;
   final VoidCallback onResign;
   final bool canTakeback;
+  final int? opponentRating;
+  final int? localRating;
 
   @override
   Widget build(BuildContext context) {
@@ -42,6 +46,7 @@ class OnlineSidePanel extends StatelessWidget {
             name: opponentName,
             ms: opponentMs,
             active: opponentActive,
+            rating: opponentRating,
           ),
           const SizedBox(height: 12),
           Padding(
@@ -83,6 +88,7 @@ class OnlineSidePanel extends StatelessWidget {
             name: localName,
             ms: localMs,
             active: localActive,
+            rating: localRating,
           ),
           const SizedBox(height: 8),
         ],
@@ -94,7 +100,9 @@ class OnlineSidePanel extends StatelessWidget {
     required String name,
     required int ms,
     required bool active,
+    int? rating,
   }) {
+    final label = rating == null ? name : '$name ($rating)';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -130,7 +138,7 @@ class OnlineSidePanel extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  name,
+                  label,
                   overflow: TextOverflow.ellipsis,
                   style: BalatroTheme.statusStyle.copyWith(fontSize: 13),
                 ),

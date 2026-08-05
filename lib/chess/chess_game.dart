@@ -174,16 +174,30 @@ class ChessGame {
   static const defaultFileCount = 8;
   static const defaultRankCount = 8;
 
-  ChessGame({AbilityCatalog? catalog, Random? random})
-    : _catalog = catalog ?? AbilityCatalog(),
-      _random = random ?? Random() {
+  ChessGame({
+    AbilityCatalog? catalog,
+    Random? random,
+    Set<PieceColor>? abilityChoosingColors,
+  }) : _catalog = catalog ?? AbilityCatalog(),
+       _random = random ?? Random(),
+       _abilityChoosingColors =
+           abilityChoosingColors ??
+           const {PieceColor.white, PieceColor.black} {
     _board = _createInitialBoard();
     _whiteStartOffers = _catalog.pickStartOffers(forColor: PieceColor.white);
     _blackStartOffers = _catalog.pickStartOffers(forColor: PieceColor.black);
+    // Sides that never pick mods (e.g. computer) skip start selection.
+    if (!_abilityChoosingColors.contains(PieceColor.white)) {
+      _whiteStartChosen = true;
+    }
+    if (!_abilityChoosingColors.contains(PieceColor.black)) {
+      _blackStartChosen = true;
+    }
   }
 
   final AbilityCatalog _catalog;
   final Random _random;
+  final Set<PieceColor> _abilityChoosingColors;
   final BoardCataclysmState _rules = BoardCataclysmState();
 
   late List<List<Piece?>> _board;
@@ -443,8 +457,8 @@ class ChessGame {
     }
     if (_pendingTargetAbility == GameAbility.kingRemoveEnemyMod) {
       return _pendingRemoveModTargetId == null
-          ? 'Выберите вражескую фигуру с модификациями'
-          : 'Выберите модификацию для удаления';
+          ? 'Выберите вражескую фигуру с модами'
+          : 'Выберите мод для удаления';
     }
     if (_pendingTargetAbility == GameAbility.queenDelayedSentence) {
       return 'Выберите атакованную вражескую фигуру';
@@ -618,7 +632,7 @@ class ChessGame {
     return !piece.pawnRevealed;
   }
 
-  /// Стартовые модификации доски и выбранные по ходу — для UI.
+  /// Стартовые моды доски и выбранные по ходу — для UI.
   ActiveAbilitiesSnapshot activeAbilitiesSnapshot() {
     return ActiveAbilitiesSnapshot(
       whiteStart: _whiteStartAbilityInfo,
@@ -1287,12 +1301,80 @@ class ChessGame {
   }
 
   bool isAwaitingStartChoice(PieceColor color) {
+    if (!_abilityChoosingColors.contains(color)) return false;
     if (color == PieceColor.white) return !_whiteStartChosen;
     return !_blackStartChosen;
   }
 
+  bool choosesAbilities(PieceColor color) =>
+      _abilityChoosingColors.contains(color);
+
   List<AbilityOffer> startOffersFor(PieceColor color) {
     return color == PieceColor.white ? _whiteStartOffers : _blackStartOffers;
+  }
+
+  /// Mark start selection done without applying a board mod (vs computer).
+  void skipStartAbility(PieceColor color) {
+    if (!isAwaitingStartChoice(color) &&
+        ((color == PieceColor.white && _whiteStartChosen) ||
+            (color == PieceColor.black && _blackStartChosen))) {
+      return;
+    }
+    if (color == PieceColor.white) {
+      _whiteStartChosen = true;
+    } else {
+      _blackStartChosen = true;
+    }
+    if (isReadyToPlay) {
+      _updateStatus();
+    }
+  }
+
+  /// Decline a mid-game / capture skill offer without applying it.
+  void skipPendingAbility() {
+    if (_pendingSkillColor == null) return;
+    final chooserColor = _pendingSkillColor!;
+    _pendingSkillSquare = null;
+    _pendingSkillPieceId = null;
+    _pendingSkillColor = null;
+    _pendingCaptureOffers = const [];
+    _completeSkillChoiceResolution(
+      chooserColor,
+      offer: const AbilityOffer(
+        ability: GameAbility.boardReroll,
+        applyMode: AbilityApplyMode.boardWide,
+      ),
+    );
+  }
+
+  /// Auto-pick any pending ability target (computer / search).
+  bool autoResolveAbilityTarget() {
+    var guard = 0;
+    while (isAwaitingAbilityTarget && guard++ < 8) {
+      if (legalAbilityOptions.isNotEmpty) {
+        if (!chooseAbilityToRemove(legalAbilityOptions.first)) break;
+        continue;
+      }
+      final captured = legalCapturedAbilityTargets;
+      if (captured.isNotEmpty) {
+        if (!chooseAbilityTarget(pieceId: captured.first.piece.pieceId)) {
+          break;
+        }
+        continue;
+      }
+      final ids = legalAbilityTargetPieceIds;
+      if (ids.isNotEmpty) {
+        if (!chooseAbilityTarget(pieceId: ids.first)) break;
+        continue;
+      }
+      final squares = legalAbilityTargetSquares;
+      if (squares.isNotEmpty) {
+        if (!chooseAbilityTarget(square: squares.first)) break;
+        continue;
+      }
+      return _finishAbilityTargetSelection();
+    }
+    return !isAwaitingAbilityTarget;
   }
 
   void applyStartAbility(
@@ -2009,16 +2091,37 @@ class ChessGame {
         !isAwaitingSkillChoice &&
         !isAwaitingAbilityTarget &&
         _rules.pendingPeriodicChooserQueue.isEmpty) {
+      final choosers = <PieceColor>[
+        if (_abilityChoosingColors.contains(PieceColor.white))
+          PieceColor.white,
+        if (_abilityChoosingColors.contains(PieceColor.black))
+          PieceColor.black,
+      ];
+      if (choosers.isEmpty) return;
       _rules.whiteMovesSinceAbilityWave = 0;
       _rules.blackMovesSinceAbilityWave = 0;
       _rules.pendingPeriodicChooserQueue
         ..clear()
-        ..addAll([PieceColor.white, PieceColor.black]);
-      _beginPeriodicSkillChoice(PieceColor.white);
+        ..addAll(choosers);
+      _beginPeriodicSkillChoice(choosers.first);
     }
   }
 
   void _beginPeriodicSkillChoice(PieceColor color) {
+    if (!_abilityChoosingColors.contains(color)) {
+      _pendingSkillSquare = null;
+      _pendingSkillPieceId = null;
+      _pendingSkillColor = null;
+      _pendingCaptureOffers = const [];
+      _completeSkillChoiceResolution(
+        color,
+        offer: const AbilityOffer(
+          ability: GameAbility.boardReroll,
+          applyMode: AbilityApplyMode.boardWide,
+        ),
+      );
+      return;
+    }
     _pendingSkillSquare = null;
     _pendingSkillPieceId = null;
     _pendingSkillColor = color;

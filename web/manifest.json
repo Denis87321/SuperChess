@@ -5,7 +5,7 @@
     "display": "standalone",
     "background_color": "#1a1a2e",
     "theme_color": "#1a1a2e",
-    "description": "Шахматы с модификациями. Онлайн с любого устройства.",
+    "description": "Шахматы с модами. Онлайн с любого устройства.",
     "orientation": "any",
     "prefer_related_applications": false,
     "icons": [

@@ -3,7 +3,8 @@
 ## Архитектура
 
 - **Сайт**: Flutter Web (папка `public/` в git) → **Render Static Site**
-- **Сервер матчей**: Dart WebSocket → **Render Web Service** `wss://superchess-api.onrender.com/ws`
+- **Сервер**: Dart (WebSocket + auth HTTP) → **Render Web Service** `wss://superchess-api.onrender.com/ws`
+- **БД**: Render Postgres (`DATABASE_URL`) для аккаунтов (ник + пароль)
 - Cloudflare Pages лучше не использовать как основной сайт из РФ (часто нужен VPN)
 
 ## Важно: API на Render засыпает
@@ -12,9 +13,30 @@ Web Service на free **засыпает ~после 15 минут**. Первы
 
 ---
 
-## 1. Сервер матчей (уже сделано)
+## 1. Postgres + API
 
-`https://superchess-api.onrender.com/health` → `{"ok":true}`
+В [render.yaml](../render.yaml) уже описаны `superchess-db` и `DATABASE_URL` / `JWT_SECRET` для `superchess-api`.
+
+Если сервисы создавались вручную раньше:
+
+1. Dashboard → **New → PostgreSQL** (free), регион как у API.
+2. У Web Service `superchess-api` → Environment:
+   - `DATABASE_URL` = Internal Database URL из Postgres
+   - `JWT_SECRET` = длинная случайная строка
+3. **Manual Deploy** API после пуша.
+
+Проверка:
+
+- `https://superchess-api.onrender.com/health` → `{"ok":true,"auth":true}`  
+  (`auth:false` = нет БД / ошибка подключения)
+
+Auth endpoints:
+
+- `POST /auth/register` `{ "username", "password" }`
+- `POST /auth/login` `{ "username", "password" }`
+- `GET /auth/me` + header `Authorization: Bearer <token>`
+
+Без `DATABASE_URL` матчмейкинг работает, регистрация отвечает **503**.
 
 ---
 
@@ -22,32 +44,40 @@ Web Service на free **засыпает ~после 15 минут**. Первы
 
 На Render **нет** команды `flutter`. Сайт собирается **у тебя на ПК**, результат кладётся в `public/` и пушится в GitHub.
 
-### Один раз / после изменений UI
+### После изменений UI / Stockfish
+
+Одна команда (сборка → `public/`):
+
+```powershell
+cd C:\Users\SRV\Documents\Proga\SuperChess
+.\scripts\build_web.ps1
+```
+
+Сразу закоммитить и запушить на GitHub (Render подхватит `public/`):
+
+```powershell
+.\scripts\build_web.ps1 -Push -Message "Publish web"
+```
+
+### Вручную (то же самое)
 
 ```powershell
 cd C:\Users\SRV\Documents\Proga\SuperChess
 flutter build web --release --dart-define=SUPERCHESS_SERVER_URL=wss://superchess-api.onrender.com/ws
 
-# скопировать в public (или scripts\build_web.ps1 после Bypass policy)
 if (Test-Path public) { Remove-Item -Recurse -Force public }
 Copy-Item -Recurse build\web public
 
-git add public render.yaml docs scripts lib
-git commit -m "Publish prebuilt web for Render Static Site"
+git add -A
+git commit -m "Publish web"
 git push origin main
 ```
 
 ### Настройки Static Site в Render
 
-1. Dashboard → твой Static Site (или **New → Static Site**)
-2. Репозиторий: SuperChess, ветка `main`
-3. **Build Command:** оставь пустым **или** `echo skip`
-4. **Publish Directory:** `public`
-5. Сохрани → **Manual Deploy** → Deploy latest commit
-
-Сайт будет вида: `https://superchess-web.onrender.com` (имя смотри в Render).
-
-Открой **без VPN** и зайди в Онлайн.
+1. Dashboard → Static Site
+2. **Publish Directory:** `public`
+3. **Manual Deploy** после пуша
 
 ---
 
@@ -58,26 +88,42 @@ cd server
 dart run bin/server.dart
 ```
 
-По умолчанию клиент ходит на Render (`wss://superchess-api.onrender.com/ws`).
-Для локального сервера явно укажи URL:
+Без Postgres auth будет `503`, онлайн как аноним работает.
+
+По умолчанию клиент ходит на Render. Локальный сервер:
 
 ```powershell
-# ПК / Edge
 flutter run -d edge --dart-define=SUPERCHESS_SERVER_URL=ws://127.0.0.1:8080/ws
-
-# Android-эмулятор → сервер на хосте
-flutter run --dart-define=SUPERCHESS_SERVER_URL=ws://10.0.2.2:8080/ws
 ```
 
-Без `--dart-define` приложение и сайт ищут игру на том же Render API.
+---
+
+## Язык
+
+RU/EN выбирается по языку системы/браузера; на главном экране можно переключить вручную (иконка глобуса). Ник в партии: аккаунт или «Аноним» / `Anonymous`.
+
+## Рейтинг и достижения
+
+- Elo обновляется только если **оба** игрока залогинены.
+- История и прогресс модов — для залогиненного в каждой его партии (в т.ч. vs аноним, без Elo).
+- Достижение **Коллекционер** (`all_abilities`): использовать все моды за карьеру в logged-in играх.
+- Профиль: иконка человека на главном / тап по нику.
+- **Против Stockfish**: локально в браузере (`web/stockfish/stockfish.js`) или на Android/iOS (плагин `stockfish`). Игрок выбирает моды, Stockfish — нет. Если движок недоступен — запасной встроенный бот.
+- При `flutter build web` файл `web/stockfish/stockfish.js` попадает в выходную папку; для Render копируйте его в `public/stockfish/` вместе с билдом.
+
 ---
 
 ## Файлы
 
 | Путь | Назначение |
 |------|------------|
-| `public/` | Готовый сайт для Render (коммитить) |
+| `public/` | Готовый сайт для Render |
 | `server/Dockerfile` | API |
-| `render.yaml` | Blueprint |
-| `lib/online/server_config.dart` | URL `wss://…` |
-| `scripts/build_web.ps1` | Сборка → `public/` |
+| `server/lib/` | auth + postgres + elo |
+| `render.yaml` | Blueprint (API + DB + static) |
+| `lib/online/server_config.dart` | WS + HTTP base URL |
+| `lib/auth/` | клиентская сессия |
+| `lib/l10n/` | RU/EN строки оболочки |
+| `lib/screens/profile_screen.dart` | рейтинг / достижение |
+| `lib/screens/history_screen.dart` | история партий |
+| `lib/chess/computer_player.dart` | локальный шахматный бот |

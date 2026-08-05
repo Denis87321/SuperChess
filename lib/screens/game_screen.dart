@@ -5,8 +5,11 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../auth/auth_service.dart';
 import '../chess/chess_game.dart';
 import '../chess/move.dart';
+import '../chess/stockfish_player.dart';
+import '../l10n/app_strings.dart';
 import '../models/game_ability.dart';
 import '../models/piece.dart';
 import '../models/square.dart';
@@ -30,13 +33,30 @@ class GameScreen extends StatefulWidget {
     this.localColor,
     this.onlineService,
     this.opponentName,
+    this.gameId,
+    this.auth,
+    this.rated = false,
+    this.yourRating,
+    this.opponentRating,
+    this.vsComputer = false,
   });
 
   final PieceColor? localColor;
   final OnlineGameService? onlineService;
   final String? opponentName;
+  final String? gameId;
+  final AuthService? auth;
+  final bool rated;
+  final int? yourRating;
+  final int? opponentRating;
+
+  /// Local game vs Stockfish (no mods for the bot; human still picks mods).
+  final bool vsComputer;
 
   bool get isOnline => onlineService != null && localColor != null;
+
+  /// One human seat (online or vs computer); not hot-seat local.
+  bool get hasFixedSeat => isOnline || vsComputer;
 
   @override
   State<GameScreen> createState() => _GameScreenState();
@@ -44,6 +64,7 @@ class GameScreen extends StatefulWidget {
 
 class _GameScreenState extends State<GameScreen> {
   late final ChessGame _game;
+  late final StockfishPlayer? _stockfish;
   Square? _selectedSquare;
   int _selectedPieceIndex = 0;
   List<Move> _availableMoves = [];
@@ -56,6 +77,8 @@ class _GameScreenState extends State<GameScreen> {
   Timer? _skillChoiceTimer;
   int _skillChoiceSecondsLeft = 30;
   _PieceFlight? _pieceFlight;
+  bool _botThinking = false;
+  int _botMoveGen = 0;
 
   /// Локальная игра: при ходе чёрных переворачивать фигуры и текст на 180°.
   bool _rotateForBlack = false;
@@ -68,11 +91,28 @@ class _GameScreenState extends State<GameScreen> {
   Timer? _chatToastTimer;
   bool _awaitingDrawResponse = false;
   bool _awaitingTakebackResponse = false;
+  bool _gameResultReported = false;
+
+  PieceColor? get _botColor {
+    if (!widget.vsComputer || widget.localColor == null) return null;
+    return widget.localColor == PieceColor.white
+        ? PieceColor.black
+        : PieceColor.white;
+  }
 
   @override
   void initState() {
     super.initState();
-    _game = ChessGame();
+    if (widget.vsComputer && widget.localColor != null) {
+      _game = ChessGame(
+        abilityChoosingColors: {widget.localColor!},
+      );
+      _stockfish = StockfishPlayer();
+      unawaited(_stockfish!.ensureReady());
+    } else {
+      _game = ChessGame();
+      _stockfish = null;
+    }
     if (widget.isOnline) {
       _onlineSub = widget.onlineService!.events.listen(_onOnlineEvent);
     }
@@ -99,6 +139,7 @@ class _GameScreenState extends State<GameScreen> {
     _clockTimer?.cancel();
     _chatToastTimer?.cancel();
     _onlineSub?.cancel();
+    _stockfish?.dispose();
     if (widget.isOnline) {
       widget.onlineService!.dispose();
     }
@@ -106,7 +147,11 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   Future<void> _runStartFlow() async {
-    if (widget.localColor == null) {
+    if (widget.vsComputer && widget.localColor != null) {
+      if (_game.isAwaitingStartChoice(widget.localColor!)) {
+        await _showStartPicker(widget.localColor!);
+      }
+    } else if (widget.localColor == null) {
       if (_game.isAwaitingStartChoice(PieceColor.white)) {
         await _showStartPicker(PieceColor.white);
       }
@@ -120,6 +165,7 @@ class _GameScreenState extends State<GameScreen> {
     if (mounted) {
       setState(() => _startFlowDone = true);
       _ensureClockRunning();
+      _maybeScheduleComputerMove();
     }
   }
 
@@ -131,8 +177,8 @@ class _GameScreenState extends State<GameScreen> {
       context,
       title: 'ДОСКА',
       subtitle: color == PieceColor.white
-          ? 'Белые — выбери модификацию доски'
-          : 'Чёрные — выбери модификацию доски',
+          ? 'Белые — выбери мод доски'
+          : 'Чёрные — выбери мод доски',
       offers: offers,
       seconds: _game.skillChoiceSeconds,
       rotate180: flipPicker,
@@ -249,6 +295,7 @@ class _GameScreenState extends State<GameScreen> {
           _clockTimer?.cancel();
           _game.resign(_other(widget.localColor!));
         });
+        unawaited(_reportGameResultIfNeeded());
       case OnlineDrawOffer():
         unawaited(_onIncomingDrawOffer());
       case OnlineDrawResponse():
@@ -259,6 +306,7 @@ class _GameScreenState extends State<GameScreen> {
             _clockTimer?.cancel();
             _game.agreeDraw();
           });
+          unawaited(_reportGameResultIfNeeded());
         } else {
           _showMessage('Соперник отклонил ничью');
         }
@@ -312,6 +360,7 @@ class _GameScreenState extends State<GameScreen> {
       _clockTimer?.cancel();
       _game.applyRemoteEnd(winner: event.winner, reason: reason);
     });
+    unawaited(_reportGameResultIfNeeded());
   }
 
   void _ensureClockRunning() {
@@ -405,6 +454,7 @@ class _GameScreenState extends State<GameScreen> {
         _clockTimer?.cancel();
         _game.agreeDraw();
       });
+      unawaited(_reportGameResultIfNeeded());
     }
   }
 
@@ -564,6 +614,48 @@ class _GameScreenState extends State<GameScreen> {
       reason: _game.endReason?.name,
       stateHash: _game.stateHash,
     );
+    unawaited(_reportGameResultIfNeeded());
+  }
+
+  Future<void> _reportGameResultIfNeeded() async {
+    if (_gameResultReported) return;
+    if (!widget.isOnline) return;
+    final auth = widget.auth;
+    final gameId = widget.gameId;
+    final color = widget.localColor;
+    if (auth == null || !auth.isLoggedIn || gameId == null || color == null) {
+      return;
+    }
+    _gameResultReported = true;
+
+    final snapshot = _game.activeAbilitiesSnapshot();
+    final abilities = <String>{};
+    if (color == PieceColor.white) {
+      if (snapshot.whiteStart != null) {
+        abilities.add(snapshot.whiteStart!.ability.name);
+      }
+      for (final c in snapshot.whiteChosen) {
+        abilities.add(c.ability.name);
+      }
+    } else {
+      if (snapshot.blackStart != null) {
+        abilities.add(snapshot.blackStart!.ability.name);
+      }
+      for (final c in snapshot.blackChosen) {
+        abilities.add(c.ability.name);
+      }
+    }
+
+    await auth.reportGameResult(
+      gameId: gameId,
+      color: color == PieceColor.white ? 'white' : 'black',
+      winner: _game.winnerColor == null
+          ? null
+          : (_game.winnerColor == PieceColor.white ? 'white' : 'black'),
+      reason: _game.endReason?.name,
+      abilities: abilities.toList(),
+      opponentName: widget.opponentName,
+    );
   }
 
   void _showMessage(String text) {
@@ -571,32 +663,103 @@ class _GameScreenState extends State<GameScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
 
+  void _maybeScheduleComputerMove() {
+    if (!widget.vsComputer) return;
+    final stockfish = _stockfish;
+    final bot = _botColor;
+    if (stockfish == null || bot == null) return;
+    if (!_startFlowDone || _game.isGameOver || _botThinking) return;
+    if (_game.isAwaitingSkillChoice && _canPickSkill) return;
+    if (_game.isAwaitingAbilityTarget && _canPickAbilityTarget) return;
+    if (_game.isAwaitingReaction && _canReact) return;
+
+    // Bot-side reactions / gallops / stray targets.
+    if (_resolveComputerPhases()) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        setState(() {});
+        _maybeScheduleComputerMove();
+      });
+      return;
+    }
+
+    if (_game.enginePhase != GameEnginePhase.play) return;
+    if (_game.turn != bot) return;
+
+    final gen = ++_botMoveGen;
+    setState(() => _botThinking = true);
+    Future<void>(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+      if (!mounted || gen != _botMoveGen) return;
+      final move = await stockfish.chooseMove(_game, forColor: bot);
+      if (!mounted || gen != _botMoveGen) return;
+      setState(() => _botThinking = false);
+      if (move == null) return;
+      await _executeMove(move);
+    });
+  }
+
+  bool _resolveComputerPhases() {
+    if (_botColor == null) return false;
+    var changed = false;
+    var guard = 0;
+    while (!_game.isGameOver && guard++ < 24) {
+      if (_game.isAwaitingSkillChoice &&
+          _game.pendingSkillColor == _botColor) {
+        _game.skipPendingAbility();
+        changed = true;
+        continue;
+      }
+      if (_game.isAwaitingReaction &&
+          _game.pendingRansomColor == _botColor) {
+        final result = _game.declineRansom();
+        changed = true;
+        if (result != null) {
+          unawaited(_finishRemoteDeclineRansom(result));
+        }
+        break;
+      }
+      if (_game.isAwaitingGallop && _game.turn == _botColor) {
+        _game.skipGallop();
+        changed = true;
+        continue;
+      }
+      if (_game.isAwaitingAbilityTarget &&
+          _game.pendingTargetColor == _botColor) {
+        _game.autoResolveAbilityTarget();
+        changed = true;
+        continue;
+      }
+      break;
+    }
+    return changed;
+  }
+
   bool get _isMyTurn {
-    if (!widget.isOnline) return true;
+    if (!widget.hasFixedSeat) return true;
     return _game.turn == widget.localColor;
   }
 
   bool get _canPickSkill {
     if (!_game.isAwaitingSkillChoice) return false;
-    if (!widget.isOnline) return true;
-    return _game.turn == widget.localColor ||
-        _game.pendingSkillColor == widget.localColor;
+    if (!widget.hasFixedSeat) return true;
+    return _game.pendingSkillColor == widget.localColor;
   }
 
   bool get _canPickAbilityTarget {
     if (!_game.isAwaitingAbilityTarget) return false;
-    if (!widget.isOnline) return true;
+    if (!widget.hasFixedSeat) return true;
     return _game.pendingTargetColor == widget.localColor;
   }
 
   bool get _canReact {
     if (!_game.isAwaitingReaction) return false;
-    if (!widget.isOnline) return true;
+    if (!widget.hasFixedSeat) return true;
     return _game.pendingRansomColor == widget.localColor;
   }
 
   bool get _canRerollSkill {
-    final color = widget.isOnline
+    final color = widget.hasFixedSeat
         ? widget.localColor
         : _game.pendingSkillColor;
     if (color == null) return false;
@@ -620,15 +783,18 @@ class _GameScreenState extends State<GameScreen> {
 
   String? get _phaseBannerText {
     if (_showEndOverlay) return 'Игра окончена';
-    if (widget.isOnline && !_game.isReadyToPlay) {
+    if (_botThinking) {
+      return AppStrings.of(context).computerThinking;
+    }
+    if ((widget.isOnline || widget.vsComputer) && !_game.isReadyToPlay) {
       final waitingOpp = widget.localColor != null &&
           !_game.isAwaitingStartChoice(widget.localColor!) &&
           (_game.isAwaitingStartChoice(PieceColor.white) ||
               _game.isAwaitingStartChoice(PieceColor.black));
-      if (waitingOpp) {
+      if (waitingOpp && widget.isOnline) {
         return 'Ожидание выбора соперника';
       }
-      return 'Выбор стартовых модификаций';
+      return 'Выбор стартовых модов';
     }
     if (_game.isAwaitingReaction) return 'Выкуп · реакция на взятие';
     if (_game.isAwaitingAbilityTarget) {
@@ -639,23 +805,24 @@ class _GameScreenState extends State<GameScreen> {
       final chooser = _game.pendingSkillColor;
       final bonus = _game.isBonusSkillChoice ? ' · бонус' : '';
       if (chooser == PieceColor.white) {
-        return 'Выбор модификации · белые$bonus';
+        return 'Выбор мода · белые$bonus';
       }
       if (chooser == PieceColor.black) {
-        return 'Выбор модификации · чёрные$bonus';
+        return 'Выбор мода · чёрные$bonus';
       }
-      return 'Выбор модификации$bonus';
+      return 'Выбор мода$bonus';
     }
     return null;
   }
 
   String get _endOverlayTitle {
+    final s = AppStrings.of(context);
     final winner = _game.winnerColor;
-    if (winner == null) return 'НИЧЬЯ';
+    if (winner == null) return s.draw;
     if (widget.isOnline) {
-      return winner == widget.localColor ? 'ПОБЕДА' : 'ПОРАЖЕНИЕ';
+      return winner == widget.localColor ? s.victory : s.defeat;
     }
-    return 'ПОБЕДА';
+    return s.victory;
   }
 
   String get _endOverlaySubtitle {
@@ -669,9 +836,10 @@ class _GameScreenState extends State<GameScreen> {
         return 'ничья';
       case GameEndReason.resign:
         if (widget.isOnline && widget.localColor != null) {
+          final s = AppStrings.of(context);
           return _game.winnerColor == widget.localColor
-              ? 'Ваш соперник сдался'
-              : 'Вы сдались';
+              ? s.opponentResigned
+              : s.youResigned;
         }
         return 'сдача';
       case GameEndReason.timeout:
@@ -882,7 +1050,7 @@ class _GameScreenState extends State<GameScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Съесть фигуру или снять с неё модификацию?',
+                    'Съесть фигуру или снять с неё мод?',
                     textAlign: TextAlign.center,
                     style: BalatroTheme.statusStyle.copyWith(fontSize: 14),
                   ),
@@ -1050,11 +1218,13 @@ class _GameScreenState extends State<GameScreen> {
       }
     } else if (_game.isAwaitingSkillChoice && _canPickSkill) {
       setState(_beginSkillChoice);
+    } else {
+      _maybeScheduleComputerMove();
     }
   }
 
   void _localRerollOffers() {
-    final color = widget.isOnline
+    final color = widget.hasFixedSeat
         ? widget.localColor
         : _game.pendingSkillColor;
     if (color == null || !_game.canRerollPendingOffers(color)) return;
@@ -1074,6 +1244,7 @@ class _GameScreenState extends State<GameScreen> {
     });
     widget.onlineService?.sendSkipTurn(stateHash: _game.stateHash);
     _maybeSendGameOver();
+    _maybeScheduleComputerMove();
   }
 
   Future<void> _localChooseAbilityTarget(Square square) async {
@@ -1184,6 +1355,8 @@ class _GameScreenState extends State<GameScreen> {
       await _promptCapturedAbilityTarget();
     } else if (_game.isAwaitingSkillChoice && _canPickSkill) {
       setState(_beginSkillChoice);
+    } else {
+      _maybeScheduleComputerMove();
     }
     _maybeSendGameOver();
   }
@@ -1249,6 +1422,8 @@ class _GameScreenState extends State<GameScreen> {
       await _promptCapturedAbilityTarget();
     } else if (_game.isAwaitingSkillChoice && _canPickSkill) {
       setState(_beginSkillChoice);
+    } else {
+      _maybeScheduleComputerMove();
     }
     _maybeSendGameOver();
   }
@@ -1302,6 +1477,11 @@ class _GameScreenState extends State<GameScreen> {
       stateHash: _game.stateHash,
     );
     _maybeSendGameOver();
+    if (_game.isAwaitingSkillChoice && _canPickSkill) {
+      setState(_beginSkillChoice);
+    } else {
+      _maybeScheduleComputerMove();
+    }
   }
 
   void _localAcceptRansom(GameAbility ability) {
@@ -1313,6 +1493,7 @@ class _GameScreenState extends State<GameScreen> {
       stateHash: _game.stateHash,
     );
     _maybeSendGameOver();
+    _maybeScheduleComputerMove();
   }
 
   Future<void> _localDeclineRansom() async {
@@ -1358,13 +1539,17 @@ class _GameScreenState extends State<GameScreen> {
         }
       }
       _maybeSendGameOver();
+      _maybeScheduleComputerMove();
       return;
     }
     if ((result.requiresSkillChoice || _game.isAwaitingSkillChoice) &&
         _canPickSkill) {
       setState(_beginSkillChoice);
+      _maybeSendGameOver();
+      return;
     }
     _maybeSendGameOver();
+    _maybeScheduleComputerMove();
   }
 
   void _toggleSkillChoicePeek() {
@@ -1529,9 +1714,11 @@ class _GameScreenState extends State<GameScreen> {
     flight.completer.complete();
   }
 
-  /// Переворот UI для локальной игры, когда ход чёрных.
+  /// Переворот UI для локальной hot-seat игры, когда ход чёрных.
   bool get _uiFlipped =>
-      !widget.isOnline && _rotateForBlack && _game.turn == PieceColor.black;
+      !widget.hasFixedSeat &&
+      _rotateForBlack &&
+      _game.turn == PieceColor.black;
 
   /// Онлайн за чёрных: 8-я горизонталь снизу (как на Lichess).
   bool get _boardPerspectiveFlipped =>
@@ -1559,7 +1746,7 @@ class _GameScreenState extends State<GameScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    if (!widget.isOnline)
+                    if (!widget.hasFixedSeat)
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
                         title: Text(
@@ -1618,7 +1805,7 @@ class _GameScreenState extends State<GameScreen> {
   Widget _modsButton() {
     return _flipOverlay(
       IconButton.filledTonal(
-        tooltip: 'Активные модификации',
+        tooltip: 'Активные моды',
         onPressed: _showActiveAbilities,
         style: IconButton.styleFrom(
           backgroundColor: BalatroTheme.felt,
@@ -1641,8 +1828,12 @@ class _GameScreenState extends State<GameScreen> {
       backgroundColor: BalatroTheme.background,
       appBar: AppBar(
         title: Text(
-          widget.isOnline ? '5+0 · Онлайн' : 'SUPERCHESS',
-          style: BalatroTheme.titleStyle.copyWith(fontSize: widget.isOnline ? 16 : 20),
+          widget.isOnline
+              ? AppStrings.of(context).onlineTitle('5+0')
+              : 'SUPERCHESS',
+          style: BalatroTheme.titleStyle.copyWith(
+            fontSize: widget.isOnline ? 16 : 20,
+          ),
         ),
         centerTitle: true,
         backgroundColor: BalatroTheme.appBar,
@@ -1680,10 +1871,13 @@ class _GameScreenState extends State<GameScreen> {
                     ),
                   ),
                   OnlineSidePanel(
-                    opponentName: widget.opponentName ?? 'Соперник',
-                    localName: 'Вы',
+                    opponentName: widget.opponentName ??
+                        AppStrings.of(context).anonymous,
+                    localName: AppStrings.of(context).you,
                     opponentMs: _clock.msFor(_other(widget.localColor!)),
                     localMs: _clock.msFor(widget.localColor!),
+                    opponentRating: widget.opponentRating,
+                    localRating: widget.yourRating,
                     opponentActive: _game.isReadyToPlay &&
                         !_game.isGameOver &&
                         _game.turn == _other(widget.localColor!) &&
@@ -1749,8 +1943,10 @@ class _GameScreenState extends State<GameScreen> {
               ? Column(
                   children: [
                     OnlinePlayerBar(
-                      name: widget.opponentName ?? 'Соперник',
+                      name: widget.opponentName ??
+                          AppStrings.of(context).anonymous,
                       clockMs: oppColor == null ? 0 : _clock.msFor(oppColor),
+                      rating: widget.opponentRating,
                       active: oppColor != null &&
                           _game.isReadyToPlay &&
                           !_game.isGameOver &&
@@ -1771,9 +1967,10 @@ class _GameScreenState extends State<GameScreen> {
                       ),
                     ),
                     OnlinePlayerBar(
-                      name: 'Вы',
+                      name: AppStrings.of(context).you,
                       clockMs:
                           localColor == null ? 0 : _clock.msFor(localColor),
+                      rating: widget.yourRating,
                       active: localColor != null &&
                           _game.isReadyToPlay &&
                           !_game.isGameOver &&
@@ -1882,7 +2079,10 @@ class _GameScreenState extends State<GameScreen> {
                   },
                 ),
         ),
-        if (!showMobileChrome && (widget.isOnline || _phaseBannerText != null))
+        if (!showMobileChrome &&
+            (widget.isOnline ||
+                widget.vsComputer ||
+                _phaseBannerText != null))
           Positioned(
             top: modsOnTop ? 64 : 8,
             left: 12,
@@ -1891,7 +2091,8 @@ class _GameScreenState extends State<GameScreen> {
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (widget.isOnline && !reserveSidePanel)
+                  if ((widget.isOnline || widget.vsComputer) &&
+                      !reserveSidePanel)
                     Text(
                       'vs ${widget.opponentName ?? 'Соперник'} · вы: $youAre',
                       textAlign: TextAlign.center,
@@ -2027,7 +2228,7 @@ class _GameScreenState extends State<GameScreen> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Отдайте модификацию или разрешите взятие',
+                              'Отдайте мод или разрешите взятие',
                               textAlign: TextAlign.center,
                               style: BalatroTheme.statusStyle.copyWith(
                                 fontSize: 13,
@@ -2093,10 +2294,10 @@ class _GameScreenState extends State<GameScreen> {
                         }
                         final chooser = _game.pendingSkillColor;
                         if (chooser == PieceColor.white) {
-                          return 'Волна модификаций — ход белых: выбери 1 из ${offers.length}';
+                          return 'Волна модов — ход белых: выбери 1 из ${offers.length}';
                         }
                         if (chooser == PieceColor.black) {
-                          return 'Волна модификаций — ход чёрных: выбери 1 из ${offers.length}';
+                          return 'Волна модов — ход чёрных: выбери 1 из ${offers.length}';
                         }
                         return 'Выбери 1 из ${offers.length}';
                       }(),
@@ -2229,7 +2430,7 @@ class _GameScreenState extends State<GameScreen> {
                                 ),
                               ),
                               child: Text(
-                                'НАЗАД',
+                                AppStrings.of(context).back,
                                 style: BalatroTheme.statusStyle.copyWith(
                                   fontSize: 14,
                                   color: BalatroTheme.felt,
@@ -2301,7 +2502,7 @@ class _GameScreenState extends State<GameScreen> {
                           info: ChosenAbilityInfo(
                             ability: a.ability,
                             title: '???',
-                            description: 'Модификация скрыта слепой зоной',
+                            description: 'Мод скрыта слепой зоной',
                           ),
                         ),
                       )

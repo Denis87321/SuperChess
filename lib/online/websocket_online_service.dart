@@ -32,8 +32,15 @@ class WebSocketOnlineService implements OnlineGameService {
   }
 
   @override
-  Future<void> findGame({String playerName = 'Player'}) async {
-    _send({'type': 'find_game', 'name': playerName});
+  Future<void> findGame({
+    String playerName = 'Player',
+    String? token,
+  }) async {
+    _send({
+      'type': 'find_game',
+      'name': playerName,
+      if (token != null && token.isNotEmpty) 'token': token,
+    });
   }
 
   @override
@@ -224,6 +231,10 @@ class WebSocketOnlineService implements OnlineGameService {
                   ? PieceColor.white
                   : PieceColor.black,
               opponentName: data['opponentName'] as String? ?? 'Соперник',
+              rated: data['rated'] == true,
+              yourRating: data['yourRating'] as int?,
+              opponentRating: data['opponentRating'] as int?,
+              opponentLoggedIn: data['opponentLoggedIn'] == true,
             ),
           ),
         );

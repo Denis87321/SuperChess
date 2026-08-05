@@ -286,7 +286,7 @@ void main() {
     expect(game.isAwaitingSkillChoice, isFalse);
   });
 
-  test('after 3 moves each, white then black choose modifications', () {
+  test('after 3 moves each, white then black choose mods', () {
     final game = _readyGame();
     // White 1 / Black 1
     expect(
@@ -651,7 +651,7 @@ void main() {
       }
       game.applyStartAbility(PieceColor.white, GameAbility.boardTide);
       final blackOffers = game.startOffersFor(PieceColor.black);
-      // Для стабильности выбираем "безопасную" модификацию стороны чёрных,
+      // Для стабильности выбираем "безопасную" мод стороны чёрных,
       // которая не должна напрямую блокировать движение пешки вперёд
       // (стены / размещение фигур на старте / мины).
       final blackSafeOffer = blackOffers.firstWhere(
@@ -2211,7 +2211,7 @@ void main() {
     test('marseilles chess: белые делают 1 движение, затем по 2', () {
       final game = _emptyReadyGame();
 
-      // В первую очередь выставим ход, чтобы инициализация модификации
+      // В первую очередь выставим ход, чтобы инициализация моды
       // настроила правильный счётчик движений.
       game.debugSetTurn(PieceColor.white);
       game.debugApplyOffer(

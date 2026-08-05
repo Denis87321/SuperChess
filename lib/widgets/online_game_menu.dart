@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_strings.dart';
 import '../theme/balatro_theme.dart';
 
 enum OnlineMenuAction { takeback, draw, resign }
@@ -8,6 +9,7 @@ class OnlineGameMenu {
   OnlineGameMenu._();
 
   static Future<OnlineMenuAction?> showActions(BuildContext context) {
+    final s = AppStrings.of(context);
     return showModalBottomSheet<OnlineMenuAction>(
       context: context,
       backgroundColor: BalatroTheme.felt,
@@ -26,7 +28,7 @@ class OnlineGameMenu {
                   color: BalatroTheme.cream,
                 ),
                 title: Text(
-                  'Попросить соперника вернуть ход',
+                  s.askTakeback,
                   style: BalatroTheme.statusStyle.copyWith(fontSize: 14),
                 ),
                 onTap: () =>
@@ -38,7 +40,7 @@ class OnlineGameMenu {
                   style: BalatroTheme.titleStyle.copyWith(fontSize: 18),
                 ),
                 title: Text(
-                  'Предложить ничью',
+                  s.offerDraw,
                   style: BalatroTheme.statusStyle.copyWith(fontSize: 14),
                 ),
                 onTap: () => Navigator.pop(context, OnlineMenuAction.draw),
@@ -49,7 +51,7 @@ class OnlineGameMenu {
                   color: BalatroTheme.cream,
                 ),
                 title: Text(
-                  'Сдаться',
+                  s.resign,
                   style: BalatroTheme.statusStyle.copyWith(fontSize: 14),
                 ),
                 onTap: () => Navigator.pop(context, OnlineMenuAction.resign),
@@ -63,13 +65,14 @@ class OnlineGameMenu {
   }
 
   static Future<bool> confirmResign(BuildContext context) async {
+    final s = AppStrings.of(context);
     final result = await showDialog<bool>(
       context: context,
       builder: (context) {
         return AlertDialog(
           backgroundColor: BalatroTheme.felt,
           title: Text(
-            'Сдаться?',
+            s.resignConfirm,
             style: BalatroTheme.titleStyle.copyWith(fontSize: 16),
           ),
           actionsAlignment: MainAxisAlignment.spaceEvenly,
@@ -78,7 +81,7 @@ class OnlineGameMenu {
               onPressed: () => Navigator.pop(context, true),
               icon: const Icon(Icons.check_rounded, color: Color(0xFF6BCB77)),
               label: Text(
-                'Сдаться',
+                s.resign,
                 style: BalatroTheme.statusStyle.copyWith(fontSize: 14),
               ),
             ),
@@ -86,7 +89,7 @@ class OnlineGameMenu {
               onPressed: () => Navigator.pop(context, false),
               icon: const Icon(Icons.close_rounded, color: Color(0xFFE57373)),
               label: Text(
-                'Отменить',
+                s.cancel,
                 style: BalatroTheme.statusStyle.copyWith(fontSize: 14),
               ),
             ),

@@ -9,12 +9,14 @@ class OnlinePlayerBar extends StatelessWidget {
     required this.name,
     required this.clockMs,
     required this.active,
+    this.rating,
     this.compact = false,
   });
 
   final String name;
   final int clockMs;
   final bool active;
+  final int? rating;
   final bool compact;
 
   @override
@@ -22,6 +24,7 @@ class OnlinePlayerBar extends StatelessWidget {
     final clockBg = active
         ? const Color(0xFF3D6B4F)
         : BalatroTheme.felt;
+    final label = rating == null ? name : '$name ($rating)';
     return Padding(
       padding: EdgeInsets.symmetric(
         horizontal: compact ? 8 : 12,
@@ -43,7 +46,7 @@ class OnlinePlayerBar extends StatelessWidget {
                 const SizedBox(width: 8),
                 Flexible(
                   child: Text(
-                    name,
+                    label,
                     overflow: TextOverflow.ellipsis,
                     style: BalatroTheme.statusStyle.copyWith(
                       fontSize: compact ? 13 : 14,
