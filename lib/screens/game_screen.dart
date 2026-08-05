@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:developer' as developer;
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -27,6 +28,8 @@ import '../widgets/skill_choice_sheet.dart';
 
 const _prefsRotateForBlackKey = 'rotate_for_black';
 const _onlineWideBreakpoint = 800.0;
+/// Web desktop: mods list beside the board instead of a button.
+const _webModsSideBreakpoint = 800.0;
 
 String _pieceTypeRu(PieceType type) {
   return switch (type) {
@@ -1830,12 +1833,51 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
+  /// Wide web only: list mods beside the board (phones keep the button).
+  bool _webModsBesideBoard(double width) =>
+      kIsWeb && width >= _webModsSideBreakpoint;
+
+  Widget _buildActiveModsSidePanel() {
+    return SizedBox(
+      width: 300,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: BalatroTheme.felt.withValues(alpha: 0.97),
+          border: Border(
+            left: BorderSide(
+              color: BalatroTheme.cream.withValues(alpha: 0.12),
+            ),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Text(
+                'АКТИВНЫЕ МОДЫ',
+                style: BalatroTheme.titleStyle.copyWith(fontSize: 14),
+              ),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: _activeModsBody(hideOpponent: widget.vsComputer),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final bottomPad = MediaQuery.paddingOf(context).bottom;
     final modsOnTop = _uiFlipped;
     final width = MediaQuery.sizeOf(context).width;
     final onlineWide = widget.isOnline && width >= _onlineWideBreakpoint;
+    final webModsBeside = _webModsBesideBoard(width);
 
     return Scaffold(
       backgroundColor: BalatroTheme.background,
@@ -1880,9 +1922,10 @@ class _GameScreenState extends State<GameScreen> {
                       bottomPad: bottomPad,
                       modsOnTop: modsOnTop,
                       showMobileChrome: false,
-                      reserveSidePanel: true,
+                      showModsButton: false,
                     ),
                   ),
+                  if (webModsBeside) _buildActiveModsSidePanel(),
                   OnlineSidePanel(
                     opponentName: widget.opponentName ??
                         AppStrings.of(context).anonymous,
@@ -1906,12 +1949,26 @@ class _GameScreenState extends State<GameScreen> {
                   ),
                 ],
               )
-            : _buildGameStack(
-                bottomPad: bottomPad,
-                modsOnTop: modsOnTop,
-                showMobileChrome: widget.isOnline,
-                reserveSidePanel: false,
-              ),
+            : webModsBeside
+                ? Row(
+                    children: [
+                      Expanded(
+                        child: _buildGameStack(
+                          bottomPad: bottomPad,
+                          modsOnTop: modsOnTop,
+                          showMobileChrome: false,
+                          showModsButton: false,
+                        ),
+                      ),
+                      _buildActiveModsSidePanel(),
+                    ],
+                  )
+                : _buildGameStack(
+                    bottomPad: bottomPad,
+                    modsOnTop: modsOnTop,
+                    showMobileChrome: widget.isOnline,
+                    showModsButton: true,
+                  ),
       ),
     );
   }
@@ -1938,7 +1995,7 @@ class _GameScreenState extends State<GameScreen> {
     required double bottomPad,
     required bool modsOnTop,
     required bool showMobileChrome,
-    required bool reserveSidePanel,
+    required bool showModsButton,
   }) {
     final youAre = widget.localColor == null
         ? null
@@ -2037,7 +2094,7 @@ class _GameScreenState extends State<GameScreen> {
                                     ),
                                   ),
                                 ),
-                              _modsButton(),
+                              if (showModsButton) _modsButton(),
                             ],
                           ),
                           if (_chatToastText != null)
@@ -2104,8 +2161,7 @@ class _GameScreenState extends State<GameScreen> {
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if ((widget.isOnline || widget.vsComputer) &&
-                      !reserveSidePanel)
+                  if (widget.isOnline || widget.vsComputer)
                     Text(
                       'vs ${widget.opponentName ?? 'Соперник'} · вы: $youAre',
                       textAlign: TextAlign.center,
@@ -2212,7 +2268,7 @@ class _GameScreenState extends State<GameScreen> {
                         ),
                       ),
                     ),
-                  if (!reserveSidePanel) _modsButton(),
+                  if (showModsButton) _modsButton(),
                 ],
               ),
             ),
@@ -2469,6 +2525,38 @@ class _GameScreenState extends State<GameScreen> {
       color == PieceColor.white ? PieceColor.black : PieceColor.white;
 
   void _showActiveAbilities() {
+    showDialog<void>(
+      context: context,
+      builder: (context) {
+        return _flipOverlay(
+          AlertDialog(
+            backgroundColor: BalatroTheme.felt,
+            title: Text(
+              'АКТИВНЫЕ МОДИФИКАЦИИ',
+              style: BalatroTheme.titleStyle.copyWith(fontSize: 16),
+            ),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: SingleChildScrollView(
+                child: _activeModsBody(hideOpponent: widget.vsComputer),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(
+                  'ЗАКРЫТЬ',
+                  style: BalatroTheme.statusStyle.copyWith(fontSize: 13),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _activeModsBody({required bool hideOpponent}) {
     final snapshot = _game.activeAbilitiesSnapshot();
     final youColor = widget.localColor ?? PieceColor.white;
     final oppColor = youColor == PieceColor.white
@@ -2490,92 +2578,69 @@ class _GameScreenState extends State<GameScreen> {
         ? snapshot.whiteChosen
         : snapshot.blackChosen;
 
-    showDialog<void>(
-      context: context,
-      builder: (context) {
-        return _flipOverlay(
-          AlertDialog(
-            backgroundColor: BalatroTheme.felt,
-            title: Text(
-              'АКТИВНЫЕ МОДИФИКАЦИИ',
-              style: BalatroTheme.titleStyle.copyWith(fontSize: 16),
-            ),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _AbilitySectionHeader(label: oppLabel),
-                    if (oppChosen.isEmpty)
-                      const _AbilityEmptyHint('Пока ничего не выбирал')
-                    else if (_game.blindSpotActive)
-                      ...oppChosen.map(
-                        (a) => _AbilityInfoTile(
-                          info: ChosenAbilityInfo(
-                            ability: a.ability,
-                            title: '???',
-                            description: 'Мод скрыта слепой зоной',
-                          ),
-                        ),
-                      )
-                    else
-                      ...oppChosen.map((a) => _AbilityInfoTile(info: a)),
-                    const SizedBox(height: 12),
-                    Divider(color: BalatroTheme.cream.withValues(alpha: 0.2)),
-                    const SizedBox(height: 8),
-                    Text(
-                      'ДОСКА',
-                      textAlign: TextAlign.center,
-                      style: BalatroTheme.statusStyle.copyWith(
-                        fontSize: 11,
-                        color: BalatroTheme.gold.withValues(alpha: 0.75),
-                        letterSpacing: 1.5,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: _AbilityStartCard(
-                            sideLabel: youLabel,
-                            info: youStart,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _AbilityStartCard(
-                            sideLabel: oppLabel,
-                            info: oppStart,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Divider(color: BalatroTheme.cream.withValues(alpha: 0.2)),
-                    const SizedBox(height: 12),
-                    _AbilitySectionHeader(label: youLabel),
-                    if (youChosen.isEmpty)
-                      const _AbilityEmptyHint('Пока ничего не выбирали')
-                    else
-                      ...youChosen.map((a) => _AbilityInfoTile(info: a)),
-                  ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (!hideOpponent) ...[
+          _AbilitySectionHeader(label: oppLabel),
+          if (oppChosen.isEmpty)
+            const _AbilityEmptyHint('Пока ничего не выбирал')
+          else if (_game.blindSpotActive)
+            ...oppChosen.map(
+              (a) => _AbilityInfoTile(
+                info: ChosenAbilityInfo(
+                  ability: a.ability,
+                  title: '???',
+                  description: 'Мод скрыта слепой зоной',
                 ),
               ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text(
-                  'ЗАКРЫТЬ',
-                  style: BalatroTheme.statusStyle.copyWith(fontSize: 13),
+            )
+          else
+            ...oppChosen.map((a) => _AbilityInfoTile(info: a)),
+          const SizedBox(height: 12),
+          Divider(color: BalatroTheme.cream.withValues(alpha: 0.2)),
+          const SizedBox(height: 8),
+        ],
+        Text(
+          'ДОСКА',
+          textAlign: TextAlign.center,
+          style: BalatroTheme.statusStyle.copyWith(
+            fontSize: 11,
+            color: BalatroTheme.gold.withValues(alpha: 0.75),
+            letterSpacing: 1.5,
+          ),
+        ),
+        const SizedBox(height: 8),
+        if (hideOpponent)
+          _AbilityStartCard(sideLabel: youLabel, info: youStart)
+        else
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _AbilityStartCard(
+                  sideLabel: youLabel,
+                  info: youStart,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _AbilityStartCard(
+                  sideLabel: oppLabel,
+                  info: oppStart,
                 ),
               ),
             ],
           ),
-        );
-      },
+        const SizedBox(height: 8),
+        Divider(color: BalatroTheme.cream.withValues(alpha: 0.2)),
+        const SizedBox(height: 12),
+        _AbilitySectionHeader(label: youLabel),
+        if (youChosen.isEmpty)
+          const _AbilityEmptyHint('Пока ничего не выбирали')
+        else
+          ...youChosen.map((a) => _AbilityInfoTile(info: a)),
+      ],
     );
   }
 }
