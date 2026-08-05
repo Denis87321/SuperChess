@@ -1,0 +1,14 @@
+# Render Blueprint — free Web Service for matchmaking
+# Dashboard: https://dashboard.render.com → New → Blueprint
+# Or create a Web Service manually pointing at this repo / server/Dockerfile
+
+services:
+  - type: web
+    name: superchess-api
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./server/Dockerfile
+    dockerContext: ./server
+    healthCheckPath: /health
+    # Render injects PORT; our server reads Platform.environment['PORT']

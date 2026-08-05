@@ -1,78 +1,110 @@
-# Hosting SuperChess (free path)
+# Hosting SuperChess (бесплатно)
 
-## Architecture
+## Архитектура
 
-- **Website**: Flutter Web → Cloudflare Pages (`https://….pages.dev`)
-- **Matchmaking**: Dart WebSocket server → Fly.io (`wss://superchess-api.fly.dev/ws`)
-- **Mobile later**: same Flutter app, same `wss://` URL → cross-play with web
+- **Сайт**: Flutter Web → Cloudflare Pages
+- **Сервер матчей**: Dart WebSocket → **Render** (free), URL вида `wss://superchess-api.onrender.com/ws`
+- **Телефон позже**: тот же `wss://` URL
 
-## One-time setup
+## Важно: Render засыпает
 
-### 1. Matchmaking server (Fly.io)
+На free-плане сервис **засыпает ~после 15 минут без запросов**. Первый вход в «Онлайн» после сна может занять **30–60 секунд** (пока сервер просыпается). Потом работает нормально.
 
-1. Create account at https://fly.io and install CLI (`scripts/deploy_server.ps1` can install flyctl).
-2. From repo:
+---
+
+## 1. Сервер на Render
+
+### Подготовка репозитория
+
+Код должен быть на GitHub (Render читает репо). Если ещё не запушено:
 
 ```powershell
-cd server
-fly auth login
-fly launch --name superchess-api --region ams --no-deploy --copy-config
-fly deploy
+cd C:\Users\SRV\Documents\Proga\SuperChess
+git add -A
+git status
+git commit -m "Add Render hosting for matchmaking server"
+git push origin main
 ```
 
-Or: `.\scripts\deploy_server.ps1`
+### Создать Web Service
 
-3. Check: open `https://superchess-api.fly.dev/health` → `{"ok":true,...}`
-4. If the app name differs, update `kProductionServerUrl` in
-   [lib/online/server_config.dart](../lib/online/server_config.dart)
-   and rebuild clients.
+1. Зайди на https://dashboard.render.com и зарегистрируйся (можно через GitHub).
+2. **New** → **Web Service**.
+3. Подключи репозиторий **SuperChess**.
+4. Настройки:
+   - **Name**: `superchess-api`
+   - **Region**: Frankfurt (или ближайший)
+   - **Runtime**: **Docker**
+   - **Dockerfile Path**: `server/Dockerfile`
+   - **Docker Context**: `./server` (если поле есть)
+   - **Instance type**: **Free**
+   - **Health Check Path**: `/health`
+5. **Create Web Service** → дождись Deploy (несколько минут).
+6. Проверка в браузере:  
+   `https://superchess-api.onrender.com/health`  
+   → должно быть `{"ok":true,"service":"superchess"}`  
+   (первый раз может подождать, пока сервис проснётся).
 
-### 2. Website (Cloudflare Pages)
+Адрес WebSocket: **`wss://superchess-api.onrender.com/ws`**
+
+Если Render дал другое имя (например `superchess-api-xxxx`), поменяй URL в  
+[lib/online/server_config.dart](../lib/online/server_config.dart) (`kProductionServerUrl`)  
+или всегда передавай его в `-ServerUrl` при сборке сайта.
+
+Альтернатива: **New → Blueprint** и указать `render.yaml` в корне репо.
+
+---
+
+## 2. Сайт на Cloudflare Pages
 
 ```powershell
-.\scripts\deploy_pages.ps1 -ServerUrl wss://superchess-api.fly.dev/ws
+cd C:\Users\SRV\Documents\Proga\SuperChess
+.\scripts\build_web.ps1 -ServerUrl wss://superchess-api.onrender.com/ws
 ```
 
-Or step by step:
+Потом:
 
+- Cloudflare → **Workers & Pages** → **Create** → **Pages** → **Direct Upload** → загрузить папку `build\web`  
+  **или**
 ```powershell
-.\scripts\build_web.ps1 -ServerUrl wss://superchess-api.fly.dev/ws
 npm i -g wrangler
 wrangler login
-wrangler pages deploy build/web --project-name=superchess
+.\scripts\deploy_pages.ps1 -ServerUrl wss://superchess-api.onrender.com/ws
 ```
 
-Or upload the `build/web` folder in the Cloudflare dashboard (Workers & Pages → Create → Direct Upload).
+Открой выданный адрес `https://….pages.dev`.
 
-### 3. Local development
+---
 
+## 3. Локально (без Render)
+
+**Терминал 1:**
 ```powershell
-cd server
+cd C:\Users\SRV\Documents\Proga\SuperChess\server
 dart run bin/server.dart
-# other terminal:
-flutter run -d chrome
-# Online matchmaking uses ws://127.0.0.1:8080/ws in debug mode
 ```
 
-Override any time:
-
+**Терминал 2:**
 ```powershell
-flutter run -d chrome --dart-define=SUPERCHESS_SERVER_URL=wss://superchess-api.fly.dev/ws
+cd C:\Users\SRV\Documents\Proga\SuperChess
+flutter run -d edge
 ```
 
-## Cross-play checklist
+Онлайн в debug ходит на `ws://127.0.0.1:8080/ws`.
 
-1. Two browsers on the production site → matched online.
-2. Phone (debug/release APK) with the same `SUPERCHESS_SERVER_URL` / release default → matched with a browser.
-3. Both must use **`wss://`** when the site is **`https://`**.
+Проверка против уже залитого Render:
+```powershell
+flutter run -d edge --dart-define=SUPERCHESS_SERVER_URL=wss://superchess-api.onrender.com/ws
+```
 
-## Files
+---
 
-| Path | Role |
-|------|------|
-| `server/Dockerfile` | Container image for Fly |
-| `server/fly.toml` | Fly app config + health check |
-| `lib/online/server_config.dart` | WS URL selection |
-| `scripts/build_web.ps1` | Release web build |
-| `scripts/deploy_server.ps1` | Fly deploy helper |
-| `wrangler.toml` | Cloudflare Pages project hint |
+## Файлы
+
+| Путь | Назначение |
+|------|------------|
+| `server/Dockerfile` | Образ сервера для Render |
+| `render.yaml` | Blueprint Render |
+| `lib/online/server_config.dart` | URL сервера |
+| `scripts/build_web.ps1` | Сборка сайта |
+| `scripts/deploy_pages.ps1` | Загрузка на Cloudflare |

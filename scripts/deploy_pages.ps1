@@ -1,6 +1,6 @@
 param(
   [string]$ProjectName = "superchess",
-  [string]$ServerUrl = "wss://superchess-api.fly.dev/ws"
+  [string]$ServerUrl = "wss://superchess-api.onrender.com/ws"
 )
 
 $ErrorActionPreference = "Stop"

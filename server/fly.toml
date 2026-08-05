@@ -1,31 +1,8 @@
-# fly.toml — deploy from the server/ directory:
-#   cd server
-#   fly launch --name superchess-api --region ams --no-deploy
-#   fly deploy
-#
-# After deploy, WSS URL is: wss://superchess-api.fly.dev/ws
+# Deprecated: project moved to Render (see docs/HOSTING.md and render.yaml).
+# Kept only so old fly commands do not confuse; do not deploy with fly.
 
 app = "superchess-api"
 primary_region = "ams"
 
 [build]
   dockerfile = "Dockerfile"
-
-[http_service]
-  internal_port = 8080
-  force_https = true
-  auto_stop_machines = "off"
-  auto_start_machines = true
-  min_machines_running = 1
-  processes = ["app"]
-
-  [[http_service.checks]]
-    interval = "30s"
-    timeout = "5s"
-    grace_period = "10s"
-    method = "GET"
-    path = "/health"
-
-[[vm]]
-  size = "shared-cpu-1x"
-  memory = "256mb"

@@ -5,6 +5,7 @@ void main() {
   test('production URL is wss for HTTPS sites and mobile release', () {
     expect(kProductionServerUrl.startsWith('wss://'), isTrue);
     expect(kProductionServerUrl.endsWith('/ws'), isTrue);
+    expect(kProductionServerUrl.contains('onrender.com'), isTrue);
   });
 
   test('local URL is ws for development', () {
