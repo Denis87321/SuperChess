@@ -1,0 +1,13 @@
+# Cloudflare Pages — direct upload of Flutter web build
+#
+# 1. Build (sets production WSS URL):
+#      .\scripts\build_web.ps1
+# 2. Install wrangler: npm i -g wrangler
+# 3. Login: wrangler login
+# 4. Deploy:
+#      wrangler pages deploy build/web --project-name=superchess
+
+name = "superchess"
+compatibility_date = "2026-01-01"
+
+pages_build_output_dir = "build/web"

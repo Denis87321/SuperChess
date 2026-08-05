@@ -1,0 +1,14 @@
+name: super_chess_server
+description: Matchmaking WebSocket server for SuperChess
+publish_to: 'none'
+
+environment:
+  sdk: ^3.12.0
+
+dependencies:
+  shelf: ^1.4.2
+  shelf_web_socket: ^3.0.0
+  web_socket_channel: ^3.0.3
+
+dev_dependencies:
+  test: ^1.25.0

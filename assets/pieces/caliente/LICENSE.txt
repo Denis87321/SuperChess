@@ -1,0 +1,4 @@
+Caliente chess piece set
+Author: avi (https://github.com/avi-0/caliente)
+Source: https://github.com/lichess-org/lila/tree/master/public/piece/caliente
+License: CC BY-NC-SA 4.0 (https://creativecommons.org/licenses/by-nc-sa/4.0/)
