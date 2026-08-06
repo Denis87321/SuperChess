@@ -250,12 +250,12 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.boardSwamp:
       case GameAbility.boardCollectiveMyopia:
       case GameAbility.boardTerritoryExpand:
-      case GameAbility.boardFrostMap:
       case GameAbility.boardScorchingSun:
         return AbilityGroup.board;
       case GameAbility.boardTide:
       case GameAbility.boardMarseillesChess:
       case GameAbility.boardTurncoats:
+      case GameAbility.boardFrostMap:
         return AbilityGroup.mode;
       case GameAbility.pawnSideways:
       case GameAbility.pawnInverted:
@@ -862,7 +862,9 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.boardTerritoryExpand:
         return 'На доске появляются вертикали Z и I сразу';
       case GameAbility.boardFrostMap:
-        return 'Фигуры замерзают после 3 ходов на морозе. У каждого игрока 3 факела: они не мёрзнут и согревают соседей. Съеденный факел передаётся ближайшему союзнику';
+        return 'У каждой фигуры счётчик мороза 0–3 (нормально → холодно → стынет → замерз). '
+            'За ход без факела рядом +1, рядом с факелом −1. На 3 фигура не ходит. '
+            'У каждого игрока 3 факела; съеденный факел переходит ближайшему союзнику. Только старт партии.';
       case GameAbility.boardScorchingSun:
         return 'Солнце палит 3–6 клеток (меняет каждые 5 ходов). Нагрев 0→3: на 3 фигура погибает. Вне солнца нагрев падает';
       case GameAbility.boardTurncoats:

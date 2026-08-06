@@ -16,12 +16,16 @@ enum StockfishIssue {
 
 /// Opponent that uses Stockfish only (no ComputerPlayer fallback).
 ///
-/// Web builds load Stockfish 18 NNUE (`stockfish-18-single`); think time is
-/// generous so the engine can use the net at serious depth in-browser.
+/// Prefers the shared server engine over WebSocket; web may fall back to
+/// local WASM if the API is unreachable.
 class StockfishPlayer {
-  StockfishPlayer({this.movetimeMs = 4000});
+  StockfishPlayer({
+    this.movetimeMs = 3000,
+    Future<StockfishEngine?> Function()? engineFactory,
+  }) : _engineFactory = engineFactory ?? createStockfishEngine;
 
   final int movetimeMs;
+  final Future<StockfishEngine?> Function() _engineFactory;
   StockfishEngine? _engine;
   Future<void>? _init;
   StockfishIssue _issue = StockfishIssue.loading;
@@ -33,7 +37,7 @@ class StockfishPlayer {
   Future<void> ensureReady() {
     return _init ??= () async {
       _issue = StockfishIssue.loading;
-      _engine = await createStockfishEngine();
+      _engine = await _engineFactory();
       _issue = _engine == null
           ? StockfishIssue.engineUnavailable
           : StockfishIssue.none;

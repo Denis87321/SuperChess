@@ -1,5 +1,5 @@
-import '../models/piece.dart';
-import '../models/square.dart';
+import '../l10n/models/piece.dart';
+import '../l10n/models/square.dart';
 
 /// Mutable board-rule / cataclysm flags shared with [GameSnapshot].
 class BoardCataclysmState {
@@ -117,7 +117,7 @@ class BoardCataclysmState {
     PieceColor.white: {},
     PieceColor.black: {},
   };
-  final Map<String, int> frostIdleTurns = {}; // pieceId -> consecutive cold turns
+  final Map<String, int> frostIdleTurns = {}; // pieceId -> frost stage 0..3 (mirror)
   final Set<String> frozenPieceIds = {};
 
   bool scorchingSunActive = false;

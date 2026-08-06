@@ -98,7 +98,18 @@ flutter run -d edge --dart-define=SUPERCHESS_SERVER_URL=ws://127.0.0.1:8080/ws
 
 ---
 
-## Язык
+## Против Stockfish (серверный движок)
+
+Клиент шлёт по `/ws`:
+
+```json
+{ "type": "stockfish_ping" }
+{ "type": "stockfish_go", "id": "1", "fen": "...", "movetime": 3000 }
+```
+
+Ответы: `stockfish_pong` / `stockfish_bestmove`.
+
+Локально (Windows): поставь [Stockfish](https://stockfishchess.org/download/) в PATH или задай `STOCKFISH_PATH`. Без бинарника на вебе останется WASM-fallback; на Android нужен задеплоенный API.
 
 RU/EN выбирается по языку системы/браузера; на главном экране можно переключить вручную (иконка глобуса). Ник в партии: аккаунт или «Аноним» / `Anonymous`.
 
@@ -108,10 +119,9 @@ RU/EN выбирается по языку системы/браузера; на
 - История и прогресс модов — для залогиненного в каждой его партии (в т.ч. vs аноним, без Elo).
 - Достижение **Коллекционер** (`all_abilities`): использовать все моды за карьеру в logged-in играх.
 - Профиль: иконка человека на главном / тап по нику.
-- **Против Stockfish**: в браузере — **Stockfish 18 NNUE lite** (`stockfish-18-lite-single.*`, ~7MB; при сбое — full ~108MB). На Android/iOS — плагин `stockfish`. Игрок выбирает моды, Stockfish — нет. Запасного бота нет: без движка ход не делается.
-- Wasm лежит в Git LFS. После клона: `git lfs pull`. Если файлов нет: `.\scripts\fetch_stockfish.ps1`.
-- Первый запуск режима «против Stockfish» может долго грузить wasm (десятки секунд на медленной сети).
-- `.\scripts\build_web.ps1` сам подтягивает движок при необходимости и копирует `web/stockfish/` → `public/stockfish/`.
+- **Против Stockfish**: клиент подключается к API по WebSocket (`stockfish_ping` / `stockfish_go`). Движок крутится **на сервере** (пакет `stockfish` в Docker). На вебе при недоступности API возможен запасной локальный WASM. В APK нативного Stockfish нет — размер маленький.
+- На сервере нужен бинарник: Debian `apt install stockfish`, или `STOCKFISH_PATH`. Health: `GET /health` → `"stockfish": true`.
+- Первый запрос после сна Render может ждать **30–60 с** (пробуждение + старт движка).
 
 ---
 

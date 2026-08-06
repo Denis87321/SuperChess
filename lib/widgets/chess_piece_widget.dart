@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-import '../models/piece.dart';
+import '../l10n/models/piece.dart';
 import '../theme/balatro_theme.dart';
 
 class ChessPieceWidget extends StatelessWidget {
@@ -19,6 +19,7 @@ class ChessPieceWidget extends StatelessWidget {
     this.hasTorch = false,
     this.isFrozen = false,
     this.isEnemyTurncoat = false,
+    this.showFrostCounter = false,
   });
 
   final Piece piece;
@@ -33,6 +34,7 @@ class ChessPieceWidget extends StatelessWidget {
   final bool hasTorch;
   final bool isFrozen;
   final bool isEnemyTurncoat;
+  final bool showFrostCounter;
 
   static String assetFor(PieceColor color, PieceType type) {
     final prefix = color == PieceColor.white ? 'w' : 'b';
@@ -62,6 +64,7 @@ class ChessPieceWidget extends StatelessWidget {
       hasTorch: hasTorch,
       isFrozen: isFrozen,
       isEnemyTurncoat: isEnemyTurncoat,
+      showFrostCounter: showFrostCounter,
     );
   }
 }
@@ -80,6 +83,7 @@ class _ChessPieceRender extends StatefulWidget {
     required this.hasTorch,
     required this.isFrozen,
     required this.isEnemyTurncoat,
+    required this.showFrostCounter,
   });
 
   final Piece piece;
@@ -94,6 +98,7 @@ class _ChessPieceRender extends StatefulWidget {
   final bool hasTorch;
   final bool isFrozen;
   final bool isEnemyTurncoat;
+  final bool showFrostCounter;
 
   @override
   State<_ChessPieceRender> createState() => _ChessPieceRenderState();
@@ -507,6 +512,39 @@ class _ChessPieceRenderState extends State<_ChessPieceRender>
                   'H${widget.piece.heatLevel}',
                   style: TextStyle(
                     fontSize: widget.size * 0.10,
+                    fontWeight: FontWeight.w800,
+                    height: 1,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          if (widget.showFrostCounter)
+            Positioned(
+              right: widget.size * 0.02,
+              top: widget.size * 0.02,
+              child: Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: widget.size * 0.04,
+                  vertical: widget.size * 0.01,
+                ),
+                decoration: BoxDecoration(
+                  color: switch (widget.piece.frostLevel.clamp(0, 3)) {
+                    0 => const Color(0xFF64748B),
+                    1 => const Color(0xFF38BDF8),
+                    2 => const Color(0xFF2563EB),
+                    _ => const Color(0xFF1E3A8A),
+                  },
+                  borderRadius: BorderRadius.circular(widget.size * 0.06),
+                  border: Border.all(
+                    color: Colors.white24,
+                    width: widget.size * 0.015,
+                  ),
+                ),
+                child: Text(
+                  '${widget.piece.frostLevel.clamp(0, 3)}',
+                  style: TextStyle(
+                    fontSize: widget.size * 0.11,
                     fontWeight: FontWeight.w800,
                     height: 1,
                     color: Colors.white,

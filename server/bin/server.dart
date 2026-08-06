@@ -11,6 +11,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:super_chess_server/auth.dart';
 import 'package:super_chess_server/db.dart';
 import 'package:super_chess_server/password.dart';
+import 'package:super_chess_server/stockfish_service.dart';
 
 AuthDatabase? _authDb;
 AuthTokens? _authTokens;
@@ -37,13 +38,25 @@ Future<void> main() async {
     _ClientConnection(client).listen();
   });
 
+  // Warm Stockfish in background (optional; fails soft if binary missing).
+  unawaited(StockfishService.instance.ensureStarted());
+
   final router = Router();
 
-  router.get('/health', (Request request) {
+  router.get('/health', (Request request) async {
+    final sf = StockfishService.instance;
+    // Don't block health on a cold start forever.
+    final available = sf.isAvailable ||
+        await sf.ensureStarted().timeout(
+              const Duration(seconds: 2),
+              onTimeout: () => false,
+            );
     return _json({
       'ok': true,
       'service': 'superchess',
       'auth': _authDb != null,
+      'stockfish': available,
+      if (sf.lastError != null) 'stockfishError': sf.lastError,
     });
   });
 
@@ -354,6 +367,16 @@ class _ClientConnection {
           name: data['name'] as String? ?? 'Player',
           token: data['token'] as String?,
         );
+      case 'stockfish_ping':
+        final ok = await StockfishService.instance.ensureStarted();
+        _send({
+          'type': 'stockfish_pong',
+          'available': ok,
+          if (!ok && StockfishService.instance.lastError != null)
+            'error': StockfishService.instance.lastError,
+        });
+      case 'stockfish_go':
+        await _handleStockfishGo(data);
       case 'move':
       case 'ability':
       case 'start_ability':
@@ -377,6 +400,31 @@ class _ClientConnection {
       default:
         _send({'type': 'error', 'message': 'Неизвестный тип сообщения'});
     }
+  }
+
+  Future<void> _handleStockfishGo(Map<String, dynamic> data) async {
+    final id = data['id']?.toString() ?? '';
+    final fen = data['fen'] as String?;
+    final movetime = (data['movetime'] as num?)?.toInt() ?? 2000;
+    if (fen == null || fen.isEmpty) {
+      _send({
+        'type': 'stockfish_bestmove',
+        'id': id,
+        'move': null,
+        'error': 'missing fen',
+      });
+      return;
+    }
+    final move = await StockfishService.instance.goBestMove(
+      fen: fen,
+      movetimeMs: movetime,
+    );
+    _send({
+      'type': 'stockfish_bestmove',
+      'id': id,
+      'move': move,
+      if (move == null) 'error': StockfishService.instance.lastError ?? 'no move',
+    });
   }
 
   Future<void> _enqueue({required String name, String? token}) async {

@@ -23,13 +23,13 @@ class AppStrings {
   String get computerThinking =>
       isRu ? 'Stockfish думает…' : 'Stockfish is thinking…';
   String get computerLoading =>
-      isRu ? 'Загрузка Stockfish…' : 'Loading Stockfish…';
+      isRu ? 'Подключение к Stockfish…' : 'Connecting to Stockfish…';
   String get computerLoadingHint => isRu
-      ? 'Первый раз ~5–15 с (движок ~7 МБ)'
-      : 'First time ~5–15s (engine ~7 MB)';
+      ? 'Движок на сервере (первый раз после сна API может занять до ~1 мин)'
+      : 'Engine on the server (cold start may take up to ~1 min)';
   String get computerUnavailable => isRu
-      ? 'Stockfish не запустился — ход не будет сделан'
-      : 'Stockfish failed to start — it will not move';
+      ? 'Stockfish на сервере недоступен — ход не будет сделан'
+      : 'Server Stockfish unavailable — it will not move';
   String get computerUnsupportedPosition => isRu
       ? 'Stockfish не видит эту позицию (нестандартная доска) — ход не будет сделан'
       : 'Stockfish cannot read this position — it will not move';

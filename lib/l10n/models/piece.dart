@@ -40,6 +40,7 @@ class Piece {
     this.stompPending = false,
     this.magicHoovesPending = false,
     this.heatLevel = 0,
+    this.frostLevel = 0,
   });
 
   /// Stable identity assigned by [ChessGame].
@@ -103,6 +104,9 @@ class Piece {
   /// 0..3 for «Палящее солнце».
   final int heatLevel;
 
+  /// 0..3 for «Морозная карта»: 0 нормально, 1 холодно, 2 стынет, 3 замерз.
+  final int frostLevel;
+
   bool get hasModifiedMoveSet {
     for (final ability in abilities) {
       if (ability.effects.isNotEmpty) return true;
@@ -159,6 +163,7 @@ class Piece {
     bool? stompPending,
     bool? magicHoovesPending,
     int? heatLevel,
+    int? frostLevel,
   }) {
     return Piece(
       pieceId: pieceId ?? this.pieceId,
@@ -197,6 +202,7 @@ class Piece {
       stompPending: stompPending ?? this.stompPending,
       magicHoovesPending: magicHoovesPending ?? this.magicHoovesPending,
       heatLevel: heatLevel ?? this.heatLevel,
+      frostLevel: frostLevel ?? this.frostLevel,
     );
   }
 

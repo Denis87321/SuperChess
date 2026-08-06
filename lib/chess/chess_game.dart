@@ -957,6 +957,16 @@ class ChessGame {
   }
 
   @visibleForTesting
+  void debugTickFrostMap(PieceColor finished) {
+    _tickFrostMap(finished);
+  }
+
+  @visibleForTesting
+  void debugSetTorchIds(PieceColor color, Set<String> ids) {
+    _rules.torchPieceIds[color] = {...ids};
+  }
+
+  @visibleForTesting
   void debugSetTurn(PieceColor color) {
     _turn = color;
   }
@@ -7479,32 +7489,30 @@ class ChessGame {
           final piece = pieces[i];
           if (piece.color != finished) continue;
           if (piece.type == PieceType.king) continue;
+
+          var frost = piece.frostLevel.clamp(0, 3);
           if (torchSet.contains(piece.pieceId)) {
-            _rules.frostIdleTurns[piece.pieceId] = 0;
-            _rules.frozenPieceIds.remove(piece.pieceId);
-            continue;
+            frost = 0;
+          } else {
+            final nearTorch = torchSquares.any(
+              (t) => _chebyshevDistance(t, square) == 1,
+            );
+            if (nearTorch) {
+              frost = (frost - 1).clamp(0, 3);
+            } else {
+              frost = (frost + 1).clamp(0, 3);
+            }
           }
-          final nearTorch = torchSquares.any(
-            (t) => _chebyshevDistance(t, square) == 1,
-          );
-          if (nearTorch) {
-            _rules.frostIdleTurns[piece.pieceId] = 0;
-            _rules.frozenPieceIds.remove(piece.pieceId);
-            continue;
+
+          if (frost != piece.frostLevel) {
+            _replacePieceAt(square, i, piece.copyWith(frostLevel: frost));
           }
-          // Skip idle increment for the piece that just moved this turn.
-          final last = finished == PieceColor.white
-              ? _rules.whiteLastMovedPieceId
-              : _rules.blackLastMovedPieceId;
-          if (last == piece.pieceId) {
-            _rules.frostIdleTurns[piece.pieceId] = 0;
-            continue;
-          }
-          final idle = (_rules.frostIdleTurns[piece.pieceId] ?? 0) + 1;
-          _rules.frostIdleTurns[piece.pieceId] = idle;
-          if (idle >= 3) {
+          if (frost >= 3) {
             _rules.frozenPieceIds.add(piece.pieceId);
+          } else {
+            _rules.frozenPieceIds.remove(piece.pieceId);
           }
+          _rules.frostIdleTurns[piece.pieceId] = frost;
         }
       }
     }
@@ -7897,11 +7905,6 @@ class ChessGame {
       );
     }
 
-    if (_rules.frostMapActive) {
-      _rules.frostIdleTurns[moverId] = 0;
-      _rules.frozenPieceIds.remove(moverId);
-    }
-
     if (moverBefore.magicHoovesPending ||
         (_hasEffect(moverBefore, AbilityEffect.magicHooves) &&
             moverBefore.magicHoovesPending)) {
@@ -8098,6 +8101,19 @@ class ChessGame {
     _rules.frostMapActive = true;
     _rules.frostIdleTurns.clear();
     _rules.frozenPieceIds.clear();
+    // All pieces start at frost stage 0.
+    for (var rank = 0; rank < _rankCount; rank++) {
+      for (var file = 0; file < _fileCount; file++) {
+        final square = Square(file, rank);
+        final pieces = piecesAt(square);
+        for (var i = 0; i < pieces.length; i++) {
+          final piece = pieces[i];
+          if (piece.frostLevel != 0) {
+            _replacePieceAt(square, i, piece.copyWith(frostLevel: 0));
+          }
+        }
+      }
+    }
     for (final color in PieceColor.values) {
       final eligible = <String>[];
       for (var rank = 0; rank < _rankCount; rank++) {

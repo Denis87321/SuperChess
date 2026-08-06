@@ -43,3 +43,10 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+/android/build/
+
+# Native Stockfish plugin (not used — engine runs remotely / WASM on web).
+# Keep local copies if needed, but never commit NDK/.cxx build artifacts.
+/packages/stockfish/
+**/.cxx/
+*.nnue

@@ -1768,9 +1768,9 @@ class _GameScreenState extends State<GameScreen> {
       (move.to.file - move.from.file).abs(),
       (move.to.rank - move.from.rank).abs(),
     );
-    // Web needs longer flights — short tweens look like teleportation there.
+    // Slightly longer on web so the flight is readable at lower browser FPS.
     final ms = kIsWeb
-        ? (280 + dist * 70).clamp(320, 620)
+        ? (260 + dist * 60).clamp(300, 560)
         : (160 + dist * 45).clamp(180, 360);
     final completer = Completer<void>();
     final flight = _PieceFlight(
@@ -1791,7 +1791,7 @@ class _GameScreenState extends State<GameScreen> {
     });
 
     await completer.future.timeout(
-      Duration(milliseconds: ms + (kIsWeb ? 400 : 120)),
+      Duration(milliseconds: ms + (kIsWeb ? 500 : 120)),
       onTimeout: () {},
     );
   }
@@ -2835,6 +2835,10 @@ class _ChessBoard extends StatelessWidget {
       hasTorch: game.hasTorch(piece.pieceId),
       isFrozen: game.isFrozenPiece(piece.pieceId),
       isEnemyTurncoat: visibleEnemyTurncoatId == piece.pieceId,
+      showFrostCounter:
+          game.frostMapActive &&
+          !game.hasTorch(piece.pieceId) &&
+          piece.type != PieceType.king,
     );
     if (!rotatePieces) return child;
     return Transform.rotate(angle: math.pi, child: child);
@@ -3385,7 +3389,8 @@ class _FlyingPieceState extends State<_FlyingPiece>
     ).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: Curves.easeInOutCubic,
+        // Softer ease reads better on web where frame pacing is uneven.
+        curve: kIsWeb ? Curves.easeInOutCubicEmphasized : Curves.easeInOutCubic,
       ),
     );
 
@@ -3394,7 +3399,11 @@ class _FlyingPieceState extends State<_FlyingPiece>
         widget.onFinished();
       }
     });
-    _controller.forward();
+    // Wait one frame so the piece is painted at the origin before moving
+    // (otherwise the first web frames often skip and the move looks like a snap).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _controller.forward();
+    });
   }
 
   @override
@@ -3408,23 +3417,34 @@ class _FlyingPieceState extends State<_FlyingPiece>
     final size = widget.cellSize * 0.88;
     final pad = (widget.cellSize - size) / 2;
 
-    return AnimatedBuilder(
-      animation: _position,
-      builder: (context, child) {
-        return Positioned(
-          left: _position.value.dx + pad,
-          top: _position.value.dy + pad,
-          child: child!,
-        );
-      },
+    // Transform.translate composites without relayout — critical on Flutter web,
+    // where animating Positioned left/top every frame drops frames and looks abrupt.
+    return Positioned.fill(
       child: IgnorePointer(
-        child: Transform.rotate(
-          angle: widget.rotatePiece ? math.pi : 0,
-          child: ChessPieceWidget(
-            piece: widget.flight.piece,
-            size: size,
-            displayAs: widget.flight.displayAs,
-            isZebra: widget.flight.isZebra,
+        child: AnimatedBuilder(
+          animation: _position,
+          builder: (context, child) {
+            return Transform.translate(
+              offset: Offset(
+                _position.value.dx + pad,
+                _position.value.dy + pad,
+              ),
+              child: child,
+            );
+          },
+          child: Align(
+            alignment: Alignment.topLeft,
+            child: RepaintBoundary(
+              child: Transform.rotate(
+                angle: widget.rotatePiece ? math.pi : 0,
+                child: ChessPieceWidget(
+                  piece: widget.flight.piece,
+                  size: size,
+                  displayAs: widget.flight.displayAs,
+                  isZebra: widget.flight.isZebra,
+                ),
+              ),
+            ),
           ),
         ),
       ),

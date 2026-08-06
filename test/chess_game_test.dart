@@ -2589,4 +2589,89 @@ void main() {
     expect(game.pieceAt(const Square(2, 5)), isNull);
     expect(game.pieceAt(const Square(3, 4))?.type, PieceType.queen); // d5
   });
+
+  test('frost map stages rise without torch and fall next to torch', () {
+    final game = ChessGame(catalog: AbilityCatalog(random: Random(7)));
+    game.applyStartAbility(
+      PieceColor.white,
+      GameAbility.boardFrostMap,
+      remoteOffer: const AbilityOffer(
+        ability: GameAbility.boardFrostMap,
+        applyMode: AbilityApplyMode.boardWide,
+        forColor: PieceColor.white,
+      ),
+    );
+    game.applyStartAbility(
+      PieceColor.black,
+      GameAbility.boardSkipTurn,
+      remoteOffer: const AbilityOffer(
+        ability: GameAbility.boardSkipTurn,
+        applyMode: AbilityApplyMode.boardWide,
+        forColor: PieceColor.black,
+      ),
+    );
+
+    expect(game.frostMapActive, isTrue);
+    expect(GameAbility.boardFrostMap.group, AbilityGroup.mode);
+
+    for (var r = 0; r < 8; r++) {
+      for (var f = 0; f < 8; f++) {
+        game.debugSetPiece(Square(f, r), null);
+      }
+    }
+    game.debugSetPiece(
+      const Square(4, 0),
+      const Piece(
+        pieceId: 'wk',
+        type: PieceType.king,
+        color: PieceColor.white,
+        hasMoved: true,
+      ),
+    );
+    game.debugSetPiece(
+      const Square(4, 7),
+      const Piece(
+        pieceId: 'bk',
+        type: PieceType.king,
+        color: PieceColor.black,
+        hasMoved: true,
+      ),
+    );
+    game.debugSetPiece(
+      const Square(0, 3),
+      const Piece(
+        pieceId: 'wr',
+        type: PieceType.rook,
+        color: PieceColor.white,
+        hasMoved: true,
+      ),
+    );
+    game.debugSetTorchIds(PieceColor.white, {});
+    game.debugSetTorchIds(PieceColor.black, {});
+
+    expect(game.pieceAt(const Square(0, 3))?.frostLevel, 0);
+    game.debugTickFrostMap(PieceColor.white);
+    expect(game.pieceAt(const Square(0, 3))?.frostLevel, 1);
+    game.debugTickFrostMap(PieceColor.white);
+    expect(game.pieceAt(const Square(0, 3))?.frostLevel, 2);
+    game.debugTickFrostMap(PieceColor.white);
+    expect(game.pieceAt(const Square(0, 3))?.frostLevel, 3);
+    expect(game.isFrozenPiece('wr'), isTrue);
+
+    game.debugSetPiece(
+      const Square(1, 3),
+      const Piece(
+        pieceId: 'wn',
+        type: PieceType.knight,
+        color: PieceColor.white,
+        hasMoved: true,
+      ),
+    );
+    game.debugSetTorchIds(PieceColor.white, {'wn'});
+
+    game.debugTickFrostMap(PieceColor.white);
+    expect(game.pieceAt(const Square(0, 3))?.frostLevel, 2);
+    expect(game.isFrozenPiece('wr'), isFalse);
+    expect(game.pieceAt(const Square(1, 3))?.frostLevel, 0);
+  });
 }

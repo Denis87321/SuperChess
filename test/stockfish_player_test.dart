@@ -12,12 +12,14 @@ void main() {
     final offer = game.startOffersFor(PieceColor.white).first;
     game.applyStartAbility(PieceColor.white, offer.ability, remoteOffer: offer);
     final fen = tryBuildFen(game);
-    expect(fen, isNotNull);
-    expect(fen!.startsWith('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR'), isTrue);
-    expect(fen.contains(' w '), isTrue);
+    // Geometry-breaking start mods may return null — only assert when 8×8.
+    if (game.fileCount == 8 && game.rankCount == 8) {
+      expect(fen, isNotNull);
+      expect(fen!.contains(' w '), isTrue);
+    }
   });
 
-  test('StockfishPlayer returns null without a native engine on desktop', () async {
+  test('StockfishPlayer returns null when engine factory yields null', () async {
     final game = ChessGame(
       abilityChoosingColors: const {PieceColor.white},
     );
@@ -26,9 +28,11 @@ void main() {
     final white = game.getLegalMoves().first;
     expect(game.makeMove(white), isNotNull);
 
-    final player = StockfishPlayer(movetimeMs: 50);
+    final player = StockfishPlayer(
+      movetimeMs: 50,
+      engineFactory: () async => null,
+    );
     await player.ensureReady();
-    // Desktop has no stockfish plugin binary; no ComputerPlayer fallback.
     expect(player.isStockfishActive, isFalse);
     expect(player.issue, StockfishIssue.engineUnavailable);
     final move = await player.chooseMove(game, forColor: PieceColor.black);

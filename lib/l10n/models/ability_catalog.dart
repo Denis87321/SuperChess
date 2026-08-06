@@ -16,6 +16,7 @@ class AbilityCatalog {
     GameAbility.boardTide,
     GameAbility.boardMarseillesChess,
     GameAbility.boardTurncoats,
+    GameAbility.boardFrostMap,
   ];
 
   static const boardAbilities = [
@@ -74,7 +75,6 @@ class AbilityCatalog {
     GameAbility.boardSwamp,
     GameAbility.boardCollectiveMyopia,
     GameAbility.boardTerritoryExpand,
-    GameAbility.boardFrostMap,
     GameAbility.boardScorchingSun,
   ];
 
@@ -245,7 +245,7 @@ class AbilityCatalog {
     required PieceColor forColor,
     Set<GameAbility> excludedAbilities = const {},
   }) {
-    // Start pool: Р РµР¶РёРј (start-only) + Р”РѕСЃРєР°.
+    // Start pool: Режим (start-only) + Доска.
     final available = [
       ...modeAbilities,
       ...boardAbilities,
