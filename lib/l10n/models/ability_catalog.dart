@@ -1,6 +1,6 @@
-import 'dart:math';
+﻿import 'dart:math';
 
-import '../chess/board_labels.dart';
+import '../../chess/board_labels.dart';
 import 'ability_effects.dart';
 import 'ability_group.dart';
 import 'game_ability.dart';
@@ -245,7 +245,7 @@ class AbilityCatalog {
     required PieceColor forColor,
     Set<GameAbility> excludedAbilities = const {},
   }) {
-    // Start pool: Режим (start-only) + Доска.
+    // Start pool: Р РµР¶РёРј (start-only) + Р”РѕСЃРєР°.
     final available = [
       ...modeAbilities,
       ...boardAbilities,

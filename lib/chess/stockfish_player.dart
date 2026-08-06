@@ -1,5 +1,5 @@
-import '../models/piece.dart';
-import '../models/square.dart';
+import '../l10n/models/piece.dart';
+import '../l10n/models/square.dart';
 import 'chess_game.dart';
 import 'fen_export.dart';
 import 'move.dart';
@@ -7,11 +7,10 @@ import 'stockfish_engine.dart';
 
 /// Opponent that uses Stockfish only (no ComputerPlayer fallback).
 ///
-/// Think time is intentionally high: the bundled web engine is an older
-/// multi-variant WASM build (not modern NNUE top strength), so movetime is the
-/// main lever we have.
+/// Web builds load Stockfish 18 NNUE (`stockfish-18-single`); think time is
+/// generous so the engine can use the net at serious depth in-browser.
 class StockfishPlayer {
-  StockfishPlayer({this.movetimeMs = 3000});
+  StockfishPlayer({this.movetimeMs = 4000});
 
   final int movetimeMs;
   StockfishEngine? _engine;

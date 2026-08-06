@@ -10,7 +10,7 @@ Future<StockfishEngine?> createStockfishEngineImpl() async {
   if (!(Platform.isAndroid || Platform.isIOS)) return null;
   try {
     final engine = _IoStockfishEngine();
-    final ok = await engine.ready().timeout(const Duration(seconds: 12));
+    final ok = await engine.ready().timeout(const Duration(seconds: 30));
     if (!ok) {
       engine.dispose();
       return null;
@@ -75,7 +75,7 @@ class _IoStockfishEngine implements StockfishEngine {
       _engine.stdin = 'setoption name Skill Level value 20';
       _engine.stdin = 'setoption name UCI_LimitStrength value false';
       _engine.stdin = 'setoption name Threads value 2';
-      _engine.stdin = 'setoption name Hash value 128';
+      _engine.stdin = 'setoption name Hash value 256';
       _engine.stdin = 'ucinewgame';
     }
     return ok;

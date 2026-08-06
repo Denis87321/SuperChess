@@ -5,31 +5,42 @@ import 'package:web/web.dart' as web;
 
 import 'stockfish_engine.dart';
 
+/// Stockfish 18 NNUE workers (strongest first).
+///
+/// Full single-thread (~108MB wasm) needs no COOP/COEP.
+/// Lite single is a smaller offline fallback.
+const _engineScripts = <String>[
+  'stockfish/stockfish-18-single.js',
+  'stockfish/stockfish-18-lite-single.js',
+];
+
 Future<StockfishEngine?> createStockfishEngineImpl() async {
-  try {
-    final engine = _WebStockfishEngine();
-    final ok = await engine.ready().timeout(const Duration(seconds: 12));
-    if (!ok) {
+  for (final script in _engineScripts) {
+    try {
+      final engine = _WebStockfishEngine(script);
+      final ok = await engine.ready().timeout(const Duration(seconds: 90));
+      if (ok) return engine;
       engine.dispose();
-      return null;
+    } catch (_) {
+      // Try next candidate.
     }
-    return engine;
-  } catch (_) {
-    return null;
   }
+  return null;
 }
 
 class _WebStockfishEngine implements StockfishEngine {
-  _WebStockfishEngine() {
-    _worker = web.Worker('stockfish/stockfish.js'.toJS);
+  _WebStockfishEngine(this._scriptUrl) {
+    _worker = web.Worker(_scriptUrl.toJS);
     _worker.onmessage = _onMessage.toJS;
     _worker.onerror = _onError.toJS;
   }
 
+  final String _scriptUrl;
   late final web.Worker _worker;
   final _lines = StreamController<String>.broadcast();
   Completer<bool>? _uciReady;
   bool _disposed = false;
+  bool _configured = false;
 
   void _onMessage(web.MessageEvent event) {
     final data = event.data;
@@ -56,24 +67,25 @@ class _WebStockfishEngine implements StockfishEngine {
 
   @override
   Future<bool> ready() async {
+    if (_configured) return true;
     if (_uciReady != null) return _uciReady!.future;
     _uciReady = Completer<bool>();
     _send('uci');
-    _send('isready');
-    // Wait for uciok; also accept readyok as soft success after timeout path.
     final ok = await _uciReady!.future.timeout(
-      const Duration(seconds: 10),
+      const Duration(seconds: 75),
       onTimeout: () => false,
     );
-    if (ok) {
-      // Max classical skill; do not limit Elo.
-      _send('setoption name Skill Level value 20');
-      _send('setoption name UCI_LimitStrength value false');
-      _send('setoption name Threads value 2');
-      _send('setoption name Hash value 128');
-      _send('ucinewgame');
-    }
-    return ok;
+    if (!ok) return false;
+
+    // Max classical strength (Stockfish 18 NNUE).
+    _send('setoption name Skill Level value 20');
+    _send('setoption name UCI_LimitStrength value false');
+    _send('setoption name Hash value 256');
+    _send('setoption name Move Overhead value 20');
+    _send('ucinewgame');
+    _send('isready');
+    _configured = true;
+    return true;
   }
 
   @override
@@ -98,7 +110,7 @@ class _WebStockfishEngine implements StockfishEngine {
     _send('go movetime $movetimeMs');
     try {
       return await completer.future.timeout(
-        Duration(milliseconds: movetimeMs + 2500),
+        Duration(milliseconds: movetimeMs + 8000),
         onTimeout: () => null,
       );
     } finally {
@@ -110,6 +122,9 @@ class _WebStockfishEngine implements StockfishEngine {
   void dispose() {
     if (_disposed) return;
     _disposed = true;
+    try {
+      _send('quit');
+    } catch (_) {}
     _worker.terminate();
     unawaited(_lines.close());
   }

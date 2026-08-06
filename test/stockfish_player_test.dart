@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:super_chess/chess/chess_game.dart';
 import 'package:super_chess/chess/fen_export.dart';
 import 'package:super_chess/chess/stockfish_player.dart';
-import 'package:super_chess/models/piece.dart';
+import 'package:super_chess/l10n/models/piece.dart';
 
 void main() {
   test('tryBuildFen returns starting-style fen after white start only', () {
@@ -17,7 +17,7 @@ void main() {
     expect(fen.contains(' w '), isTrue);
   });
 
-  test('StockfishPlayer falls back without engine on desktop', () async {
+  test('StockfishPlayer returns null without a native engine on desktop', () async {
     final game = ChessGame(
       abilityChoosingColors: const {PieceColor.white},
     );
@@ -28,9 +28,10 @@ void main() {
 
     final player = StockfishPlayer(movetimeMs: 50);
     await player.ensureReady();
+    // Desktop has no stockfish plugin binary; no ComputerPlayer fallback.
+    expect(player.isStockfishActive, isFalse);
     final move = await player.chooseMove(game, forColor: PieceColor.black);
-    expect(move, isNotNull);
-    expect(game.getLegalMoves(), contains(move));
+    expect(move, isNull);
     player.dispose();
   });
 }

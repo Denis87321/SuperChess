@@ -8,6 +8,13 @@ param(
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot\..
 
+# Stockfish 18 NNUE assets (full single ~108MB) must exist under web/stockfish/
+$sfPrimary = "web\stockfish\stockfish-18-single.wasm"
+if (-not (Test-Path $sfPrimary)) {
+  Write-Host "==> Stockfish wasm missing - running fetch_stockfish.ps1"
+  & "$PSScriptRoot\fetch_stockfish.ps1"
+}
+
 Write-Host "==> flutter pub get"
 flutter pub get
 
@@ -20,13 +27,13 @@ if (Test-Path public) {
 Copy-Item -Recurse build\web public
 "/*    /index.html   200" | Set-Content -Path "public\_redirects" -Encoding utf8
 
-# Ensure Stockfish worker is present (also copied via web/ → build/web)
-$sfSrc = "web\stockfish\stockfish.js"
-$sfDst = "public\stockfish\stockfish.js"
-if ((Test-Path $sfSrc) -and -not (Test-Path $sfDst)) {
-  New-Item -ItemType Directory -Force -Path "public\stockfish" | Out-Null
-  Copy-Item $sfSrc $sfDst -Force
-  Write-Host "==> Copied stockfish.js into public/stockfish/"
+# Ensure Stockfish 18 workers are present (also copied via web/ -> build/web)
+$sfSrcDir = "web\stockfish"
+$sfDstDir = "public\stockfish"
+if (Test-Path $sfSrcDir) {
+  New-Item -ItemType Directory -Force -Path $sfDstDir | Out-Null
+  Copy-Item -Path (Join-Path $sfSrcDir "*") -Destination $sfDstDir -Force
+  Write-Host "==> Synced stockfish assets into public/stockfish/"
 }
 
 Write-Host ""
@@ -51,4 +58,4 @@ git commit -m $Message
 git push origin main
 Write-Host ""
 Write-Host "Pushed. If Render Static Site uses auto-deploy from main, wait ~1 min."
-Write-Host "Otherwise: Render → Static Site → Manual Deploy."
+Write-Host "Otherwise: Render -> Static Site -> Manual Deploy."

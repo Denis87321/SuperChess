@@ -1,4 +1,4 @@
-import '../chess/board_labels.dart';
+﻿import '../../chess/board_labels.dart';
 import 'ability_group.dart';
 import 'piece.dart';
 import 'square.dart';
@@ -389,716 +389,716 @@ extension GameAbilityInfo on GameAbility {
   String get title {
     switch (this) {
       case GameAbility.boardPawnsSideways:
-        return 'На распутье';
+        return 'РќР° СЂР°СЃРїСѓС‚СЊРµ';
       case GameAbility.boardPawnsDiagonal:
-        return 'Партизаны';
+        return 'РџР°СЂС‚РёР·Р°РЅС‹';
       case GameAbility.boardPawnsBackward:
-        return 'Шагу назад';
+        return 'РЁР°РіСѓ РЅР°Р·Р°Рґ';
       case GameAbility.boardKingSwap:
-        return 'Королевский указ';
+        return 'РљРѕСЂРѕР»РµРІСЃРєРёР№ СѓРєР°Р·';
       case GameAbility.boardLavaRank:
-        return 'Пол — это лава';
+        return 'РџРѕР» вЂ” СЌС‚Рѕ Р»Р°РІР°';
       case GameAbility.boardExtraRank:
-        return 'Новый этаж';
+        return 'РќРѕРІС‹Р№ СЌС‚Р°Р¶';
       case GameAbility.boardExtraFile:
-        return 'Новая вертикаль';
+        return 'РќРѕРІР°СЏ РІРµСЂС‚РёРєР°Р»СЊ';
       case GameAbility.boardFogOfWar:
-        return 'Туман войны';
+        return 'РўСѓРјР°РЅ РІРѕР№РЅС‹';
       case GameAbility.boardTide:
-        return 'Прилив';
+        return 'РџСЂРёР»РёРІ';
       case GameAbility.boardDoubleStart:
-        return 'Двойной старт';
+        return 'Р”РІРѕР№РЅРѕР№ СЃС‚Р°СЂС‚';
       case GameAbility.boardSprint:
-        return 'Спринт';
+        return 'РЎРїСЂРёРЅС‚';
       case GameAbility.boardZebras:
-        return 'Зебры';
+        return 'Р—РµР±СЂС‹';
       case GameAbility.boardFisher:
-        return 'Шахматы Фишера';
+        return 'РЁР°С…РјР°С‚С‹ Р¤РёС€РµСЂР°';
       case GameAbility.boardFisherMadness:
-        return 'Безумие Фишера';
+        return 'Р‘РµР·СѓРјРёРµ Р¤РёС€РµСЂР°';
       case GameAbility.boardNight:
-        return 'Во тьме ночной';
+        return 'Р’Рѕ С‚СЊРјРµ РЅРѕС‡РЅРѕР№';
       case GameAbility.boardDay:
-        return 'При свете дня';
+        return 'РџСЂРё СЃРІРµС‚Рµ РґРЅСЏ';
       case GameAbility.boardColorblind:
-        return 'Дальтоник';
+        return 'Р”Р°Р»СЊС‚РѕРЅРёРє';
       case GameAbility.boardPawnFront:
-        return 'Пешечный фронт';
+        return 'РџРµС€РµС‡РЅС‹Р№ С„СЂРѕРЅС‚';
       case GameAbility.boardCavalry:
-        return 'По коням';
+        return 'РџРѕ РєРѕРЅСЏРј';
       case GameAbility.boardMirror:
-        return 'Зеркало';
+        return 'Р—РµСЂРєР°Р»Рѕ';
       case GameAbility.boardGhostCells:
-        return 'Призрачные клетки';
+        return 'РџСЂРёР·СЂР°С‡РЅС‹Рµ РєР»РµС‚РєРё';
       case GameAbility.boardAttraction:
-        return 'Притяжение';
+        return 'РџСЂРёС‚СЏР¶РµРЅРёРµ';
       case GameAbility.boardVirus:
-        return 'Шахматный вирус';
+        return 'РЁР°С…РјР°С‚РЅС‹Р№ РІРёСЂСѓСЃ';
       case GameAbility.boardInvisibleRegiment:
-        return 'Невидимый полк';
+        return 'РќРµРІРёРґРёРјС‹Р№ РїРѕР»Рє';
       case GameAbility.boardShuffle:
-        return 'Перетасовка';
+        return 'РџРµСЂРµС‚Р°СЃРѕРІРєР°';
       case GameAbility.boardTeleport:
-        return 'Телепорт';
+        return 'РўРµР»РµРїРѕСЂС‚';
       case GameAbility.boardVanityFair:
-        return 'Ярмарка тщеславия';
+        return 'РЇСЂРјР°СЂРєР° С‚С‰РµСЃР»Р°РІРёСЏ';
       case GameAbility.boardMinefield:
-        return 'Минное поле';
+        return 'РњРёРЅРЅРѕРµ РїРѕР»Рµ';
       case GameAbility.boardGolconda:
-        return 'Голконда';
+        return 'Р“РѕР»РєРѕРЅРґР°';
       case GameAbility.boardUnbridledHorse:
-        return 'Скакун без узды';
+        return 'РЎРєР°РєСѓРЅ Р±РµР· СѓР·РґС‹';
       case GameAbility.boardBaskerville:
-        return 'Эффект Баскервилей';
+        return 'Р­С„С„РµРєС‚ Р‘Р°СЃРєРµСЂРІРёР»РµР№';
       case GameAbility.boardBloodOath:
-        return 'Клятва крови';
+        return 'РљР»СЏС‚РІР° РєСЂРѕРІРё';
       case GameAbility.boardSilentFile:
-        return 'Немая вертикаль';
+        return 'РќРµРјР°СЏ РІРµСЂС‚РёРєР°Р»СЊ';
       case GameAbility.boardFourHorsemen:
-        return '4 всадника';
+        return '4 РІСЃР°РґРЅРёРєР°';
       case GameAbility.boardReroll:
-        return 'Перевыбор';
+        return 'РџРµСЂРµРІС‹Р±РѕСЂ';
       case GameAbility.boardPassiveAggression:
-        return 'Пассивная агрессия';
+        return 'РџР°СЃСЃРёРІРЅР°СЏ Р°РіСЂРµСЃСЃРёСЏ';
       case GameAbility.boardSkipTurn:
-        return 'Я ещё думаю';
+        return 'РЇ РµС‰С‘ РґСѓРјР°СЋ';
       case GameAbility.boardTroopFatigue:
-        return 'Усталость войск';
+        return 'РЈСЃС‚Р°Р»РѕСЃС‚СЊ РІРѕР№СЃРє';
       case GameAbility.boardCombatOptics:
-        return 'Боевая оптика';
+        return 'Р‘РѕРµРІР°СЏ РѕРїС‚РёРєР°';
       case GameAbility.boardKingOfHill:
-        return 'Царь горы';
+        return 'Р¦Р°СЂСЊ РіРѕСЂС‹';
       case GameAbility.boardSecretRoute:
-        return 'Тайный маршрут';
+        return 'РўР°Р№РЅС‹Р№ РјР°СЂС€СЂСѓС‚';
       case GameAbility.boardRoyalPilgrimage:
-        return 'Королевское паломничество';
+        return 'РљРѕСЂРѕР»РµРІСЃРєРѕРµ РїР°Р»РѕРјРЅРёС‡РµСЃС‚РІРѕ';
       case GameAbility.boardMightMakesRight:
-        return 'Право сильного';
+        return 'РџСЂР°РІРѕ СЃРёР»СЊРЅРѕРіРѕ';
       case GameAbility.boardExpeditionaryCorps:
-        return 'Разведкорпус';
+        return 'Р Р°Р·РІРµРґРєРѕСЂРїСѓСЃ';
       case GameAbility.boardWitnessProtection:
-        return 'Программа защиты свидетелей';
+        return 'РџСЂРѕРіСЂР°РјРјР° Р·Р°С‰РёС‚С‹ СЃРІРёРґРµС‚РµР»РµР№';
       case GameAbility.boardDeserters:
-        return 'Дезертиры';
+        return 'Р”РµР·РµСЂС‚РёСЂС‹';
       case GameAbility.boardLetterH:
         return 'H';
       case GameAbility.boardFullCircle:
-        return 'Полный круг';
+        return 'РџРѕР»РЅС‹Р№ РєСЂСѓРі';
       case GameAbility.boardArchitect:
-        return 'Архитектор';
+        return 'РђСЂС…РёС‚РµРєС‚РѕСЂ';
       case GameAbility.boardBigAssortment:
-        return 'Большой ассортимент';
+        return 'Р‘РѕР»СЊС€РѕР№ Р°СЃСЃРѕСЂС‚РёРјРµРЅС‚';
       case GameAbility.boardBlindSpot:
-        return 'Слепая зона';
+        return 'РЎР»РµРїР°СЏ Р·РѕРЅР°';
       case GameAbility.boardOnlyEqualsKill:
-        return 'Только равный убьёт';
+        return 'РўРѕР»СЊРєРѕ СЂР°РІРЅС‹Р№ СѓР±СЊС‘С‚';
       case GameAbility.boardMarseillesChess:
-        return 'Марсельские шахматы';
+        return 'РњР°СЂСЃРµР»СЊСЃРєРёРµ С€Р°С…РјР°С‚С‹';
       case GameAbility.boardInitiativeFear:
-        return 'Боязнь инициативы';
+        return 'Р‘РѕСЏР·РЅСЊ РёРЅРёС†РёР°С‚РёРІС‹';
       case GameAbility.boardSwamp:
         return 'What are you doing in my swamp';
       case GameAbility.boardCollectiveMyopia:
-        return 'Коллективное близорукое';
+        return 'РљРѕР»Р»РµРєС‚РёРІРЅРѕРµ Р±Р»РёР·РѕСЂСѓРєРѕРµ';
       case GameAbility.boardTerritoryExpand:
-        return 'Расширение территории';
+        return 'Р Р°СЃС€РёСЂРµРЅРёРµ С‚РµСЂСЂРёС‚РѕСЂРёРё';
       case GameAbility.boardFrostMap:
-        return 'Морозная карта';
+        return 'РњРѕСЂРѕР·РЅР°СЏ РєР°СЂС‚Р°';
       case GameAbility.boardScorchingSun:
-        return 'Палящее солнце';
+        return 'РџР°Р»СЏС‰РµРµ СЃРѕР»РЅС†Рµ';
       case GameAbility.boardTurncoats:
-        return 'Отступники';
+        return 'РћС‚СЃС‚СѓРїРЅРёРєРё';
       case GameAbility.pawnSideways:
-        return 'Карцинизация';
+        return 'РљР°СЂС†РёРЅРёР·Р°С†РёСЏ';
       case GameAbility.pawnInverted:
-        return 'Диагональный ход';
+        return 'Р”РёР°РіРѕРЅР°Р»СЊРЅС‹Р№ С…РѕРґ';
       case GameAbility.pawnAlwaysDoubleStep:
-        return 'Длинный шаг';
+        return 'Р”Р»РёРЅРЅС‹Р№ С€Р°Рі';
       case GameAbility.pawnRam:
-        return 'На таран';
+        return 'РќР° С‚Р°СЂР°РЅ';
       case GameAbility.pawnAirborne:
-        return 'Десант';
+        return 'Р”РµСЃР°РЅС‚';
       case GameAbility.pawnBoomerang:
       case GameAbility.knightBoomerang:
       case GameAbility.bishopBoomerang:
-        return 'Бумеранг';
+        return 'Р‘СѓРјРµСЂР°РЅРі';
       case GameAbility.pawnKamikaze:
-        return 'Камикадзе';
+        return 'РљР°РјРёРєР°РґР·Рµ';
       case GameAbility.pawnCaliph:
-        return 'Халиф на час';
+        return 'РҐР°Р»РёС„ РЅР° С‡Р°СЃ';
       case GameAbility.pawnSticky:
-        return 'Липота';
+        return 'Р›РёРїРѕС‚Р°';
       case GameAbility.pawnPolymorph:
-        return 'Полиморф';
+        return 'РџРѕР»РёРјРѕСЂС„';
       case GameAbility.pawnInheritance:
-        return 'Наследство';
+        return 'РќР°СЃР»РµРґСЃС‚РІРѕ';
       case GameAbility.pawnRansom:
-        return 'Выкуп';
+        return 'Р’С‹РєСѓРї';
       case GameAbility.pawnForTheKing:
-        return 'Во имя Короля';
+        return 'Р’Рѕ РёРјСЏ РљРѕСЂРѕР»СЏ';
       case GameAbility.pawnCamouflageNet:
-        return 'Маскировочная сеть';
+        return 'РњР°СЃРєРёСЂРѕРІРѕС‡РЅР°СЏ СЃРµС‚СЊ';
       case GameAbility.pawnTrench:
-        return 'Окоп';
+        return 'РћРєРѕРї';
       case GameAbility.pawnSignalFire:
       case GameAbility.knightSignalFire:
       case GameAbility.bishopSignalFire:
       case GameAbility.rookSignalFire:
-        return 'Сигнальный костер';
+        return 'РЎРёРіРЅР°Р»СЊРЅС‹Р№ РєРѕСЃС‚РµСЂ';
       case GameAbility.pawnAvengeMe:
-        return 'Отомсти за меня';
+        return 'РћС‚РѕРјСЃС‚Рё Р·Р° РјРµРЅСЏ';
       case GameAbility.pawnCaravan:
-        return 'Караван';
+        return 'РљР°СЂР°РІР°РЅ';
       case GameAbility.pawnFaceControl:
-        return 'Фейсконтроль';
+        return 'Р¤РµР№СЃРєРѕРЅС‚СЂРѕР»СЊ';
       case GameAbility.knightRearing:
-        return 'Встать на дыбы';
+        return 'Р’СЃС‚Р°С‚СЊ РЅР° РґС‹Р±С‹';
       case GameAbility.knightLongJump:
-        return 'Пегас';
+        return 'РџРµРіР°СЃ';
       case GameAbility.knightSecondChance:
-        return 'Второй шанс';
+        return 'Р’С‚РѕСЂРѕР№ С€Р°РЅСЃ';
       case GameAbility.knightGallop:
-        return 'Галоп';
+        return 'Р“Р°Р»РѕРї';
       case GameAbility.knightDust:
-        return 'Пыль из-под копыт';
+        return 'РџС‹Р»СЊ РёР·-РїРѕРґ РєРѕРїС‹С‚';
       case GameAbility.knightCentaur:
-        return 'Кентавр';
+        return 'РљРµРЅС‚Р°РІСЂ';
       case GameAbility.knightTrojan:
-        return 'Троянский конь';
+        return 'РўСЂРѕСЏРЅСЃРєРёР№ РєРѕРЅСЊ';
       case GameAbility.knightDuel:
-        return 'Вызов на дуэль';
+        return 'Р’С‹Р·РѕРІ РЅР° РґСѓСЌР»СЊ';
       case GameAbility.knightGuard:
-        return 'Караул';
+        return 'РљР°СЂР°СѓР»';
       case GameAbility.knightTour:
-        return 'Конный тур';
+        return 'РљРѕРЅРЅС‹Р№ С‚СѓСЂ';
       case GameAbility.knightDoppelgangerOnce:
-        return 'Двойник';
+        return 'Р”РІРѕР№РЅРёРє';
       case GameAbility.knightDoppelgangers:
-        return 'Двойники';
+        return 'Р”РІРѕР№РЅРёРєРё';
       case GameAbility.knightFifthLeg:
-        return 'Пятая нога';
+        return 'РџСЏС‚Р°СЏ РЅРѕРіР°';
       case GameAbility.knightElusive:
       case GameAbility.bishopElusive:
-        return 'Неуловимый';
+        return 'РќРµСѓР»РѕРІРёРјС‹Р№';
       case GameAbility.knightStomp:
-        return 'Топот';
+        return 'РўРѕРїРѕС‚';
       case GameAbility.knightSurveyor:
-        return 'Геодезист';
+        return 'Р“РµРѕРґРµР·РёСЃС‚';
       case GameAbility.knightCornerQuest:
-        return 'Задача не из лёгких';
+        return 'Р—Р°РґР°С‡Р° РЅРµ РёР· Р»С‘РіРєРёС…';
       case GameAbility.knightRideMe:
-        return 'Садись на меня';
+        return 'РЎР°РґРёСЃСЊ РЅР° РјРµРЅСЏ';
       case GameAbility.knightMagicHooves:
-        return 'Волшебные копыта';
+        return 'Р’РѕР»С€РµР±РЅС‹Рµ РєРѕРїС‹С‚Р°';
       case GameAbility.bishopHopAlly:
-        return 'Прыжок через своего';
+        return 'РџСЂС‹Р¶РѕРє С‡РµСЂРµР· СЃРІРѕРµРіРѕ';
       case GameAbility.bishopColorChaos:
-        return 'Цветной хаос';
+        return 'Р¦РІРµС‚РЅРѕР№ С…Р°РѕСЃ';
       case GameAbility.bishopInquisitor:
-        return 'Инквизитор';
+        return 'РРЅРєРІРёР·РёС‚РѕСЂ';
       case GameAbility.bishopColorVow:
-        return 'Цветная клятва';
+        return 'Р¦РІРµС‚РЅР°СЏ РєР»СЏС‚РІР°';
       case GameAbility.bishopBrothers:
-        return 'Братья по разуму';
+        return 'Р‘СЂР°С‚СЊСЏ РїРѕ СЂР°Р·СѓРјСѓ';
       case GameAbility.bishopSanctuary:
-        return 'Святилище';
+        return 'РЎРІСЏС‚РёР»РёС‰Рµ';
       case GameAbility.bishopExcommunication:
-        return 'Отлучение';
+        return 'РћС‚Р»СѓС‡РµРЅРёРµ';
       case GameAbility.bishopTithe:
-        return 'Десятина';
+        return 'Р”РµСЃСЏС‚РёРЅР°';
       case GameAbility.bishopPilgrimage:
-        return 'Паломничество';
+        return 'РџР°Р»РѕРјРЅРёС‡РµСЃС‚РІРѕ';
       case GameAbility.bishopCrusade:
-        return 'Крестовый поход';
+        return 'РљСЂРµСЃС‚РѕРІС‹Р№ РїРѕС…РѕРґ';
       case GameAbility.bishopPost:
-        return 'Пост';
+        return 'РџРѕСЃС‚';
       case GameAbility.bishopParallelWorlds:
-        return 'Параллельные миры';
+        return 'РџР°СЂР°Р»Р»РµР»СЊРЅС‹Рµ РјРёСЂС‹';
       case GameAbility.bishopAlcove:
-        return 'Альков';
+        return 'РђР»СЊРєРѕРІ';
       case GameAbility.bishopGlassCeiling:
-        return 'Стеклянный потолок';
+        return 'РЎС‚РµРєР»СЏРЅРЅС‹Р№ РїРѕС‚РѕР»РѕРє';
       case GameAbility.rookHopAlly:
-        return 'Прыжок через своего';
+        return 'РџСЂС‹Р¶РѕРє С‡РµСЂРµР· СЃРІРѕРµРіРѕ';
       case GameAbility.rookRam:
-        return 'На таран';
+        return 'РќР° С‚Р°СЂР°РЅ';
       case GameAbility.rookAstronomicon:
-        return 'Астрономикон';
+        return 'РђСЃС‚СЂРѕРЅРѕРјРёРєРѕРЅ';
       case GameAbility.rookFortress:
-        return 'Крепость';
+        return 'РљСЂРµРїРѕСЃС‚СЊ';
       case GameAbility.rookStandardBearer:
-        return 'Знаменосец';
+        return 'Р—РЅР°РјРµРЅРѕСЃРµС†';
       case GameAbility.rookCustoms:
-        return 'Таможня';
+        return 'РўР°РјРѕР¶РЅСЏ';
       case GameAbility.rookDrawbridge:
-        return 'Подъёмный мост';
+        return 'РџРѕРґСЉС‘РјРЅС‹Р№ РјРѕСЃС‚';
       case GameAbility.rookCurfew:
-        return 'Комендантский час';
+        return 'РљРѕРјРµРЅРґР°РЅС‚СЃРєРёР№ С‡Р°СЃ';
       case GameAbility.rookSiegeCalculation:
-        return 'Осадный расчёт';
+        return 'РћСЃР°РґРЅС‹Р№ СЂР°СЃС‡С‘С‚';
       case GameAbility.rookFerry:
-        return 'Переправа';
+        return 'РџРµСЂРµРїСЂР°РІР°';
       case GameAbility.rookSignalTower:
-        return 'Сигнальная башня';
+        return 'РЎРёРіРЅР°Р»СЊРЅР°СЏ Р±Р°С€РЅСЏ';
       case GameAbility.queenKnightStep:
-        return 'Конский ход';
+        return 'РљРѕРЅСЃРєРёР№ С…РѕРґ';
       case GameAbility.queenHopAlly:
-        return 'Прыжок через своего';
+        return 'РџСЂС‹Р¶РѕРє С‡РµСЂРµР· СЃРІРѕРµРіРѕ';
       case GameAbility.queenSplit:
-        return 'Разделение';
+        return 'Р Р°Р·РґРµР»РµРЅРёРµ';
       case GameAbility.queenMatka:
-        return 'Матка';
+        return 'РњР°С‚РєР°';
       case GameAbility.queenShadowEmpress:
-        return 'Императрица теней';
+        return 'РРјРїРµСЂР°С‚СЂРёС†Р° С‚РµРЅРµР№';
       case GameAbility.queenEscape:
-        return 'Бегство';
+        return 'Р‘РµРіСЃС‚РІРѕ';
       case GameAbility.queenDelayedSentence:
-        return 'Отложенный приговор';
+        return 'РћС‚Р»РѕР¶РµРЅРЅС‹Р№ РїСЂРёРіРѕРІРѕСЂ';
       case GameAbility.queenTrophyEmbargo:
-        return 'Эмбарго на трофеи';
+        return 'Р­РјР±Р°СЂРіРѕ РЅР° С‚СЂРѕС„РµРё';
       case GameAbility.queenYouShallNotPass:
-        return 'Ты не пройдёшь!';
+        return 'РўС‹ РЅРµ РїСЂРѕР№РґС‘С€СЊ!';
       case GameAbility.kingRoyalDecree:
-        return 'Королевский указ';
+        return 'РљРѕСЂРѕР»РµРІСЃРєРёР№ СѓРєР°Р·';
       case GameAbility.kingExtraStep:
-        return 'Длинный шаг';
+        return 'Р”Р»РёРЅРЅС‹Р№ С€Р°Рі';
       case GameAbility.kingShield:
-        return 'Щит короля';
+        return 'Р©РёС‚ РєРѕСЂРѕР»СЏ';
       case GameAbility.kingAura:
-        return 'Аура';
+        return 'РђСѓСЂР°';
       case GameAbility.kingDoppelganger:
-        return 'Доппельгангер';
+        return 'Р”РѕРїРїРµР»СЊРіР°РЅРіРµСЂ';
       case GameAbility.kingThrone:
-        return 'Сила Трона';
+        return 'РЎРёР»Р° РўСЂРѕРЅР°';
       case GameAbility.kingFamilyUnion:
-        return 'Объединение семей';
+        return 'РћР±СЉРµРґРёРЅРµРЅРёРµ СЃРµРјРµР№';
       case GameAbility.kingPrisonerExchange:
-        return 'Обмен пленными';
+        return 'РћР±РјРµРЅ РїР»РµРЅРЅС‹РјРё';
       case GameAbility.kingRemoveEnemyMod:
-        return 'Не прежде чем их повесят';
+        return 'РќРµ РїСЂРµР¶РґРµ С‡РµРј РёС… РїРѕРІРµСЃСЏС‚';
       case GameAbility.kingAssemblyHall:
-        return 'Зал заседаний';
+        return 'Р—Р°Р» Р·Р°СЃРµРґР°РЅРёР№';
       case GameAbility.randomShift:
-        return 'Сдвиг';
+        return 'РЎРґРІРёРі';
       case GameAbility.randomCalm:
-        return 'Затишье';
+        return 'Р—Р°С‚РёС€СЊРµ';
       case GameAbility.randomQuarantine:
-        return 'Карантин';
+        return 'РљР°СЂР°РЅС‚РёРЅ';
       case GameAbility.randomEarthquake:
-        return 'Землетрясение';
+        return 'Р—РµРјР»РµС‚СЂСЏСЃРµРЅРёРµ';
       case GameAbility.randomTyphoon:
-        return 'Тайфун';
+        return 'РўР°Р№С„СѓРЅ';
       case GameAbility.randomWormhole:
-        return 'Червоточина';
+        return 'Р§РµСЂРІРѕС‚РѕС‡РёРЅР°';
       case GameAbility.randomClone:
-        return 'Клон';
+        return 'РљР»РѕРЅ';
       case GameAbility.randomNoQueen:
-        return 'Без ферзя';
+        return 'Р‘РµР· С„РµСЂР·СЏ';
       case GameAbility.randomTruce:
-        return 'Перемирие';
+        return 'РџРµСЂРµРјРёСЂРёРµ';
       case GameAbility.randomMeteorRain:
-        return 'Метеоритный дождь';
+        return 'РњРµС‚РµРѕСЂРёС‚РЅС‹Р№ РґРѕР¶РґСЊ';
       case GameAbility.randomCensus:
-        return 'Перепись';
+        return 'РџРµСЂРµРїРёСЃСЊ';
       case GameAbility.randomExterminatus:
-        return 'Экстерминатус';
+        return 'Р­РєСЃС‚РµСЂРјРёРЅР°С‚СѓСЃ';
       case GameAbility.randomGoldenThrone:
-        return 'Золотой трон';
+        return 'Р—РѕР»РѕС‚РѕР№ С‚СЂРѕРЅ';
       case GameAbility.randomLottery:
-        return 'Лотерея';
+        return 'Р›РѕС‚РµСЂРµСЏ';
       case GameAbility.randomPlague:
-        return 'Чума';
+        return 'Р§СѓРјР°';
       case GameAbility.randomMutation:
-        return 'Мутация';
+        return 'РњСѓС‚Р°С†РёСЏ';
       case GameAbility.randomAuction:
-        return 'Аукцион';
+        return 'РђСѓРєС†РёРѕРЅ';
       case GameAbility.randomRightToMove:
-        return 'Право хода';
+        return 'РџСЂР°РІРѕ С…РѕРґР°';
       case GameAbility.randomFurtherMore:
-        return 'Дальше — больше';
+        return 'Р”Р°Р»СЊС€Рµ вЂ” Р±РѕР»СЊС€Рµ';
       case GameAbility.randomWordOfHonor:
-        return 'Слово пацана';
+        return 'РЎР»РѕРІРѕ РїР°С†Р°РЅР°';
       case GameAbility.randomSymmetry:
-        return 'Симметрия';
+        return 'РЎРёРјРјРµС‚СЂРёСЏ';
       case GameAbility.randomVeto:
-        return 'Право вето';
+        return 'РџСЂР°РІРѕ РІРµС‚Рѕ';
       case GameAbility.randomInitiativeIntercept:
-        return 'Перехват инициативы';
+        return 'РџРµСЂРµС…РІР°С‚ РёРЅРёС†РёР°С‚РёРІС‹';
       case GameAbility.randomStrike:
-        return 'Забастовка';
+        return 'Р—Р°Р±Р°СЃС‚РѕРІРєР°';
       case GameAbility.randomBorderClosure:
-        return 'Закрытие границ';
+        return 'Р—Р°РєСЂС‹С‚РёРµ РіСЂР°РЅРёС†';
       case GameAbility.randomMyopia:
-        return 'Близорукость';
+        return 'Р‘Р»РёР·РѕСЂСѓРєРѕСЃС‚СЊ';
       case GameAbility.randomMagicShutdown:
-        return 'Отключение магии';
+        return 'РћС‚РєР»СЋС‡РµРЅРёРµ РјР°РіРёРё';
       case GameAbility.randomTimeCapsule:
-        return 'Капсула времени';
+        return 'РљР°РїСЃСѓР»Р° РІСЂРµРјРµРЅРё';
       case GameAbility.randomSuicideCapture:
-        return 'Смертник';
+        return 'РЎРјРµСЂС‚РЅРёРє';
       case GameAbility.randomMeatGrinder:
-        return 'Мясорубка';
+        return 'РњСЏСЃРѕСЂСѓР±РєР°';
       case GameAbility.randomQuicksand:
-        return 'Зыбучие пески';
+        return 'Р—С‹Р±СѓС‡РёРµ РїРµСЃРєРё';
     }
   }
 
   String get description {
     switch (this) {
       case GameAbility.boardPawnsSideways:
-        return 'Ваши пешки могут ходить прямо, налево и направо';
+        return 'Р’Р°С€Рё РїРµС€РєРё РјРѕРіСѓС‚ С…РѕРґРёС‚СЊ РїСЂСЏРјРѕ, РЅР°Р»РµРІРѕ Рё РЅР°РїСЂР°РІРѕ';
       case GameAbility.boardPawnsDiagonal:
-        return 'Ваши пешки: ход по диагонали, взятие по прямой';
+        return 'Р’Р°С€Рё РїРµС€РєРё: С…РѕРґ РїРѕ РґРёР°РіРѕРЅР°Р»Рё, РІР·СЏС‚РёРµ РїРѕ РїСЂСЏРјРѕР№';
       case GameAbility.boardPawnsBackward:
-        return 'Ваши пешки могут ходить на назад';
+        return 'Р’Р°С€Рё РїРµС€РєРё РјРѕРіСѓС‚ С…РѕРґРёС‚СЊ РЅР° РЅР°Р·Р°Рґ';
       case GameAbility.boardKingSwap:
-        return 'Вместо рокировки король и ладья меняются местами, даже если между ними есть фигуры';
+        return 'Р’РјРµСЃС‚Рѕ СЂРѕРєРёСЂРѕРІРєРё РєРѕСЂРѕР»СЊ Рё Р»Р°РґСЊСЏ РјРµРЅСЏСЋС‚СЃСЏ РјРµСЃС‚Р°РјРё, РґР°Р¶Рµ РµСЃР»Рё РјРµР¶РґСѓ РЅРёРјРё РµСЃС‚СЊ С„РёРіСѓСЂС‹';
       case GameAbility.boardLavaRank:
-        return 'Горизонталь ? покрывается лавой';
+        return 'Р“РѕСЂРёР·РѕРЅС‚Р°Р»СЊ ? РїРѕРєСЂС‹РІР°РµС‚СЃСЏ Р»Р°РІРѕР№';
       case GameAbility.boardExtraRank:
-        return 'Между горизонталями 4 и 5 появляется новая пустая горизонталь';
+        return 'РњРµР¶РґСѓ РіРѕСЂРёР·РѕРЅС‚Р°Р»СЏРјРё 4 Рё 5 РїРѕСЏРІР»СЏРµС‚СЃСЏ РЅРѕРІР°СЏ РїСѓСЃС‚Р°СЏ РіРѕСЂРёР·РѕРЅС‚Р°Р»СЊ';
       case GameAbility.boardExtraFile:
-        return 'Появляется новая вертикаль ?';
+        return 'РџРѕСЏРІР»СЏРµС‚СЃСЏ РЅРѕРІР°СЏ РІРµСЂС‚РёРєР°Р»СЊ ?';
       case GameAbility.boardFogOfWar:
-        return 'Видны только клетки вокруг ваших фигур и клетки, на которые они могут сходить';
+        return 'Р’РёРґРЅС‹ С‚РѕР»СЊРєРѕ РєР»РµС‚РєРё РІРѕРєСЂСѓРі РІР°С€РёС… С„РёРіСѓСЂ Рё РєР»РµС‚РєРё, РЅР° РєРѕС‚РѕСЂС‹Рµ РѕРЅРё РјРѕРіСѓС‚ СЃС…РѕРґРёС‚СЊ';
       case GameAbility.boardTide:
-        return 'Ваши пешки выдвигаются вперёд и ходят только на 1 клетку вперёд';
+        return 'Р’Р°С€Рё РїРµС€РєРё РІС‹РґРІРёРіР°СЋС‚СЃСЏ РІРїРµСЂС‘Рґ Рё С…РѕРґСЏС‚ С‚РѕР»СЊРєРѕ РЅР° 1 РєР»РµС‚РєСѓ РІРїРµСЂС‘Рґ';
       case GameAbility.boardDoubleStart:
-        return 'Пешки с начальной линии один раз за партию могут пройти 3 клетки вперёд';
+        return 'РџРµС€РєРё СЃ РЅР°С‡Р°Р»СЊРЅРѕР№ Р»РёРЅРёРё РѕРґРёРЅ СЂР°Р· Р·Р° РїР°СЂС‚РёСЋ РјРѕРіСѓС‚ РїСЂРѕР№С‚Рё 3 РєР»РµС‚РєРё РІРїРµСЂС‘Рґ';
       case GameAbility.boardSprint:
-        return 'На выбор мода даётся 10 секунд вместо 30';
+        return 'РќР° РІС‹Р±РѕСЂ РјРѕРґР° РґР°С‘С‚СЃСЏ 10 СЃРµРєСѓРЅРґ РІРјРµСЃС‚Рѕ 30';
       case GameAbility.boardZebras:
-        return 'Все кони становятся общими: оба игрока ходят ими в свой ход. Этими конями нельзя дать шах или мат';
+        return 'Р’СЃРµ РєРѕРЅРё СЃС‚Р°РЅРѕРІСЏС‚СЃСЏ РѕР±С‰РёРјРё: РѕР±Р° РёРіСЂРѕРєР° С…РѕРґСЏС‚ РёРјРё РІ СЃРІРѕР№ С…РѕРґ. Р­С‚РёРјРё РєРѕРЅСЏРјРё РЅРµР»СЊР·СЏ РґР°С‚СЊ С€Р°С… РёР»Рё РјР°С‚';
       case GameAbility.boardFisher:
-        return 'Только на старте: расстановка обоих игроков по правилам шахмат Фишера: '
-            'пешки на месте, слоны на разных цветах, король между ладьями, '
-            'стороны зеркальны друг другу';
+        return 'РўРѕР»СЊРєРѕ РЅР° СЃС‚Р°СЂС‚Рµ: СЂР°СЃСЃС‚Р°РЅРѕРІРєР° РѕР±РѕРёС… РёРіСЂРѕРєРѕРІ РїРѕ РїСЂР°РІРёР»Р°Рј С€Р°С…РјР°С‚ Р¤РёС€РµСЂР°: '
+            'РїРµС€РєРё РЅР° РјРµСЃС‚Рµ, СЃР»РѕРЅС‹ РЅР° СЂР°Р·РЅС‹С… С†РІРµС‚Р°С…, РєРѕСЂРѕР»СЊ РјРµР¶РґСѓ Р»Р°РґСЊСЏРјРё, '
+            'СЃС‚РѕСЂРѕРЅС‹ Р·РµСЂРєР°Р»СЊРЅС‹ РґСЂСѓРі РґСЂСѓРіСѓ';
       case GameAbility.boardFisherMadness:
-        return 'Только на старте: все фигуры обоих игроков перемешиваются между собой. Слоны на разных цветах, без рокировки';
+        return 'РўРѕР»СЊРєРѕ РЅР° СЃС‚Р°СЂС‚Рµ: РІСЃРµ С„РёРіСѓСЂС‹ РѕР±РѕРёС… РёРіСЂРѕРєРѕРІ РїРµСЂРµРјРµС€РёРІР°СЋС‚СЃСЏ РјРµР¶РґСѓ СЃРѕР±РѕР№. РЎР»РѕРЅС‹ РЅР° СЂР°Р·РЅС‹С… С†РІРµС‚Р°С…, Р±РµР· СЂРѕРєРёСЂРѕРІРєРё';
       case GameAbility.boardNight:
-        return 'Следующие 3 хода фигуры могут вставать только на тёмные клетки';
+        return 'РЎР»РµРґСѓСЋС‰РёРµ 3 С…РѕРґР° С„РёРіСѓСЂС‹ РјРѕРіСѓС‚ РІСЃС‚Р°РІР°С‚СЊ С‚РѕР»СЊРєРѕ РЅР° С‚С‘РјРЅС‹Рµ РєР»РµС‚РєРё';
       case GameAbility.boardDay:
-        return 'Следующие 3 хода фигуры могут вставать только на светлые клетки';
+        return 'РЎР»РµРґСѓСЋС‰РёРµ 3 С…РѕРґР° С„РёРіСѓСЂС‹ РјРѕРіСѓС‚ РІСЃС‚Р°РІР°С‚СЊ С‚РѕР»СЊРєРѕ РЅР° СЃРІРµС‚Р»С‹Рµ РєР»РµС‚РєРё';
       case GameAbility.boardColorblind:
-        return 'Все фигуры переливаются случайными цветами. По цвету нельзя понять, кому принадлежит фигура';
+        return 'Р’СЃРµ С„РёРіСѓСЂС‹ РїРµСЂРµР»РёРІР°СЋС‚СЃСЏ СЃР»СѓС‡Р°Р№РЅС‹РјРё С†РІРµС‚Р°РјРё. РџРѕ С†РІРµС‚Сѓ РЅРµР»СЊР·СЏ РїРѕРЅСЏС‚СЊ, РєРѕРјСѓ РїСЂРёРЅР°РґР»РµР¶РёС‚ С„РёРіСѓСЂР°';
       case GameAbility.boardPawnFront:
-        return 'Все ваши пешки продвигаются на 1 клетку вперёд, если путь свободен';
+        return 'Р’СЃРµ РІР°С€Рё РїРµС€РєРё РїСЂРѕРґРІРёРіР°СЋС‚СЃСЏ РЅР° 1 РєР»РµС‚РєСѓ РІРїРµСЂС‘Рґ, РµСЃР»Рё РїСѓС‚СЊ СЃРІРѕР±РѕРґРµРЅ';
       case GameAbility.boardCavalry:
-        return 'Все ваши пешки на 3 хода становятся конями, затем снова превращаются в пешки';
+        return 'Р’СЃРµ РІР°С€Рё РїРµС€РєРё РЅР° 3 С…РѕРґР° СЃС‚Р°РЅРѕРІСЏС‚СЃСЏ РєРѕРЅСЏРјРё, Р·Р°С‚РµРј СЃРЅРѕРІР° РїСЂРµРІСЂР°С‰Р°СЋС‚СЃСЏ РІ РїРµС€РєРё';
       case GameAbility.boardMirror:
-        return 'Левая и правая границы доски соединяются';
+        return 'Р›РµРІР°СЏ Рё РїСЂР°РІР°СЏ РіСЂР°РЅРёС†С‹ РґРѕСЃРєРё СЃРѕРµРґРёРЅСЏСЋС‚СЃСЏ';
       case GameAbility.boardGhostCells:
-        return 'Несколько случайных клеток становятся призрачными: через них можно ходить, но стоять нельзя';
+        return 'РќРµСЃРєРѕР»СЊРєРѕ СЃР»СѓС‡Р°Р№РЅС‹С… РєР»РµС‚РѕРє СЃС‚Р°РЅРѕРІСЏС‚СЃСЏ РїСЂРёР·СЂР°С‡РЅС‹РјРё: С‡РµСЂРµР· РЅРёС… РјРѕР¶РЅРѕ С…РѕРґРёС‚СЊ, РЅРѕ СЃС‚РѕСЏС‚СЊ РЅРµР»СЊР·СЏ';
       case GameAbility.boardAttraction:
-        return 'Каждые 10 ходов все фигуры сдвигаются на 1 клетку к центру доски (d4, d5, e4, e5), если это возможно';
+        return 'РљР°Р¶РґС‹Рµ 10 С…РѕРґРѕРІ РІСЃРµ С„РёРіСѓСЂС‹ СЃРґРІРёРіР°СЋС‚СЃСЏ РЅР° 1 РєР»РµС‚РєСѓ Рє С†РµРЅС‚СЂСѓ РґРѕСЃРєРё (d4, d5, e4, e5), РµСЃР»Рё СЌС‚Рѕ РІРѕР·РјРѕР¶РЅРѕ';
       case GameAbility.boardVirus:
-        return 'После взятия фигура заражает соседнюю вражескую: та теряет одну мод';
+        return 'РџРѕСЃР»Рµ РІР·СЏС‚РёСЏ С„РёРіСѓСЂР° Р·Р°СЂР°Р¶Р°РµС‚ СЃРѕСЃРµРґРЅСЋСЋ РІСЂР°Р¶РµСЃРєСѓСЋ: С‚Р° С‚РµСЂСЏРµС‚ РѕРґРЅСѓ РјРѕРґ';
       case GameAbility.boardInvisibleRegiment:
-        return 'Оба игрока не видят пешки соперника, пока те не сделают взятие или не дойдут до 4-й линии (для чёрных — до 5-й)';
+        return 'РћР±Р° РёРіСЂРѕРєР° РЅРµ РІРёРґСЏС‚ РїРµС€РєРё СЃРѕРїРµСЂРЅРёРєР°, РїРѕРєР° С‚Рµ РЅРµ СЃРґРµР»Р°СЋС‚ РІР·СЏС‚РёРµ РёР»Рё РЅРµ РґРѕР№РґСѓС‚ РґРѕ 4-Р№ Р»РёРЅРёРё (РґР»СЏ С‡С‘СЂРЅС‹С… вЂ” РґРѕ 5-Р№)';
       case GameAbility.boardShuffle:
-        return 'Каждая клетка доски случайно становится светлой или тёмной — чередование цветов пропадает';
+        return 'РљР°Р¶РґР°СЏ РєР»РµС‚РєР° РґРѕСЃРєРё СЃР»СѓС‡Р°Р№РЅРѕ СЃС‚Р°РЅРѕРІРёС‚СЃСЏ СЃРІРµС‚Р»РѕР№ РёР»Рё С‚С‘РјРЅРѕР№ вЂ” С‡РµСЂРµРґРѕРІР°РЅРёРµ С†РІРµС‚РѕРІ РїСЂРѕРїР°РґР°РµС‚';
       case GameAbility.boardTeleport:
-        return 'Две случайные клетки связаны: вход на одну = выход на другую';
+        return 'Р”РІРµ СЃР»СѓС‡Р°Р№РЅС‹Рµ РєР»РµС‚РєРё СЃРІСЏР·Р°РЅС‹: РІС…РѕРґ РЅР° РѕРґРЅСѓ = РІС‹С…РѕРґ РЅР° РґСЂСѓРіСѓСЋ';
       case GameAbility.boardVanityFair:
-        return 'Каждая ваша лёгкая фигура (конь или слон) с вероятностью 50% становится другой лёгкой фигурой';
+        return 'РљР°Р¶РґР°СЏ РІР°С€Р° Р»С‘РіРєР°СЏ С„РёРіСѓСЂР° (РєРѕРЅСЊ РёР»Рё СЃР»РѕРЅ) СЃ РІРµСЂРѕСЏС‚РЅРѕСЃС‚СЊСЋ 50% СЃС‚Р°РЅРѕРІРёС‚СЃСЏ РґСЂСѓРіРѕР№ Р»С‘РіРєРѕР№ С„РёРіСѓСЂРѕР№';
       case GameAbility.boardMinefield:
-        return 'На 1–3 случайные свободные клетки ставятся невидимые мины: следующая фигура на мине уничтожается';
+        return 'РќР° 1вЂ“3 СЃР»СѓС‡Р°Р№РЅС‹Рµ СЃРІРѕР±РѕРґРЅС‹Рµ РєР»РµС‚РєРё СЃС‚Р°РІСЏС‚СЃСЏ РЅРµРІРёРґРёРјС‹Рµ РјРёРЅС‹: СЃР»РµРґСѓСЋС‰Р°СЏ С„РёРіСѓСЂР° РЅР° РјРёРЅРµ СѓРЅРёС‡С‚РѕР¶Р°РµС‚СЃСЏ';
       case GameAbility.boardGolconda:
-        return 'В начале каждого хода с вероятностью 1% на свободную клетку падает пешка, конь или слон игрока, чей сейчас ход';
+        return 'Р’ РЅР°С‡Р°Р»Рµ РєР°Р¶РґРѕРіРѕ С…РѕРґР° СЃ РІРµСЂРѕСЏС‚РЅРѕСЃС‚СЊСЋ 1% РЅР° СЃРІРѕР±РѕРґРЅСѓСЋ РєР»РµС‚РєСѓ РїР°РґР°РµС‚ РїРµС€РєР°, РєРѕРЅСЊ РёР»Рё СЃР»РѕРЅ РёРіСЂРѕРєР°, С‡РµР№ СЃРµР№С‡Р°СЃ С…РѕРґ';
       case GameAbility.boardUnbridledHorse:
-        return 'В начале хода с вероятностью 5% случайный ваш конь сам делает ход на случайную доступную клетку';
+        return 'Р’ РЅР°С‡Р°Р»Рµ С…РѕРґР° СЃ РІРµСЂРѕСЏС‚РЅРѕСЃС‚СЊСЋ 5% СЃР»СѓС‡Р°Р№РЅС‹Р№ РІР°С€ РєРѕРЅСЊ СЃР°Рј РґРµР»Р°РµС‚ С…РѕРґ РЅР° СЃР»СѓС‡Р°Р№РЅСѓСЋ РґРѕСЃС‚СѓРїРЅСѓСЋ РєР»РµС‚РєСѓ';
       case GameAbility.boardBaskerville:
-        return 'Для обоих игроков: если игрок поставит вражескому королю 2 шаха за партию, король умрёт от страха';
+        return 'Р”Р»СЏ РѕР±РѕРёС… РёРіСЂРѕРєРѕРІ: РµСЃР»Рё РёРіСЂРѕРє РїРѕСЃС‚Р°РІРёС‚ РІСЂР°Р¶РµСЃРєРѕРјСѓ РєРѕСЂРѕР»СЋ 2 С€Р°С…Р° Р·Р° РїР°СЂС‚РёСЋ, РєРѕСЂРѕР»СЊ СѓРјСЂС‘С‚ РѕС‚ СЃС‚СЂР°С…Р°';
       case GameAbility.boardBloodOath:
-        return 'При мате король может съесть свою фигуру рядом и встать на её место, чтобы избежать мата';
+        return 'РџСЂРё РјР°С‚Рµ РєРѕСЂРѕР»СЊ РјРѕР¶РµС‚ СЃСЉРµСЃС‚СЊ СЃРІРѕСЋ С„РёРіСѓСЂСѓ СЂСЏРґРѕРј Рё РІСЃС‚Р°С‚СЊ РЅР° РµС‘ РјРµСЃС‚Рѕ, С‡С‚РѕР±С‹ РёР·Р±РµР¶Р°С‚СЊ РјР°С‚Р°';
       case GameAbility.boardSilentFile:
-        return 'Фигуры на выбранной вертикали не могут дать шах или мат';
+        return 'Р¤РёРіСѓСЂС‹ РЅР° РІС‹Р±СЂР°РЅРЅРѕР№ РІРµСЂС‚РёРєР°Р»Рё РЅРµ РјРѕРіСѓС‚ РґР°С‚СЊ С€Р°С… РёР»Рё РјР°С‚';
       case GameAbility.boardFourHorsemen:
-        return 'Первое взятие каждого коня превращает жертву в вашу фигуру: оба остаются на клетке, пока кто-то не уйдёт';
+        return 'РџРµСЂРІРѕРµ РІР·СЏС‚РёРµ РєР°Р¶РґРѕРіРѕ РєРѕРЅСЏ РїСЂРµРІСЂР°С‰Р°РµС‚ Р¶РµСЂС‚РІСѓ РІ РІР°С€Сѓ С„РёРіСѓСЂСѓ: РѕР±Р° РѕСЃС‚Р°СЋС‚СЃСЏ РЅР° РєР»РµС‚РєРµ, РїРѕРєР° РєС‚Рѕ-С‚Рѕ РЅРµ СѓР№РґС‘С‚';
       case GameAbility.boardReroll:
-        return 'Все игроки до конца игры могут обновлять предложенные моды';
+        return 'Р’СЃРµ РёРіСЂРѕРєРё РґРѕ РєРѕРЅС†Р° РёРіСЂС‹ РјРѕРіСѓС‚ РѕР±РЅРѕРІР»СЏС‚СЊ РїСЂРµРґР»РѕР¶РµРЅРЅС‹Рµ РјРѕРґС‹';
       case GameAbility.boardPassiveAggression:
-        return 'Каждый игрок должен поставить шах хотя бы раз за 10 своих ходов, иначе он проигрывает; после шаха счётчик снова равен 10';
+        return 'РљР°Р¶РґС‹Р№ РёРіСЂРѕРє РґРѕР»Р¶РµРЅ РїРѕСЃС‚Р°РІРёС‚СЊ С€Р°С… С…РѕС‚СЏ Р±С‹ СЂР°Р· Р·Р° 10 СЃРІРѕРёС… С…РѕРґРѕРІ, РёРЅР°С‡Рµ РѕРЅ РїСЂРѕРёРіСЂС‹РІР°РµС‚; РїРѕСЃР»Рµ С€Р°С…Р° СЃС‡С‘С‚С‡РёРє СЃРЅРѕРІР° СЂР°РІРµРЅ 10';
       case GameAbility.boardSkipTurn:
-        return 'Оба игрока могут пропустить ход и передать его сопернику';
+        return 'РћР±Р° РёРіСЂРѕРєР° РјРѕРіСѓС‚ РїСЂРѕРїСѓСЃС‚РёС‚СЊ С…РѕРґ Рё РїРµСЂРµРґР°С‚СЊ РµРіРѕ СЃРѕРїРµСЂРЅРёРєСѓ';
       case GameAbility.boardTroopFatigue:
-        return 'Одной фигурой нельзя ходить два своих хода подряд';
+        return 'РћРґРЅРѕР№ С„РёРіСѓСЂРѕР№ РЅРµР»СЊР·СЏ С…РѕРґРёС‚СЊ РґРІР° СЃРІРѕРёС… С…РѕРґР° РїРѕРґСЂСЏРґ';
       case GameAbility.boardCombatOptics:
-        return 'Слон, ладья и ферзь без взятия ходят не дальше 3 клеток, а при взятии — без ограничения';
+        return 'РЎР»РѕРЅ, Р»Р°РґСЊСЏ Рё С„РµСЂР·СЊ Р±РµР· РІР·СЏС‚РёСЏ С…РѕРґСЏС‚ РЅРµ РґР°Р»СЊС€Рµ 3 РєР»РµС‚РѕРє, Р° РїСЂРё РІР·СЏС‚РёРё вЂ” Р±РµР· РѕРіСЂР°РЅРёС‡РµРЅРёСЏ';
       case GameAbility.boardKingOfHill:
-        return 'Посещённые клетки окрашиваются в цвет игрока; окрашивание более 48 клеток из 64 приносит победу';
+        return 'РџРѕСЃРµС‰С‘РЅРЅС‹Рµ РєР»РµС‚РєРё РѕРєСЂР°С€РёРІР°СЋС‚СЃСЏ РІ С†РІРµС‚ РёРіСЂРѕРєР°; РѕРєСЂР°С€РёРІР°РЅРёРµ Р±РѕР»РµРµ 48 РєР»РµС‚РѕРє РёР· 64 РїСЂРёРЅРѕСЃРёС‚ РїРѕР±РµРґСѓ';
       case GameAbility.boardSecretRoute:
-        return 'Каждый игрок получает скрытый маршрут из трёх клеток; посещение всех трёх приносит победу';
+        return 'РљР°Р¶РґС‹Р№ РёРіСЂРѕРє РїРѕР»СѓС‡Р°РµС‚ СЃРєСЂС‹С‚С‹Р№ РјР°СЂС€СЂСѓС‚ РёР· С‚СЂС‘С… РєР»РµС‚РѕРє; РїРѕСЃРµС‰РµРЅРёРµ РІСЃРµС… С‚СЂС‘С… РїСЂРёРЅРѕСЃРёС‚ РїРѕР±РµРґСѓ';
       case GameAbility.boardRoyalPilgrimage:
-        return 'Король, достигший крайней горизонтали соперника без шаха, приносит своему игроку победу';
+        return 'РљРѕСЂРѕР»СЊ, РґРѕСЃС‚РёРіС€РёР№ РєСЂР°Р№РЅРµР№ РіРѕСЂРёР·РѕРЅС‚Р°Р»Рё СЃРѕРїРµСЂРЅРёРєР° Р±РµР· С€Р°С…Р°, РїСЂРёРЅРѕСЃРёС‚ СЃРІРѕРµРјСѓ РёРіСЂРѕРєСѓ РїРѕР±РµРґСѓ';
       case GameAbility.boardMightMakesRight:
-        return 'Фигура может брать только фигуры не дороже себя; король может брать всех, и все могут атаковать короля';
+        return 'Р¤РёРіСѓСЂР° РјРѕР¶РµС‚ Р±СЂР°С‚СЊ С‚РѕР»СЊРєРѕ С„РёРіСѓСЂС‹ РЅРµ РґРѕСЂРѕР¶Рµ СЃРµР±СЏ; РєРѕСЂРѕР»СЊ РјРѕР¶РµС‚ Р±СЂР°С‚СЊ РІСЃРµС…, Рё РІСЃРµ РјРѕРіСѓС‚ Р°С‚Р°РєРѕРІР°С‚СЊ РєРѕСЂРѕР»СЏ';
       case GameAbility.boardExpeditionaryCorps:
-        return 'Фигура на половине соперника не может вернуться на свою половину, пока не сделает хотя бы одно взятие';
+        return 'Р¤РёРіСѓСЂР° РЅР° РїРѕР»РѕРІРёРЅРµ СЃРѕРїРµСЂРЅРёРєР° РЅРµ РјРѕР¶РµС‚ РІРµСЂРЅСѓС‚СЊСЃСЏ РЅР° СЃРІРѕСЋ РїРѕР»РѕРІРёРЅСѓ, РїРѕРєР° РЅРµ СЃРґРµР»Р°РµС‚ С…РѕС‚СЏ Р±С‹ РѕРґРЅРѕ РІР·СЏС‚РёРµ';
       case GameAbility.boardWitnessProtection:
-        return 'Оба игрока тайно выбирают одну свою фигуру, кроме короля; её первое взятие отменяется';
+        return 'РћР±Р° РёРіСЂРѕРєР° С‚Р°Р№РЅРѕ РІС‹Р±РёСЂР°СЋС‚ РѕРґРЅСѓ СЃРІРѕСЋ С„РёРіСѓСЂСѓ, РєСЂРѕРјРµ РєРѕСЂРѕР»СЏ; РµС‘ РїРµСЂРІРѕРµ РІР·СЏС‚РёРµ РѕС‚РјРµРЅСЏРµС‚СЃСЏ';
       case GameAbility.boardDeserters:
-        return 'У каждого игрока тайно есть пешка-дезертир; на вражеской половине она меняет цвет';
+        return 'РЈ РєР°Р¶РґРѕРіРѕ РёРіСЂРѕРєР° С‚Р°Р№РЅРѕ РµСЃС‚СЊ РїРµС€РєР°-РґРµР·РµСЂС‚РёСЂ; РЅР° РІСЂР°Р¶РµСЃРєРѕР№ РїРѕР»РѕРІРёРЅРµ РѕРЅР° РјРµРЅСЏРµС‚ С†РІРµС‚';
       case GameAbility.boardLetterH:
-        return 'Составьте букву H из 7 своих фигур — победа';
+        return 'РЎРѕСЃС‚Р°РІСЊС‚Рµ Р±СѓРєРІСѓ H РёР· 7 СЃРІРѕРёС… С„РёРіСѓСЂ вЂ” РїРѕР±РµРґР°';
       case GameAbility.boardFullCircle:
-        return 'Ладья, посетившая все 4 угловые клетки, приносит победу';
+        return 'Р›Р°РґСЊСЏ, РїРѕСЃРµС‚РёРІС€Р°СЏ РІСЃРµ 4 СѓРіР»РѕРІС‹Рµ РєР»РµС‚РєРё, РїСЂРёРЅРѕСЃРёС‚ РїРѕР±РµРґСѓ';
       case GameAbility.boardArchitect:
-        return 'Между случайными соседними клетками появляются 3–8 стен: через них нельзя ходить и атаковать';
+        return 'РњРµР¶РґСѓ СЃР»СѓС‡Р°Р№РЅС‹РјРё СЃРѕСЃРµРґРЅРёРјРё РєР»РµС‚РєР°РјРё РїРѕСЏРІР»СЏСЋС‚СЃСЏ 3вЂ“8 СЃС‚РµРЅ: С‡РµСЂРµР· РЅРёС… РЅРµР»СЊР·СЏ С…РѕРґРёС‚СЊ Рё Р°С‚Р°РєРѕРІР°С‚СЊ';
       case GameAbility.boardBigAssortment:
-        return 'До конца игры вы выбираете из 4 модов';
+        return 'Р”Рѕ РєРѕРЅС†Р° РёРіСЂС‹ РІС‹ РІС‹Р±РёСЂР°РµС‚Рµ РёР· 4 РјРѕРґРѕРІ';
       case GameAbility.boardBlindSpot:
-        return 'Моды соперника скрыты знаками вопроса; свои видны как обычно';
+        return 'РњРѕРґС‹ СЃРѕРїРµСЂРЅРёРєР° СЃРєСЂС‹С‚С‹ Р·РЅР°РєР°РјРё РІРѕРїСЂРѕСЃР°; СЃРІРѕРё РІРёРґРЅС‹ РєР°Рє РѕР±С‹С‡РЅРѕ';
       case GameAbility.boardOnlyEqualsKill:
-        return 'Пять взятий фигур того же типа, что и взявшая, приносят победу';
+        return 'РџСЏС‚СЊ РІР·СЏС‚РёР№ С„РёРіСѓСЂ С‚РѕРіРѕ Р¶Рµ С‚РёРїР°, С‡С‚Рѕ Рё РІР·СЏРІС€Р°СЏ, РїСЂРёРЅРѕСЃСЏС‚ РїРѕР±РµРґСѓ';
       case GameAbility.boardMarseillesChess:
-        return 'За один ход игрок делает два последовательных движения. В сбалансированном варианте белые на первом ходу делают только одно движение';
+        return 'Р—Р° РѕРґРёРЅ С…РѕРґ РёРіСЂРѕРє РґРµР»Р°РµС‚ РґРІР° РїРѕСЃР»РµРґРѕРІР°С‚РµР»СЊРЅС‹С… РґРІРёР¶РµРЅРёСЏ. Р’ СЃР±Р°Р»Р°РЅСЃРёСЂРѕРІР°РЅРЅРѕРј РІР°СЂРёР°РЅС‚Рµ Р±РµР»С‹Рµ РЅР° РїРµСЂРІРѕРј С…РѕРґСѓ РґРµР»Р°СЋС‚ С‚РѕР»СЊРєРѕ РѕРґРЅРѕ РґРІРёР¶РµРЅРёРµ';
       case GameAbility.boardInitiativeFear:
-        return 'Первый игрок, чья фигура будет съедена, дополнительно выбирает мод вне обычной волны раз в 3 хода';
+        return 'РџРµСЂРІС‹Р№ РёРіСЂРѕРє, С‡СЊСЏ С„РёРіСѓСЂР° Р±СѓРґРµС‚ СЃСЉРµРґРµРЅР°, РґРѕРїРѕР»РЅРёС‚РµР»СЊРЅРѕ РІС‹Р±РёСЂР°РµС‚ РјРѕРґ РІРЅРµ РѕР±С‹С‡РЅРѕР№ РІРѕР»РЅС‹ СЂР°Р· РІ 3 С…РѕРґР°';
       case GameAbility.boardSwamp:
-        return 'Фигура увязает после хода: следующим своим ходом ею ходить нельзя (другими — можно)';
+        return 'Р¤РёРіСѓСЂР° СѓРІСЏР·Р°РµС‚ РїРѕСЃР»Рµ С…РѕРґР°: СЃР»РµРґСѓСЋС‰РёРј СЃРІРѕРёРј С…РѕРґРѕРј РµСЋ С…РѕРґРёС‚СЊ РЅРµР»СЊР·СЏ (РґСЂСѓРіРёРјРё вЂ” РјРѕР¶РЅРѕ)';
       case GameAbility.boardCollectiveMyopia:
-        return 'Слоны, ладьи и ферзи не могут ходить дальше 3 клеток';
+        return 'РЎР»РѕРЅС‹, Р»Р°РґСЊРё Рё С„РµСЂР·Рё РЅРµ РјРѕРіСѓС‚ С…РѕРґРёС‚СЊ РґР°Р»СЊС€Рµ 3 РєР»РµС‚РѕРє';
       case GameAbility.boardTerritoryExpand:
-        return 'На доске появляются вертикали Z и I сразу';
+        return 'РќР° РґРѕСЃРєРµ РїРѕСЏРІР»СЏСЋС‚СЃСЏ РІРµСЂС‚РёРєР°Р»Рё Z Рё I СЃСЂР°Р·Сѓ';
       case GameAbility.boardFrostMap:
-        return 'Фигуры замерзают после 3 ходов на морозе. У каждого игрока 3 факела: они не мёрзнут и согревают соседей. Съеденный факел передаётся ближайшему союзнику';
+        return 'Р¤РёРіСѓСЂС‹ Р·Р°РјРµСЂР·Р°СЋС‚ РїРѕСЃР»Рµ 3 С…РѕРґРѕРІ РЅР° РјРѕСЂРѕР·Рµ. РЈ РєР°Р¶РґРѕРіРѕ РёРіСЂРѕРєР° 3 С„Р°РєРµР»Р°: РѕРЅРё РЅРµ РјС‘СЂР·РЅСѓС‚ Рё СЃРѕРіСЂРµРІР°СЋС‚ СЃРѕСЃРµРґРµР№. РЎСЉРµРґРµРЅРЅС‹Р№ С„Р°РєРµР» РїРµСЂРµРґР°С‘С‚СЃСЏ Р±Р»РёР¶Р°Р№С€РµРјСѓ СЃРѕСЋР·РЅРёРєСѓ';
       case GameAbility.boardScorchingSun:
-        return 'Солнце палит 3–6 клеток (меняет каждые 5 ходов). Нагрев 0→3: на 3 фигура погибает. Вне солнца нагрев падает';
+        return 'РЎРѕР»РЅС†Рµ РїР°Р»РёС‚ 3вЂ“6 РєР»РµС‚РѕРє (РјРµРЅСЏРµС‚ РєР°Р¶РґС‹Рµ 5 С…РѕРґРѕРІ). РќР°РіСЂРµРІ 0в†’3: РЅР° 3 С„РёРіСѓСЂР° РїРѕРіРёР±Р°РµС‚. Р’РЅРµ СЃРѕР»РЅС†Р° РЅР°РіСЂРµРІ РїР°РґР°РµС‚';
       case GameAbility.boardTurncoats:
-        return 'У каждого игрока один шпион среди лёгких фигур. Вы видите вражеского шпиона и можете сходить им, раскрыв его на свою сторону. Шпион не может поставить мат «своему» королю';
+        return 'РЈ РєР°Р¶РґРѕРіРѕ РёРіСЂРѕРєР° РѕРґРёРЅ С€РїРёРѕРЅ СЃСЂРµРґРё Р»С‘РіРєРёС… С„РёРіСѓСЂ. Р’С‹ РІРёРґРёС‚Рµ РІСЂР°Р¶РµСЃРєРѕРіРѕ С€РїРёРѕРЅР° Рё РјРѕР¶РµС‚Рµ СЃС…РѕРґРёС‚СЊ РёРј, СЂР°СЃРєСЂС‹РІ РµРіРѕ РЅР° СЃРІРѕСЋ СЃС‚РѕСЂРѕРЅСѓ. РЁРїРёРѕРЅ РЅРµ РјРѕР¶РµС‚ РїРѕСЃС‚Р°РІРёС‚СЊ РјР°С‚ В«СЃРІРѕРµРјСѓВ» РєРѕСЂРѕР»СЋ';
       case GameAbility.pawnSideways:
-        return 'Выбранная пешка может сходить на 1 клетку вбок';
+        return 'Р’С‹Р±СЂР°РЅРЅР°СЏ РїРµС€РєР° РјРѕР¶РµС‚ СЃС…РѕРґРёС‚СЊ РЅР° 1 РєР»РµС‚РєСѓ РІР±РѕРє';
       case GameAbility.pawnInverted:
-        return 'Выбранная пешка ходит по диагонали и ест по прямой';
+        return 'Р’С‹Р±СЂР°РЅРЅР°СЏ РїРµС€РєР° С…РѕРґРёС‚ РїРѕ РґРёР°РіРѕРЅР°Р»Рё Рё РµСЃС‚ РїРѕ РїСЂСЏРјРѕР№';
       case GameAbility.pawnAlwaysDoubleStep:
-        return 'Выбранная пешка всегда может пройти 2 клетки вперёд';
+        return 'Р’С‹Р±СЂР°РЅРЅР°СЏ РїРµС€РєР° РІСЃРµРіРґР° РјРѕР¶РµС‚ РїСЂРѕР№С‚Рё 2 РєР»РµС‚РєРё РІРїРµСЂС‘Рґ';
       case GameAbility.pawnRam:
-        return 'Выбранная пешка ходит и ест только вперёд, не по диагонали';
+        return 'Р’С‹Р±СЂР°РЅРЅР°СЏ РїРµС€РєР° С…РѕРґРёС‚ Рё РµСЃС‚ С‚РѕР»СЊРєРѕ РІРїРµСЂС‘Рґ, РЅРµ РїРѕ РґРёР°РіРѕРЅР°Р»Рё';
       case GameAbility.pawnAirborne:
-        return 'Выбранная пешка один раз может перепрыгнуть фигуру прямо перед собой';
+        return 'Р’С‹Р±СЂР°РЅРЅР°СЏ РїРµС€РєР° РѕРґРёРЅ СЂР°Р· РјРѕР¶РµС‚ РїРµСЂРµРїСЂС‹РіРЅСѓС‚СЊ С„РёРіСѓСЂСѓ РїСЂСЏРјРѕ РїРµСЂРµРґ СЃРѕР±РѕР№';
       case GameAbility.pawnBoomerang:
       case GameAbility.knightBoomerang:
       case GameAbility.bishopBoomerang:
-        return 'После следующего взятия выбранная фигура сразу возвращается на клетку, с которой ходила';
+        return 'РџРѕСЃР»Рµ СЃР»РµРґСѓСЋС‰РµРіРѕ РІР·СЏС‚РёСЏ РІС‹Р±СЂР°РЅРЅР°СЏ С„РёРіСѓСЂР° СЃСЂР°Р·Сѓ РІРѕР·РІСЂР°С‰Р°РµС‚СЃСЏ РЅР° РєР»РµС‚РєСѓ, СЃ РєРѕС‚РѕСЂРѕР№ С…РѕРґРёР»Р°';
       case GameAbility.pawnKamikaze:
-        return 'В ваш следующий ход выбранная пешка взрывается и отбрасывает соседние фигуры на 1 клетку от себя, если возможно';
+        return 'Р’ РІР°С€ СЃР»РµРґСѓСЋС‰РёР№ С…РѕРґ РІС‹Р±СЂР°РЅРЅР°СЏ РїРµС€РєР° РІР·СЂС‹РІР°РµС‚СЃСЏ Рё РѕС‚Р±СЂР°СЃС‹РІР°РµС‚ СЃРѕСЃРµРґРЅРёРµ С„РёРіСѓСЂС‹ РЅР° 1 РєР»РµС‚РєСѓ РѕС‚ СЃРµР±СЏ, РµСЃР»Рё РІРѕР·РјРѕР¶РЅРѕ';
       case GameAbility.pawnCaliph:
-        return 'На 1 ваш ход выбранная пешка становится ферзем, затем снова пешкой';
+        return 'РќР° 1 РІР°С€ С…РѕРґ РІС‹Р±СЂР°РЅРЅР°СЏ РїРµС€РєР° СЃС‚Р°РЅРѕРІРёС‚СЃСЏ С„РµСЂР·РµРј, Р·Р°С‚РµРј СЃРЅРѕРІР° РїРµС€РєРѕР№';
       case GameAbility.pawnSticky:
-        return 'Вражеская фигура, съевшая выбранную пешку, на свой следующий ход не сможет ходить';
+        return 'Р’СЂР°Р¶РµСЃРєР°СЏ С„РёРіСѓСЂР°, СЃСЉРµРІС€Р°СЏ РІС‹Р±СЂР°РЅРЅСѓСЋ РїРµС€РєСѓ, РЅР° СЃРІРѕР№ СЃР»РµРґСѓСЋС‰РёР№ С…РѕРґ РЅРµ СЃРјРѕР¶РµС‚ С…РѕРґРёС‚СЊ';
       case GameAbility.pawnPolymorph:
-        return 'После взятия выбранная пешка на 1 следующий ход становится типом съеденной фигуры и ходит как она';
+        return 'РџРѕСЃР»Рµ РІР·СЏС‚РёСЏ РІС‹Р±СЂР°РЅРЅР°СЏ РїРµС€РєР° РЅР° 1 СЃР»РµРґСѓСЋС‰РёР№ С…РѕРґ СЃС‚Р°РЅРѕРІРёС‚СЃСЏ С‚РёРїРѕРј СЃСЉРµРґРµРЅРЅРѕР№ С„РёРіСѓСЂС‹ Рё С…РѕРґРёС‚ РєР°Рє РѕРЅР°';
       case GameAbility.pawnInheritance:
-        return 'После гибели выбранной пешки все её моды переходят ближайшей своей пешке';
+        return 'РџРѕСЃР»Рµ РіРёР±РµР»Рё РІС‹Р±СЂР°РЅРЅРѕР№ РїРµС€РєРё РІСЃРµ РµС‘ РјРѕРґС‹ РїРµСЂРµС…РѕРґСЏС‚ Р±Р»РёР¶Р°Р№С€РµР№ СЃРІРѕРµР№ РїРµС€РєРµ';
       case GameAbility.pawnRansom:
-        return 'При попытке взять выбранную пешку можно уничтожить одну её мод и отменить взятие';
+        return 'РџСЂРё РїРѕРїС‹С‚РєРµ РІР·СЏС‚СЊ РІС‹Р±СЂР°РЅРЅСѓСЋ РїРµС€РєСѓ РјРѕР¶РЅРѕ СѓРЅРёС‡С‚РѕР¶РёС‚СЊ РѕРґРЅСѓ РµС‘ РјРѕРґ Рё РѕС‚РјРµРЅРёС‚СЊ РІР·СЏС‚РёРµ';
       case GameAbility.pawnForTheKing:
-        return 'Если выбранная пешка погибает на мине, ваш король получает выбор мода';
+        return 'Р•СЃР»Рё РІС‹Р±СЂР°РЅРЅР°СЏ РїРµС€РєР° РїРѕРіРёР±Р°РµС‚ РЅР° РјРёРЅРµ, РІР°С€ РєРѕСЂРѕР»СЊ РїРѕР»СѓС‡Р°РµС‚ РІС‹Р±РѕСЂ РјРѕРґР°';
       case GameAbility.pawnCamouflageNet:
-        return 'Фигура, окружённая тремя или более вашими пешками, невидима для соперника';
+        return 'Р¤РёРіСѓСЂР°, РѕРєСЂСѓР¶С‘РЅРЅР°СЏ С‚СЂРµРјСЏ РёР»Рё Р±РѕР»РµРµ РІР°С€РёРјРё РїРµС€РєР°РјРё, РЅРµРІРёРґРёРјР° РґР»СЏ СЃРѕРїРµСЂРЅРёРєР°';
       case GameAbility.pawnTrench:
-        return 'Если выбранная пешка не ходила 5 и более своих ходов, её можно взять только при двух и более атаках';
+        return 'Р•СЃР»Рё РІС‹Р±СЂР°РЅРЅР°СЏ РїРµС€РєР° РЅРµ С…РѕРґРёР»Р° 5 Рё Р±РѕР»РµРµ СЃРІРѕРёС… С…РѕРґРѕРІ, РµС‘ РјРѕР¶РЅРѕ РІР·СЏС‚СЊ С‚РѕР»СЊРєРѕ РїСЂРё РґРІСѓС… Рё Р±РѕР»РµРµ Р°С‚Р°РєР°С…';
       case GameAbility.pawnSignalFire:
       case GameAbility.knightSignalFire:
       case GameAbility.bishopSignalFire:
       case GameAbility.rookSignalFire:
-        return 'Случайная клетка под туманом войны навсегда открывается для вас';
+        return 'РЎР»СѓС‡Р°Р№РЅР°СЏ РєР»РµС‚РєР° РїРѕРґ С‚СѓРјР°РЅРѕРј РІРѕР№РЅС‹ РЅР°РІСЃРµРіРґР° РѕС‚РєСЂС‹РІР°РµС‚СЃСЏ РґР»СЏ РІР°СЃ';
       case GameAbility.pawnAvengeMe:
-        return 'Если выбранную пешку взяли, любая соседняя союзная пешка может взять взявшую фигуру даже необычным ходом';
+        return 'Р•СЃР»Рё РІС‹Р±СЂР°РЅРЅСѓСЋ РїРµС€РєСѓ РІР·СЏР»Рё, Р»СЋР±Р°СЏ СЃРѕСЃРµРґРЅСЏСЏ СЃРѕСЋР·РЅР°СЏ РїРµС€РєР° РјРѕР¶РµС‚ РІР·СЏС‚СЊ РІР·СЏРІС€СѓСЋ С„РёРіСѓСЂСѓ РґР°Р¶Рµ РЅРµРѕР±С‹С‡РЅС‹Рј С…РѕРґРѕРј';
       case GameAbility.pawnCaravan:
-        return 'Сдвоенные или строенные пешки с выбранной на одной вертикали ходят вперёд одновременно';
+        return 'РЎРґРІРѕРµРЅРЅС‹Рµ РёР»Рё СЃС‚СЂРѕРµРЅРЅС‹Рµ РїРµС€РєРё СЃ РІС‹Р±СЂР°РЅРЅРѕР№ РЅР° РѕРґРЅРѕР№ РІРµСЂС‚РёРєР°Р»Рё С…РѕРґСЏС‚ РІРїРµСЂС‘Рґ РѕРґРЅРѕРІСЂРµРјРµРЅРЅРѕ';
       case GameAbility.pawnFaceControl:
-        return 'Вражеская фигура прямо перед выбранной пешкой пропускает следующий свой ход';
+        return 'Р’СЂР°Р¶РµСЃРєР°СЏ С„РёРіСѓСЂР° РїСЂСЏРјРѕ РїРµСЂРµРґ РІС‹Р±СЂР°РЅРЅРѕР№ РїРµС€РєРѕР№ РїСЂРѕРїСѓСЃРєР°РµС‚ СЃР»РµРґСѓСЋС‰РёР№ СЃРІРѕР№ С…РѕРґ';
       case GameAbility.knightRearing:
-        return 'На клетку выбранного коня могут вставать другие фигуры; этого коня нельзя съесть';
+        return 'РќР° РєР»РµС‚РєСѓ РІС‹Р±СЂР°РЅРЅРѕРіРѕ РєРѕРЅСЏ РјРѕРіСѓС‚ РІСЃС‚Р°РІР°С‚СЊ РґСЂСѓРіРёРµ С„РёРіСѓСЂС‹; СЌС‚РѕРіРѕ РєРѕРЅСЏ РЅРµР»СЊР·СЏ СЃСЉРµСЃС‚СЊ';
       case GameAbility.knightLongJump:
-        return 'Выбранный конь прыгает только на 3+1, а не на 2+1';
+        return 'Р’С‹Р±СЂР°РЅРЅС‹Р№ РєРѕРЅСЊ РїСЂС‹РіР°РµС‚ С‚РѕР»СЊРєРѕ РЅР° 3+1, Р° РЅРµ РЅР° 2+1';
       case GameAbility.knightSecondChance:
-        return 'При взятии выбранный конь возвращается на предыдущую клетку, если она свободна';
+        return 'РџСЂРё РІР·СЏС‚РёРё РІС‹Р±СЂР°РЅРЅС‹Р№ РєРѕРЅСЊ РІРѕР·РІСЂР°С‰Р°РµС‚СЃСЏ РЅР° РїСЂРµРґС‹РґСѓС‰СѓСЋ РєР»РµС‚РєСѓ, РµСЃР»Рё РѕРЅР° СЃРІРѕР±РѕРґРЅР°';
       case GameAbility.knightGallop:
-        return 'После хода выбранный конь может сразу сделать второй прыжок на свободную клетку';
+        return 'РџРѕСЃР»Рµ С…РѕРґР° РІС‹Р±СЂР°РЅРЅС‹Р№ РєРѕРЅСЊ РјРѕР¶РµС‚ СЃСЂР°Р·Сѓ СЃРґРµР»Р°С‚СЊ РІС‚РѕСЂРѕР№ РїСЂС‹Р¶РѕРє РЅР° СЃРІРѕР±РѕРґРЅСѓСЋ РєР»РµС‚РєСѓ';
       case GameAbility.knightDust:
-        return 'Клетка, с которой ушёл выбранный конь, на 1 ход недоступна никому';
+        return 'РљР»РµС‚РєР°, СЃ РєРѕС‚РѕСЂРѕР№ СѓС€С‘Р» РІС‹Р±СЂР°РЅРЅС‹Р№ РєРѕРЅСЊ, РЅР° 1 С…РѕРґ РЅРµРґРѕСЃС‚СѓРїРЅР° РЅРёРєРѕРјСѓ';
       case GameAbility.knightCentaur:
-        return 'Выбранный конь также может ходить как король на 1 клетку';
+        return 'Р’С‹Р±СЂР°РЅРЅС‹Р№ РєРѕРЅСЊ С‚Р°РєР¶Рµ РјРѕР¶РµС‚ С…РѕРґРёС‚СЊ РєР°Рє РєРѕСЂРѕР»СЊ РЅР° 1 РєР»РµС‚РєСѓ';
       case GameAbility.knightTrojan:
-        return 'Через 3 хода выбранный конь взрывается и уничтожает все окружающие фигуры; отсчёт виден у коня';
+        return 'Р§РµСЂРµР· 3 С…РѕРґР° РІС‹Р±СЂР°РЅРЅС‹Р№ РєРѕРЅСЊ РІР·СЂС‹РІР°РµС‚СЃСЏ Рё СѓРЅРёС‡С‚РѕР¶Р°РµС‚ РІСЃРµ РѕРєСЂСѓР¶Р°СЋС‰РёРµ С„РёРіСѓСЂС‹; РѕС‚СЃС‡С‘С‚ РІРёРґРµРЅ Сѓ РєРѕРЅСЏ';
       case GameAbility.knightDuel:
-        return 'Выбранный конь выбирает вражескую фигуру; пока один из дуэлянтов не погибнет, они могут брать только друг друга';
+        return 'Р’С‹Р±СЂР°РЅРЅС‹Р№ РєРѕРЅСЊ РІС‹Р±РёСЂР°РµС‚ РІСЂР°Р¶РµСЃРєСѓСЋ С„РёРіСѓСЂСѓ; РїРѕРєР° РѕРґРёРЅ РёР· РґСѓСЌР»СЏРЅС‚РѕРІ РЅРµ РїРѕРіРёР±РЅРµС‚, РѕРЅРё РјРѕРіСѓС‚ Р±СЂР°С‚СЊ С‚РѕР»СЊРєРѕ РґСЂСѓРі РґСЂСѓРіР°';
       case GameAbility.knightGuard:
-        return 'Выбранный конь выбирает доступную клетку и 3 хода защищает её: вставшую туда вражескую фигуру он сразу берёт вне хода';
+        return 'Р’С‹Р±СЂР°РЅРЅС‹Р№ РєРѕРЅСЊ РІС‹Р±РёСЂР°РµС‚ РґРѕСЃС‚СѓРїРЅСѓСЋ РєР»РµС‚РєСѓ Рё 3 С…РѕРґР° Р·Р°С‰РёС‰Р°РµС‚ РµС‘: РІСЃС‚Р°РІС€СѓСЋ С‚СѓРґР° РІСЂР°Р¶РµСЃРєСѓСЋ С„РёРіСѓСЂСѓ РѕРЅ СЃСЂР°Р·Сѓ Р±РµСЂС‘С‚ РІРЅРµ С…РѕРґР°';
       case GameAbility.knightTour:
-        return 'Посетив 8 разных клеток, выбранный конь получает дополнительную мод';
+        return 'РџРѕСЃРµС‚РёРІ 8 СЂР°Р·РЅС‹С… РєР»РµС‚РѕРє, РІС‹Р±СЂР°РЅРЅС‹Р№ РєРѕРЅСЊ РїРѕР»СѓС‡Р°РµС‚ РґРѕРїРѕР»РЅРёС‚РµР»СЊРЅСѓСЋ РјРѕРґ';
       case GameAbility.knightDoppelgangerOnce:
-        return 'После хода выбранный конь один раз оставляет иллюзию на стартовой клетке; её видит только соперник';
+        return 'РџРѕСЃР»Рµ С…РѕРґР° РІС‹Р±СЂР°РЅРЅС‹Р№ РєРѕРЅСЊ РѕРґРёРЅ СЂР°Р· РѕСЃС‚Р°РІР»СЏРµС‚ РёР»Р»СЋР·РёСЋ РЅР° СЃС‚Р°СЂС‚РѕРІРѕР№ РєР»РµС‚РєРµ; РµС‘ РІРёРґРёС‚ С‚РѕР»СЊРєРѕ СЃРѕРїРµСЂРЅРёРє';
       case GameAbility.knightDoppelgangers:
-        return 'После каждого хода выбранный конь оставляет иллюзию на старте; их видит только соперник';
+        return 'РџРѕСЃР»Рµ РєР°Р¶РґРѕРіРѕ С…РѕРґР° РІС‹Р±СЂР°РЅРЅС‹Р№ РєРѕРЅСЊ РѕСЃС‚Р°РІР»СЏРµС‚ РёР»Р»СЋР·РёСЋ РЅР° СЃС‚Р°СЂС‚Рµ; РёС… РІРёРґРёС‚ С‚РѕР»СЊРєРѕ СЃРѕРїРµСЂРЅРёРє';
       case GameAbility.knightFifthLeg:
-        return 'Выбранный конь ходит на 2+2 клетки вместо 2+1';
+        return 'Р’С‹Р±СЂР°РЅРЅС‹Р№ РєРѕРЅСЊ С…РѕРґРёС‚ РЅР° 2+2 РєР»РµС‚РєРё РІРјРµСЃС‚Рѕ 2+1';
       case GameAbility.knightElusive:
       case GameAbility.bishopElusive:
-        return 'Выбранную фигуру можно взять только если её атакуют не менее двух вражеских фигур';
+        return 'Р’С‹Р±СЂР°РЅРЅСѓСЋ С„РёРіСѓСЂСѓ РјРѕР¶РЅРѕ РІР·СЏС‚СЊ С‚РѕР»СЊРєРѕ РµСЃР»Рё РµС‘ Р°С‚Р°РєСѓСЋС‚ РЅРµ РјРµРЅРµРµ РґРІСѓС… РІСЂР°Р¶РµСЃРєРёС… С„РёРіСѓСЂ';
       case GameAbility.knightStomp:
-        return 'После следующего хода выбранного коня соседние вражеские пешки по возможности отходят от него';
+        return 'РџРѕСЃР»Рµ СЃР»РµРґСѓСЋС‰РµРіРѕ С…РѕРґР° РІС‹Р±СЂР°РЅРЅРѕРіРѕ РєРѕРЅСЏ СЃРѕСЃРµРґРЅРёРµ РІСЂР°Р¶РµСЃРєРёРµ РїРµС€РєРё РїРѕ РІРѕР·РјРѕР¶РЅРѕСЃС‚Рё РѕС‚С…РѕРґСЏС‚ РѕС‚ РЅРµРіРѕ';
       case GameAbility.knightSurveyor:
-        return 'Клетки, посещённые выбранным конём, защищены от случайных катаклизмов';
+        return 'РљР»РµС‚РєРё, РїРѕСЃРµС‰С‘РЅРЅС‹Рµ РІС‹Р±СЂР°РЅРЅС‹Рј РєРѕРЅС‘Рј, Р·Р°С‰РёС‰РµРЅС‹ РѕС‚ СЃР»СѓС‡Р°Р№РЅС‹С… РєР°С‚Р°РєР»РёР·РјРѕРІ';
       case GameAbility.knightCornerQuest:
-        return 'Если кони игрока вместе посетили любые 3 из 4 угловых клеток — победа';
+        return 'Р•СЃР»Рё РєРѕРЅРё РёРіСЂРѕРєР° РІРјРµСЃС‚Рµ РїРѕСЃРµС‚РёР»Рё Р»СЋР±С‹Рµ 3 РёР· 4 СѓРіР»РѕРІС‹С… РєР»РµС‚РѕРє вЂ” РїРѕР±РµРґР°';
       case GameAbility.knightRideMe:
-        return 'Перед ходом выбранного коня выберите соседнюю пешку: она поедет с ним, сохраняя относительную позицию';
+        return 'РџРµСЂРµРґ С…РѕРґРѕРј РІС‹Р±СЂР°РЅРЅРѕРіРѕ РєРѕРЅСЏ РІС‹Р±РµСЂРёС‚Рµ СЃРѕСЃРµРґРЅСЋСЋ РїРµС€РєСѓ: РѕРЅР° РїРѕРµРґРµС‚ СЃ РЅРёРј, СЃРѕС…СЂР°РЅСЏСЏ РѕС‚РЅРѕСЃРёС‚РµР»СЊРЅСѓСЋ РїРѕР·РёС†РёСЋ';
       case GameAbility.knightMagicHooves:
-        return 'Следующий ход выбранного коня создаёт портал со стартовой клетки на конечную';
+        return 'РЎР»РµРґСѓСЋС‰РёР№ С…РѕРґ РІС‹Р±СЂР°РЅРЅРѕРіРѕ РєРѕРЅСЏ СЃРѕР·РґР°С‘С‚ РїРѕСЂС‚Р°Р» СЃРѕ СЃС‚Р°СЂС‚РѕРІРѕР№ РєР»РµС‚РєРё РЅР° РєРѕРЅРµС‡РЅСѓСЋ';
       case GameAbility.bishopHopAlly:
-        return 'Выбранный слон может перепрыгнуть одну свою фигуру';
+        return 'Р’С‹Р±СЂР°РЅРЅС‹Р№ СЃР»РѕРЅ РјРѕР¶РµС‚ РїРµСЂРµРїСЂС‹РіРЅСѓС‚СЊ РѕРґРЅСѓ СЃРІРѕСЋ С„РёРіСѓСЂСѓ';
       case GameAbility.bishopColorChaos:
-        return 'Один раз выбранный слон может встать на соседнюю пустую клетку, сменив цвет поля';
+        return 'РћРґРёРЅ СЂР°Р· РІС‹Р±СЂР°РЅРЅС‹Р№ СЃР»РѕРЅ РјРѕР¶РµС‚ РІСЃС‚Р°С‚СЊ РЅР° СЃРѕСЃРµРґРЅСЋСЋ РїСѓСЃС‚СѓСЋ РєР»РµС‚РєСѓ, СЃРјРµРЅРёРІ С†РІРµС‚ РїРѕР»СЏ';
       case GameAbility.bishopInquisitor:
-        return 'Вместо взятия выбранный слон может снять одну мод с атакуемой вражеской фигуры, оставаясь на месте';
+        return 'Р’РјРµСЃС‚Рѕ РІР·СЏС‚РёСЏ РІС‹Р±СЂР°РЅРЅС‹Р№ СЃР»РѕРЅ РјРѕР¶РµС‚ СЃРЅСЏС‚СЊ РѕРґРЅСѓ РјРѕРґ СЃ Р°С‚Р°РєСѓРµРјРѕР№ РІСЂР°Р¶РµСЃРєРѕР№ С„РёРіСѓСЂС‹, РѕСЃС‚Р°РІР°СЏСЃСЊ РЅР° РјРµСЃС‚Рµ';
       case GameAbility.bishopColorVow:
-        return 'Выбранный слон привязан к цвету своей клетки и погибает на другом цвете; зато может рикошетить на 1 клетку от края доски';
+        return 'Р’С‹Р±СЂР°РЅРЅС‹Р№ СЃР»РѕРЅ РїСЂРёРІСЏР·Р°РЅ Рє С†РІРµС‚Сѓ СЃРІРѕРµР№ РєР»РµС‚РєРё Рё РїРѕРіРёР±Р°РµС‚ РЅР° РґСЂСѓРіРѕРј С†РІРµС‚Рµ; Р·Р°С‚Рѕ РјРѕР¶РµС‚ СЂРёРєРѕС€РµС‚РёС‚СЊ РЅР° 1 РєР»РµС‚РєСѓ РѕС‚ РєСЂР°СЏ РґРѕСЃРєРё';
       case GameAbility.bishopBrothers:
-        return 'Если у вас 2+ слона, ход выбранного сдвигает всех ваших слонов тем же вектором, где это возможно';
+        return 'Р•СЃР»Рё Сѓ РІР°СЃ 2+ СЃР»РѕРЅР°, С…РѕРґ РІС‹Р±СЂР°РЅРЅРѕРіРѕ СЃРґРІРёРіР°РµС‚ РІСЃРµС… РІР°С€РёС… СЃР»РѕРЅРѕРІ С‚РµРј Р¶Рµ РІРµРєС‚РѕСЂРѕРј, РіРґРµ СЌС‚Рѕ РІРѕР·РјРѕР¶РЅРѕ';
       case GameAbility.bishopSanctuary:
-        return 'Выбранный слон выбирает союзника, кроме короля; при следующем взятии подзащитного вместо него погибает слон';
+        return 'Р’С‹Р±СЂР°РЅРЅС‹Р№ СЃР»РѕРЅ РІС‹Р±РёСЂР°РµС‚ СЃРѕСЋР·РЅРёРєР°, РєСЂРѕРјРµ РєРѕСЂРѕР»СЏ; РїСЂРё СЃР»РµРґСѓСЋС‰РµРј РІР·СЏС‚РёРё РїРѕРґР·Р°С‰РёС‚РЅРѕРіРѕ РІРјРµСЃС‚Рѕ РЅРµРіРѕ РїРѕРіРёР±Р°РµС‚ СЃР»РѕРЅ';
       case GameAbility.bishopExcommunication:
-        return 'После взятия фигуры выбранным слоном другие враги того же типа до следующего хода этого слона не могут брать его';
+        return 'РџРѕСЃР»Рµ РІР·СЏС‚РёСЏ С„РёРіСѓСЂС‹ РІС‹Р±СЂР°РЅРЅС‹Рј СЃР»РѕРЅРѕРј РґСЂСѓРіРёРµ РІСЂР°РіРё С‚РѕРіРѕ Р¶Рµ С‚РёРїР° РґРѕ СЃР»РµРґСѓСЋС‰РµРіРѕ С…РѕРґР° СЌС‚РѕРіРѕ СЃР»РѕРЅР° РЅРµ РјРѕРіСѓС‚ Р±СЂР°С‚СЊ РµРіРѕ';
       case GameAbility.bishopTithe:
-        return 'Модифицированный враг, покинувший диагональ выбранного слона, до следующего хода этого слона теряет одну мод';
+        return 'РњРѕРґРёС„РёС†РёСЂРѕРІР°РЅРЅС‹Р№ РІСЂР°Рі, РїРѕРєРёРЅСѓРІС€РёР№ РґРёР°РіРѕРЅР°Р»СЊ РІС‹Р±СЂР°РЅРЅРѕРіРѕ СЃР»РѕРЅР°, РґРѕ СЃР»РµРґСѓСЋС‰РµРіРѕ С…РѕРґР° СЌС‚РѕРіРѕ СЃР»РѕРЅР° С‚РµСЂСЏРµС‚ РѕРґРЅСѓ РјРѕРґ';
       case GameAbility.bishopPilgrimage:
-        return 'Посетив все четыре четверти доски, выбранный слон выбирает союзника и защищает его от следующего взятия';
+        return 'РџРѕСЃРµС‚РёРІ РІСЃРµ С‡РµС‚С‹СЂРµ С‡РµС‚РІРµСЂС‚Рё РґРѕСЃРєРё, РІС‹Р±СЂР°РЅРЅС‹Р№ СЃР»РѕРЅ РІС‹Р±РёСЂР°РµС‚ СЃРѕСЋР·РЅРёРєР° Рё Р·Р°С‰РёС‰Р°РµС‚ РµРіРѕ РѕС‚ СЃР»РµРґСѓСЋС‰РµРіРѕ РІР·СЏС‚РёСЏ';
       case GameAbility.bishopCrusade:
-        return 'После двух взятий выбранным слоном на доске срабатывает случайный катаклизм';
+        return 'РџРѕСЃР»Рµ РґРІСѓС… РІР·СЏС‚РёР№ РІС‹Р±СЂР°РЅРЅС‹Рј СЃР»РѕРЅРѕРј РЅР° РґРѕСЃРєРµ СЃСЂР°Р±Р°С‚С‹РІР°РµС‚ СЃР»СѓС‡Р°Р№РЅС‹Р№ РєР°С‚Р°РєР»РёР·Рј';
       case GameAbility.bishopPost:
-        return 'Три хода выбранного слона без взятий дают два выбора модов подряд';
+        return 'РўСЂРё С…РѕРґР° РІС‹Р±СЂР°РЅРЅРѕРіРѕ СЃР»РѕРЅР° Р±РµР· РІР·СЏС‚РёР№ РґР°СЋС‚ РґРІР° РІС‹Р±РѕСЂР° РјРѕРґРѕРІ РїРѕРґСЂСЏРґ';
       case GameAbility.bishopParallelWorlds:
-        return 'Выбранный слон один раз меняется местами с союзной фигурой на той же диагонали';
+        return 'Р’С‹Р±СЂР°РЅРЅС‹Р№ СЃР»РѕРЅ РѕРґРёРЅ СЂР°Р· РјРµРЅСЏРµС‚СЃСЏ РјРµСЃС‚Р°РјРё СЃ СЃРѕСЋР·РЅРѕР№ С„РёРіСѓСЂРѕР№ РЅР° С‚РѕР№ Р¶Рµ РґРёР°РіРѕРЅР°Р»Рё';
       case GameAbility.bishopAlcove:
-        return 'Выбранный слон один раз может создать одну клетку за краем доски и встать на неё';
+        return 'Р’С‹Р±СЂР°РЅРЅС‹Р№ СЃР»РѕРЅ РѕРґРёРЅ СЂР°Р· РјРѕР¶РµС‚ СЃРѕР·РґР°С‚СЊ РѕРґРЅСѓ РєР»РµС‚РєСѓ Р·Р° РєСЂР°РµРј РґРѕСЃРєРё Рё РІСЃС‚Р°С‚СЊ РЅР° РЅРµС‘';
       case GameAbility.bishopGlassCeiling:
-        return 'Выбранный слон может перепрыгнуть через одну вражескую фигуру вместо взятия; та пропускает ход';
+        return 'Р’С‹Р±СЂР°РЅРЅС‹Р№ СЃР»РѕРЅ РјРѕР¶РµС‚ РїРµСЂРµРїСЂС‹РіРЅСѓС‚СЊ С‡РµСЂРµР· РѕРґРЅСѓ РІСЂР°Р¶РµСЃРєСѓСЋ С„РёРіСѓСЂСѓ РІРјРµСЃС‚Рѕ РІР·СЏС‚РёСЏ; С‚Р° РїСЂРѕРїСѓСЃРєР°РµС‚ С…РѕРґ';
       case GameAbility.rookHopAlly:
-        return 'Выбранная ладья может перепрыгнуть одну свою фигуру';
+        return 'Р’С‹Р±СЂР°РЅРЅР°СЏ Р»Р°РґСЊСЏ РјРѕР¶РµС‚ РїРµСЂРµРїСЂС‹РіРЅСѓС‚СЊ РѕРґРЅСѓ СЃРІРѕСЋ С„РёРіСѓСЂСѓ';
       case GameAbility.rookRam:
-        return 'Выбранная ладья может толкнуть свою фигуру на 1 клетку дальше и занять её место';
+        return 'Р’С‹Р±СЂР°РЅРЅР°СЏ Р»Р°РґСЊСЏ РјРѕР¶РµС‚ С‚РѕР»РєРЅСѓС‚СЊ СЃРІРѕСЋ С„РёРіСѓСЂСѓ РЅР° 1 РєР»РµС‚РєСѓ РґР°Р»СЊС€Рµ Рё Р·Р°РЅСЏС‚СЊ РµС‘ РјРµСЃС‚Рѕ';
       case GameAbility.rookAstronomicon:
-        return 'Если вертикаль выбранной ладьи пуста кроме неё, ладья прожигает её на 3 хода: враг на вертикали уничтожается, король не может туда встать';
+        return 'Р•СЃР»Рё РІРµСЂС‚РёРєР°Р»СЊ РІС‹Р±СЂР°РЅРЅРѕР№ Р»Р°РґСЊРё РїСѓСЃС‚Р° РєСЂРѕРјРµ РЅРµС‘, Р»Р°РґСЊСЏ РїСЂРѕР¶РёРіР°РµС‚ РµС‘ РЅР° 3 С…РѕРґР°: РІСЂР°Рі РЅР° РІРµСЂС‚РёРєР°Р»Рё СѓРЅРёС‡С‚РѕР¶Р°РµС‚СЃСЏ, РєРѕСЂРѕР»СЊ РЅРµ РјРѕР¶РµС‚ С‚СѓРґР° РІСЃС‚Р°С‚СЊ';
       case GameAbility.rookFortress:
-        return 'Клетка перед выбранной ладьёй — укрепление: вражеские пешки и лёгкие фигуры не могут съесть фигуру на ней';
+        return 'РљР»РµС‚РєР° РїРµСЂРµРґ РІС‹Р±СЂР°РЅРЅРѕР№ Р»Р°РґСЊС‘Р№ вЂ” СѓРєСЂРµРїР»РµРЅРёРµ: РІСЂР°Р¶РµСЃРєРёРµ РїРµС€РєРё Рё Р»С‘РіРєРёРµ С„РёРіСѓСЂС‹ РЅРµ РјРѕРіСѓС‚ СЃСЉРµСЃС‚СЊ С„РёРіСѓСЂСѓ РЅР° РЅРµР№';
       case GameAbility.rookStandardBearer:
-        return 'Фигуры на восьми клетках вокруг выбранной ладьи нельзя перемещать принудительными эффектами модов';
+        return 'Р¤РёРіСѓСЂС‹ РЅР° РІРѕСЃСЊРјРё РєР»РµС‚РєР°С… РІРѕРєСЂСѓРі РІС‹Р±СЂР°РЅРЅРѕР№ Р»Р°РґСЊРё РЅРµР»СЊР·СЏ РїРµСЂРµРјРµС‰Р°С‚СЊ РїСЂРёРЅСѓРґРёС‚РµР»СЊРЅС‹РјРё СЌС„С„РµРєС‚Р°РјРё РјРѕРґРѕРІ';
       case GameAbility.rookCustoms:
-        return 'Следующие 3 хода враги не могут вставать на выбранную случайно горизонталь или вертикаль ладьи, если уже не находятся на ней';
+        return 'РЎР»РµРґСѓСЋС‰РёРµ 3 С…РѕРґР° РІСЂР°РіРё РЅРµ РјРѕРіСѓС‚ РІСЃС‚Р°РІР°С‚СЊ РЅР° РІС‹Р±СЂР°РЅРЅСѓСЋ СЃР»СѓС‡Р°Р№РЅРѕ РіРѕСЂРёР·РѕРЅС‚Р°Р»СЊ РёР»Рё РІРµСЂС‚РёРєР°Р»СЊ Р»Р°РґСЊРё, РµСЃР»Рё СѓР¶Рµ РЅРµ РЅР°С…РѕРґСЏС‚СЃСЏ РЅР° РЅРµР№';
       case GameAbility.rookDrawbridge:
-        return 'Союзные фигуры могут проходить сквозь выбранную ладью';
+        return 'РЎРѕСЋР·РЅС‹Рµ С„РёРіСѓСЂС‹ РјРѕРіСѓС‚ РїСЂРѕС…РѕРґРёС‚СЊ СЃРєРІРѕР·СЊ РІС‹Р±СЂР°РЅРЅСѓСЋ Р»Р°РґСЊСЋ';
       case GameAbility.rookCurfew:
-        return 'Враг рядом с выбранной ладьёй не может отойти от неё 3 своих хода, пока ладья сама не отойдёт';
+        return 'Р’СЂР°Рі СЂСЏРґРѕРј СЃ РІС‹Р±СЂР°РЅРЅРѕР№ Р»Р°РґСЊС‘Р№ РЅРµ РјРѕР¶РµС‚ РѕС‚РѕР№С‚Рё РѕС‚ РЅРµС‘ 3 СЃРІРѕРёС… С…РѕРґР°, РїРѕРєР° Р»Р°РґСЊСЏ СЃР°РјР° РЅРµ РѕС‚РѕР№РґС‘С‚';
       case GameAbility.rookSiegeCalculation:
-        return 'Если выбранная ладья 3 хода подряд может взять одну и ту же вражескую фигуру, но не берёт её, эта фигура исчезает';
+        return 'Р•СЃР»Рё РІС‹Р±СЂР°РЅРЅР°СЏ Р»Р°РґСЊСЏ 3 С…РѕРґР° РїРѕРґСЂСЏРґ РјРѕР¶РµС‚ РІР·СЏС‚СЊ РѕРґРЅСѓ Рё С‚Сѓ Р¶Рµ РІСЂР°Р¶РµСЃРєСѓСЋ С„РёРіСѓСЂСѓ, РЅРѕ РЅРµ Р±РµСЂС‘С‚ РµС‘, СЌС‚Р° С„РёРіСѓСЂР° РёСЃС‡РµР·Р°РµС‚';
       case GameAbility.rookFerry:
-        return 'Для выбранной ладьи левая и правая границы доски соединяются, как у Зеркала';
+        return 'Р”Р»СЏ РІС‹Р±СЂР°РЅРЅРѕР№ Р»Р°РґСЊРё Р»РµРІР°СЏ Рё РїСЂР°РІР°СЏ РіСЂР°РЅРёС†С‹ РґРѕСЃРєРё СЃРѕРµРґРёРЅСЏСЋС‚СЃСЏ, РєР°Рє Сѓ Р—РµСЂРєР°Р»Р°';
       case GameAbility.rookSignalTower:
-        return 'Выбранная ладья раскрывает туман войны на своей вертикали и горизонтали';
+        return 'Р’С‹Р±СЂР°РЅРЅР°СЏ Р»Р°РґСЊСЏ СЂР°СЃРєСЂС‹РІР°РµС‚ С‚СѓРјР°РЅ РІРѕР№РЅС‹ РЅР° СЃРІРѕРµР№ РІРµСЂС‚РёРєР°Р»Рё Рё РіРѕСЂРёР·РѕРЅС‚Р°Р»Рё';
       case GameAbility.queenKnightStep:
-        return 'Выбранный ферзь дополнительно ходит как конь';
+        return 'Р’С‹Р±СЂР°РЅРЅС‹Р№ С„РµСЂР·СЊ РґРѕРїРѕР»РЅРёС‚РµР»СЊРЅРѕ С…РѕРґРёС‚ РєР°Рє РєРѕРЅСЊ';
       case GameAbility.queenHopAlly:
-        return 'Выбранный ферзь может перепрыгнуть одну свою фигуру';
+        return 'Р’С‹Р±СЂР°РЅРЅС‹Р№ С„РµСЂР·СЊ РјРѕР¶РµС‚ РїРµСЂРµРїСЂС‹РіРЅСѓС‚СЊ РѕРґРЅСѓ СЃРІРѕСЋ С„РёРіСѓСЂСѓ';
       case GameAbility.queenSplit:
-        return 'Выбранный ферзь исчезает: на клетке остаются слон и ладья одновременно';
+        return 'Р’С‹Р±СЂР°РЅРЅС‹Р№ С„РµСЂР·СЊ РёСЃС‡РµР·Р°РµС‚: РЅР° РєР»РµС‚РєРµ РѕСЃС‚Р°СЋС‚СЃСЏ СЃР»РѕРЅ Рё Р»Р°РґСЊСЏ РѕРґРЅРѕРІСЂРµРјРµРЅРЅРѕ';
       case GameAbility.queenMatka:
-        return 'Выбранный ферзь не может никого съесть, но каждые 3 ваших хода вокруг него на случайной свободной клетке появляется пешка';
+        return 'Р’С‹Р±СЂР°РЅРЅС‹Р№ С„РµСЂР·СЊ РЅРµ РјРѕР¶РµС‚ РЅРёРєРѕРіРѕ СЃСЉРµСЃС‚СЊ, РЅРѕ РєР°Р¶РґС‹Рµ 3 РІР°С€РёС… С…РѕРґР° РІРѕРєСЂСѓРі РЅРµРіРѕ РЅР° СЃР»СѓС‡Р°Р№РЅРѕР№ СЃРІРѕР±РѕРґРЅРѕР№ РєР»РµС‚РєРµ РїРѕСЏРІР»СЏРµС‚СЃСЏ РїРµС€РєР°';
       case GameAbility.queenShadowEmpress:
-        return 'Выбранный ферзь дополнительно ходит как конь (2+1), но может вставать только на клетки одного цвета (выбирается случайно)';
+        return 'Р’С‹Р±СЂР°РЅРЅС‹Р№ С„РµСЂР·СЊ РґРѕРїРѕР»РЅРёС‚РµР»СЊРЅРѕ С…РѕРґРёС‚ РєР°Рє РєРѕРЅСЊ (2+1), РЅРѕ РјРѕР¶РµС‚ РІСЃС‚Р°РІР°С‚СЊ С‚РѕР»СЊРєРѕ РЅР° РєР»РµС‚РєРё РѕРґРЅРѕРіРѕ С†РІРµС‚Р° (РІС‹Р±РёСЂР°РµС‚СЃСЏ СЃР»СѓС‡Р°Р№РЅРѕ)';
       case GameAbility.queenEscape:
-        return 'Если выбранного ферзя съедят, на случайной свободной клетке появится ваш слон или ладья (50%), без шаха и мата вражескому королю';
+        return 'Р•СЃР»Рё РІС‹Р±СЂР°РЅРЅРѕРіРѕ С„РµСЂР·СЏ СЃСЉРµРґСЏС‚, РЅР° СЃР»СѓС‡Р°Р№РЅРѕР№ СЃРІРѕР±РѕРґРЅРѕР№ РєР»РµС‚РєРµ РїРѕСЏРІРёС‚СЃСЏ РІР°С€ СЃР»РѕРЅ РёР»Рё Р»Р°РґСЊСЏ (50%), Р±РµР· С€Р°С…Р° Рё РјР°С‚Р° РІСЂР°Р¶РµСЃРєРѕРјСѓ РєРѕСЂРѕР»СЋ';
       case GameAbility.queenDelayedSentence:
-        return 'Выбранный ферзь отмечает атакуемого врага; после хода соперника тот погибает, если всё ещё находится под атакой ферзя';
+        return 'Р’С‹Р±СЂР°РЅРЅС‹Р№ С„РµСЂР·СЊ РѕС‚РјРµС‡Р°РµС‚ Р°С‚Р°РєСѓРµРјРѕРіРѕ РІСЂР°РіР°; РїРѕСЃР»Рµ С…РѕРґР° СЃРѕРїРµСЂРЅРёРєР° С‚РѕС‚ РїРѕРіРёР±Р°РµС‚, РµСЃР»Рё РІСЃС‘ РµС‰С‘ РЅР°С…РѕРґРёС‚СЃСЏ РїРѕРґ Р°С‚Р°РєРѕР№ С„РµСЂР·СЏ';
       case GameAbility.queenTrophyEmbargo:
-        return 'Взятие на клетке под контролем выбранного ферзя больше не даёт награды (правило совместимости; волны модов от взятий не зависят)';
+        return 'Р’Р·СЏС‚РёРµ РЅР° РєР»РµС‚РєРµ РїРѕРґ РєРѕРЅС‚СЂРѕР»РµРј РІС‹Р±СЂР°РЅРЅРѕРіРѕ С„РµСЂР·СЏ Р±РѕР»СЊС€Рµ РЅРµ РґР°С‘С‚ РЅР°РіСЂР°РґС‹ (РїСЂР°РІРёР»Рѕ СЃРѕРІРјРµСЃС‚РёРјРѕСЃС‚Рё; РІРѕР»РЅС‹ РјРѕРґРѕРІ РѕС‚ РІР·СЏС‚РёР№ РЅРµ Р·Р°РІРёСЃСЏС‚)';
       case GameAbility.queenYouShallNotPass:
-        return 'Вражеская фигура, взявшая выбранного ферзя, тоже уничтожается';
+        return 'Р’СЂР°Р¶РµСЃРєР°СЏ С„РёРіСѓСЂР°, РІР·СЏРІС€Р°СЏ РІС‹Р±СЂР°РЅРЅРѕРіРѕ С„РµСЂР·СЏ, С‚РѕР¶Рµ СѓРЅРёС‡С‚РѕР¶Р°РµС‚СЃСЏ';
       case GameAbility.kingRoyalDecree:
-        return 'Выбранный король и ладья меняются местами, даже если между ними есть фигуры';
+        return 'Р’С‹Р±СЂР°РЅРЅС‹Р№ РєРѕСЂРѕР»СЊ Рё Р»Р°РґСЊСЏ РјРµРЅСЏСЋС‚СЃСЏ РјРµСЃС‚Р°РјРё, РґР°Р¶Рµ РµСЃР»Рё РјРµР¶РґСѓ РЅРёРјРё РµСЃС‚СЊ С„РёРіСѓСЂС‹';
       case GameAbility.kingExtraStep:
-        return 'Выбранный король может ходить на 2 клетки в любую сторону';
+        return 'Р’С‹Р±СЂР°РЅРЅС‹Р№ РєРѕСЂРѕР»СЊ РјРѕР¶РµС‚ С…РѕРґРёС‚СЊ РЅР° 2 РєР»РµС‚РєРё РІ Р»СЋР±СѓСЋ СЃС‚РѕСЂРѕРЅСѓ';
       case GameAbility.kingShield:
-        return 'Один раз выбранный король избегает мата, телепортируясь на случайную свободную клетку';
+        return 'РћРґРёРЅ СЂР°Р· РІС‹Р±СЂР°РЅРЅС‹Р№ РєРѕСЂРѕР»СЊ РёР·Р±РµРіР°РµС‚ РјР°С‚Р°, С‚РµР»РµРїРѕСЂС‚РёСЂСѓСЏСЃСЊ РЅР° СЃР»СѓС‡Р°Р№РЅСѓСЋ СЃРІРѕР±РѕРґРЅСѓСЋ РєР»РµС‚РєСѓ';
       case GameAbility.kingAura:
-        return 'Выбранному королю нельзя поставить мат пешкой';
+        return 'Р’С‹Р±СЂР°РЅРЅРѕРјСѓ РєРѕСЂРѕР»СЋ РЅРµР»СЊР·СЏ РїРѕСЃС‚Р°РІРёС‚СЊ РјР°С‚ РїРµС€РєРѕР№';
       case GameAbility.kingDoppelganger:
-        return 'Все ваши пешки и ферзь выглядят как король';
+        return 'Р’СЃРµ РІР°С€Рё РїРµС€РєРё Рё С„РµСЂР·СЊ РІС‹РіР»СЏРґСЏС‚ РєР°Рє РєРѕСЂРѕР»СЊ';
       case GameAbility.kingThrone:
-        return 'Пока выбранный король стоит на троне, шах засчитывается только от фигур не дальше 3 клеток';
+        return 'РџРѕРєР° РІС‹Р±СЂР°РЅРЅС‹Р№ РєРѕСЂРѕР»СЊ СЃС‚РѕРёС‚ РЅР° С‚СЂРѕРЅРµ, С€Р°С… Р·Р°СЃС‡РёС‚С‹РІР°РµС‚СЃСЏ С‚РѕР»СЊРєРѕ РѕС‚ С„РёРіСѓСЂ РЅРµ РґР°Р»СЊС€Рµ 3 РєР»РµС‚РѕРє';
       case GameAbility.kingFamilyUnion:
-        return 'Выбранный король может съесть свою лёгкую фигуру (коня или слона) рядом и до конца партии ходить только как она';
+        return 'Р’С‹Р±СЂР°РЅРЅС‹Р№ РєРѕСЂРѕР»СЊ РјРѕР¶РµС‚ СЃСЉРµСЃС‚СЊ СЃРІРѕСЋ Р»С‘РіРєСѓСЋ С„РёРіСѓСЂСѓ (РєРѕРЅСЏ РёР»Рё СЃР»РѕРЅР°) СЂСЏРґРѕРј Рё РґРѕ РєРѕРЅС†Р° РїР°СЂС‚РёРё С…РѕРґРёС‚СЊ С‚РѕР»СЊРєРѕ РєР°Рє РѕРЅР°';
       case GameAbility.kingPrisonerExchange:
-        return 'Вы выбираете взятую соперником свою фигуру, а соперник — взятую вами; обе возвращаются на случайные свободные клетки';
+        return 'Р’С‹ РІС‹Р±РёСЂР°РµС‚Рµ РІР·СЏС‚СѓСЋ СЃРѕРїРµСЂРЅРёРєРѕРј СЃРІРѕСЋ С„РёРіСѓСЂСѓ, Р° СЃРѕРїРµСЂРЅРёРє вЂ” РІР·СЏС‚СѓСЋ РІР°РјРё; РѕР±Рµ РІРѕР·РІСЂР°С‰Р°СЋС‚СЃСЏ РЅР° СЃР»СѓС‡Р°Р№РЅС‹Рµ СЃРІРѕР±РѕРґРЅС‹Рµ РєР»РµС‚РєРё';
       case GameAbility.kingRemoveEnemyMod:
-        return 'Вы выбираете и удаляете одну мод у любой вражеской фигуры';
+        return 'Р’С‹ РІС‹Р±РёСЂР°РµС‚Рµ Рё СѓРґР°Р»СЏРµС‚Рµ РѕРґРЅСѓ РјРѕРґ Сѓ Р»СЋР±РѕР№ РІСЂР°Р¶РµСЃРєРѕР№ С„РёРіСѓСЂС‹';
       case GameAbility.kingAssemblyHall:
-        return 'Фигуры рядом с выбранным королём не могут быть целью случайного выбора катаклизма';
+        return 'Р¤РёРіСѓСЂС‹ СЂСЏРґРѕРј СЃ РІС‹Р±СЂР°РЅРЅС‹Рј РєРѕСЂРѕР»С‘Рј РЅРµ РјРѕРіСѓС‚ Р±С‹С‚СЊ С†РµР»СЊСЋ СЃР»СѓС‡Р°Р№РЅРѕРіРѕ РІС‹Р±РѕСЂР° РєР°С‚Р°РєР»РёР·РјР°';
       case GameAbility.randomShift:
-        return 'Вертикаль ? сдвигается на 1 клетку';
+        return 'Р’РµСЂС‚РёРєР°Р»СЊ ? СЃРґРІРёРіР°РµС‚СЃСЏ РЅР° 1 РєР»РµС‚РєСѓ';
       case GameAbility.randomCalm:
-        return 'Ничего не происходит';
+        return 'РќРёС‡РµРіРѕ РЅРµ РїСЂРѕРёСЃС…РѕРґРёС‚';
       case GameAbility.randomQuarantine:
-        return 'Случайная свободная клетка недоступна на 3–10 ходов';
+        return 'РЎР»СѓС‡Р°Р№РЅР°СЏ СЃРІРѕР±РѕРґРЅР°СЏ РєР»РµС‚РєР° РЅРµРґРѕСЃС‚СѓРїРЅР° РЅР° 3вЂ“10 С…РѕРґРѕРІ';
       case GameAbility.randomEarthquake:
-        return 'Горизонталь ? сдвигается влево или вправо на 1 клетку';
+        return 'Р“РѕСЂРёР·РѕРЅС‚Р°Р»СЊ ? СЃРґРІРёРіР°РµС‚СЃСЏ РІР»РµРІРѕ РёР»Рё РІРїСЂР°РІРѕ РЅР° 1 РєР»РµС‚РєСѓ';
       case GameAbility.randomTyphoon:
-        return 'Область 2×2 поворачивается по часовой стрелке';
+        return 'РћР±Р»Р°СЃС‚СЊ 2Г—2 РїРѕРІРѕСЂР°С‡РёРІР°РµС‚СЃСЏ РїРѕ С‡Р°СЃРѕРІРѕР№ СЃС‚СЂРµР»РєРµ';
       case GameAbility.randomWormhole:
-        return 'Случайная пустая клетка недоступна до конца партии';
+        return 'РЎР»СѓС‡Р°Р№РЅР°СЏ РїСѓСЃС‚Р°СЏ РєР»РµС‚РєР° РЅРµРґРѕСЃС‚СѓРїРЅР° РґРѕ РєРѕРЅС†Р° РїР°СЂС‚РёРё';
       case GameAbility.randomClone:
-        return 'На вашей половине появляется ещё одна пешка';
+        return 'РќР° РІР°С€РµР№ РїРѕР»РѕРІРёРЅРµ РїРѕСЏРІР»СЏРµС‚СЃСЏ РµС‰С‘ РѕРґРЅР° РїРµС€РєР°';
       case GameAbility.randomNoQueen:
-        return 'Вражеский ферзь на 2 своих хода превращается в коня';
+        return 'Р’СЂР°Р¶РµСЃРєРёР№ С„РµСЂР·СЊ РЅР° 2 СЃРІРѕРёС… С…РѕРґР° РїСЂРµРІСЂР°С‰Р°РµС‚СЃСЏ РІ РєРѕРЅСЏ';
       case GameAbility.randomTruce:
-        return '3 хода нельзя брать фигуры; шах и мат временно не засчитываются';
+        return '3 С…РѕРґР° РЅРµР»СЊР·СЏ Р±СЂР°С‚СЊ С„РёРіСѓСЂС‹; С€Р°С… Рё РјР°С‚ РІСЂРµРјРµРЅРЅРѕ РЅРµ Р·Р°СЃС‡РёС‚С‹РІР°СЋС‚СЃСЏ';
       case GameAbility.randomMeteorRain:
-        return 'На 3 случайные клетки падают метеориты, уничтожая все фигуры, кроме королей';
+        return 'РќР° 3 СЃР»СѓС‡Р°Р№РЅС‹Рµ РєР»РµС‚РєРё РїР°РґР°СЋС‚ РјРµС‚РµРѕСЂРёС‚С‹, СѓРЅРёС‡С‚РѕР¶Р°СЏ РІСЃРµ С„РёРіСѓСЂС‹, РєСЂРѕРјРµ РєРѕСЂРѕР»РµР№';
       case GameAbility.randomCensus:
-        return 'У случайной вражеской фигуры с модами исчезает одна случайная мод';
+        return 'РЈ СЃР»СѓС‡Р°Р№РЅРѕР№ РІСЂР°Р¶РµСЃРєРѕР№ С„РёРіСѓСЂС‹ СЃ РјРѕРґР°РјРё РёСЃС‡РµР·Р°РµС‚ РѕРґРЅР° СЃР»СѓС‡Р°Р№РЅР°СЏ РјРѕРґ';
       case GameAbility.randomExterminatus:
-        return 'В течение следующего хода у обоих игроков: шах вражескому королю мгновенно убивает его';
+        return 'Р’ С‚РµС‡РµРЅРёРµ СЃР»РµРґСѓСЋС‰РµРіРѕ С…РѕРґР° Сѓ РѕР±РѕРёС… РёРіСЂРѕРєРѕРІ: С€Р°С… РІСЂР°Р¶РµСЃРєРѕРјСѓ РєРѕСЂРѕР»СЋ РјРіРЅРѕРІРµРЅРЅРѕ СѓР±РёРІР°РµС‚ РµРіРѕ';
       case GameAbility.randomGoldenThrone:
-        return 'Если ваша пешка погибает, ваш король выбирает себе мод';
+        return 'Р•СЃР»Рё РІР°С€Р° РїРµС€РєР° РїРѕРіРёР±Р°РµС‚, РІР°С€ РєРѕСЂРѕР»СЊ РІС‹Р±РёСЂР°РµС‚ СЃРµР±Рµ РјРѕРґ';
       case GameAbility.randomLottery:
-        return 'Две ваши случайные фигуры не-короли меняются типами';
+        return 'Р”РІРµ РІР°С€Рё СЃР»СѓС‡Р°Р№РЅС‹Рµ С„РёРіСѓСЂС‹ РЅРµ-РєРѕСЂРѕР»Рё РјРµРЅСЏСЋС‚СЃСЏ С‚РёРїР°РјРё';
       case GameAbility.randomPlague:
-        return 'Каждый ход фигура с шансом 1% заболевает чумой и умрёт через 3 хода; рядом с больной шанс 10%. Короли тоже могут заболеть';
+        return 'РљР°Р¶РґС‹Р№ С…РѕРґ С„РёРіСѓСЂР° СЃ С€Р°РЅСЃРѕРј 1% Р·Р°Р±РѕР»РµРІР°РµС‚ С‡СѓРјРѕР№ Рё СѓРјСЂС‘С‚ С‡РµСЂРµР· 3 С…РѕРґР°; СЂСЏРґРѕРј СЃ Р±РѕР»СЊРЅРѕР№ С€Р°РЅСЃ 10%. РљРѕСЂРѕР»Рё С‚РѕР¶Рµ РјРѕРіСѓС‚ Р·Р°Р±РѕР»РµС‚СЊ';
       case GameAbility.randomMutation:
-        return 'Случайная ваша пешка становится случайной лёгкой фигурой (конь или слон) того же цвета';
+        return 'РЎР»СѓС‡Р°Р№РЅР°СЏ РІР°С€Р° РїРµС€РєР° СЃС‚Р°РЅРѕРІРёС‚СЃСЏ СЃР»СѓС‡Р°Р№РЅРѕР№ Р»С‘РіРєРѕР№ С„РёРіСѓСЂРѕР№ (РєРѕРЅСЊ РёР»Рё СЃР»РѕРЅ) С‚РѕРіРѕ Р¶Рµ С†РІРµС‚Р°';
       case GameAbility.randomAuction:
-        return 'Случайная клетка становится аукционной: кто первым на неё встанет, получит 2 мода';
+        return 'РЎР»СѓС‡Р°Р№РЅР°СЏ РєР»РµС‚РєР° СЃС‚Р°РЅРѕРІРёС‚СЃСЏ Р°СѓРєС†РёРѕРЅРЅРѕР№: РєС‚Рѕ РїРµСЂРІС‹Рј РЅР° РЅРµС‘ РІСЃС‚Р°РЅРµС‚, РїРѕР»СѓС‡РёС‚ 2 РјРѕРґР°';
       case GameAbility.randomRightToMove:
-        return 'Выберите вражескую фигуру: в следующий ход соперник обязан сходить ей, если может';
+        return 'Р’С‹Р±РµСЂРёС‚Рµ РІСЂР°Р¶РµСЃРєСѓСЋ С„РёРіСѓСЂСѓ: РІ СЃР»РµРґСѓСЋС‰РёР№ С…РѕРґ СЃРѕРїРµСЂРЅРёРє РѕР±СЏР·Р°РЅ СЃС…РѕРґРёС‚СЊ РµР№, РµСЃР»Рё РјРѕР¶РµС‚';
       case GameAbility.randomFurtherMore:
-        return 'Сейчас ничего не происходит; при следующем выборе вы сможете один раз обновить предложенные моды';
+        return 'РЎРµР№С‡Р°СЃ РЅРёС‡РµРіРѕ РЅРµ РїСЂРѕРёСЃС…РѕРґРёС‚; РїСЂРё СЃР»РµРґСѓСЋС‰РµРј РІС‹Р±РѕСЂРµ РІС‹ СЃРјРѕР¶РµС‚Рµ РѕРґРёРЅ СЂР°Р· РѕР±РЅРѕРІРёС‚СЊ РїСЂРµРґР»РѕР¶РµРЅРЅС‹Рµ РјРѕРґС‹';
       case GameAbility.randomWordOfHonor:
-        return 'Выберите клетку: если в следующий свой ход встанете на неё, получите мод, иначе потеряете одну случайную мод';
+        return 'Р’С‹Р±РµСЂРёС‚Рµ РєР»РµС‚РєСѓ: РµСЃР»Рё РІ СЃР»РµРґСѓСЋС‰РёР№ СЃРІРѕР№ С…РѕРґ РІСЃС‚Р°РЅРµС‚Рµ РЅР° РЅРµС‘, РїРѕР»СѓС‡РёС‚Рµ РјРѕРґ, РёРЅР°С‡Рµ РїРѕС‚РµСЂСЏРµС‚Рµ РѕРґРЅСѓ СЃР»СѓС‡Р°Р№РЅСѓСЋ РјРѕРґ';
       case GameAbility.randomSymmetry:
-        return 'Следующие 3 хода соперник обязан ходить теми же типами фигур, которыми перед ним ходили вы';
+        return 'РЎР»РµРґСѓСЋС‰РёРµ 3 С…РѕРґР° СЃРѕРїРµСЂРЅРёРє РѕР±СЏР·Р°РЅ С…РѕРґРёС‚СЊ С‚РµРјРё Р¶Рµ С‚РёРїР°РјРё С„РёРіСѓСЂ, РєРѕС‚РѕСЂС‹РјРё РїРµСЂРµРґ РЅРёРј С…РѕРґРёР»Рё РІС‹';
       case GameAbility.randomVeto:
-        return 'Выберите вражескую фигуру: следующие 3 хода соперник не может ходить ею';
+        return 'Р’С‹Р±РµСЂРёС‚Рµ РІСЂР°Р¶РµСЃРєСѓСЋ С„РёРіСѓСЂСѓ: СЃР»РµРґСѓСЋС‰РёРµ 3 С…РѕРґР° СЃРѕРїРµСЂРЅРёРє РЅРµ РјРѕР¶РµС‚ С…РѕРґРёС‚СЊ РµСЋ';
       case GameAbility.randomInitiativeIntercept:
-        return 'Игрок с более слабой армией получает дополнительный ход без взятия, шаха и мата';
+        return 'РРіСЂРѕРє СЃ Р±РѕР»РµРµ СЃР»Р°Р±РѕР№ Р°СЂРјРёРµР№ РїРѕР»СѓС‡Р°РµС‚ РґРѕРїРѕР»РЅРёС‚РµР»СЊРЅС‹Р№ С…РѕРґ Р±РµР· РІР·СЏС‚РёСЏ, С€Р°С…Р° Рё РјР°С‚Р°';
       case GameAbility.randomStrike:
-        return 'Оба игрока не могут двигать фигуры случайного типа в течение 3–10 ходов';
+        return 'РћР±Р° РёРіСЂРѕРєР° РЅРµ РјРѕРіСѓС‚ РґРІРёРіР°С‚СЊ С„РёРіСѓСЂС‹ СЃР»СѓС‡Р°Р№РЅРѕРіРѕ С‚РёРїР° РІ С‚РµС‡РµРЅРёРµ 3вЂ“10 С…РѕРґРѕРІ';
       case GameAbility.randomBorderClosure:
-        return 'Следующие 2 хода фигуры не могут пересекать середину доски';
+        return 'РЎР»РµРґСѓСЋС‰РёРµ 2 С…РѕРґР° С„РёРіСѓСЂС‹ РЅРµ РјРѕРіСѓС‚ РїРµСЂРµСЃРµРєР°С‚СЊ СЃРµСЂРµРґРёРЅСѓ РґРѕСЃРєРё';
       case GameAbility.randomMyopia:
-        return 'Слоны, ладьи и ферзи временно видят и ходят не дальше 2 клеток';
+        return 'РЎР»РѕРЅС‹, Р»Р°РґСЊРё Рё С„РµСЂР·Рё РІСЂРµРјРµРЅРЅРѕ РІРёРґСЏС‚ Рё С…РѕРґСЏС‚ РЅРµ РґР°Р»СЊС€Рµ 2 РєР»РµС‚РѕРє';
       case GameAbility.randomMagicShutdown:
-        return 'Следующие 3–10 ходов все моды отключены';
+        return 'РЎР»РµРґСѓСЋС‰РёРµ 3вЂ“10 С…РѕРґРѕРІ РІСЃРµ РјРѕРґС‹ РѕС‚РєР»СЋС‡РµРЅС‹';
       case GameAbility.randomTimeCapsule:
-        return 'Позиция сохраняется; после двух ходов каждого игрока доска возвращается к ней, но заработанные моды сохраняются';
+        return 'РџРѕР·РёС†РёСЏ СЃРѕС…СЂР°РЅСЏРµС‚СЃСЏ; РїРѕСЃР»Рµ РґРІСѓС… С…РѕРґРѕРІ РєР°Р¶РґРѕРіРѕ РёРіСЂРѕРєР° РґРѕСЃРєР° РІРѕР·РІСЂР°С‰Р°РµС‚СЃСЏ Рє РЅРµР№, РЅРѕ Р·Р°СЂР°Р±РѕС‚Р°РЅРЅС‹Рµ РјРѕРґС‹ СЃРѕС…СЂР°РЅСЏСЋС‚СЃСЏ';
       case GameAbility.randomSuicideCapture:
-        return 'Следующее взятие уничтожает и взятую фигуру, и фигуру, которая её взяла';
+        return 'РЎР»РµРґСѓСЋС‰РµРµ РІР·СЏС‚РёРµ СѓРЅРёС‡С‚РѕР¶Р°РµС‚ Рё РІР·СЏС‚СѓСЋ С„РёРіСѓСЂСѓ, Рё С„РёРіСѓСЂСѓ, РєРѕС‚РѕСЂР°СЏ РµС‘ РІР·СЏР»Р°';
       case GameAbility.randomMeatGrinder:
-        return 'Следующий ход обоих игроков должен быть взятием, если взятие возможно';
+        return 'РЎР»РµРґСѓСЋС‰РёР№ С…РѕРґ РѕР±РѕРёС… РёРіСЂРѕРєРѕРІ РґРѕР»Р¶РµРЅ Р±С‹С‚СЊ РІР·СЏС‚РёРµРј, РµСЃР»Рё РІР·СЏС‚РёРµ РІРѕР·РјРѕР¶РЅРѕ';
       case GameAbility.randomQuicksand:
-        return '2–5 скрытых клеток — зыбучие пески. Вставшая фигура не ходит 2–5 ходов; клетка раскрывается навсегда';
+        return '2вЂ“5 СЃРєСЂС‹С‚С‹С… РєР»РµС‚РѕРє вЂ” Р·С‹Р±СѓС‡РёРµ РїРµСЃРєРё. Р’СЃС‚Р°РІС€Р°СЏ С„РёРіСѓСЂР° РЅРµ С…РѕРґРёС‚ 2вЂ“5 С…РѕРґРѕРІ; РєР»РµС‚РєР° СЂР°СЃРєСЂС‹РІР°РµС‚СЃСЏ РЅР°РІСЃРµРіРґР°';
     }
   }
 
@@ -1396,29 +1396,29 @@ extension GameAbilityInfo on GameAbility {
     int? durationMoves,
   }) {
     if (this == GameAbility.rookCustoms && axis != null) {
-      final axisName = axis == AbilityAxis.rank ? 'горизонталь' : 'вертикаль';
-      return 'Следующие 3 хода враги не могут вставать на $axisName ладьи, '
-          'если уже не находятся на ней';
+      final axisName = axis == AbilityAxis.rank ? 'РіРѕСЂРёР·РѕРЅС‚Р°Р»СЊ' : 'РІРµСЂС‚РёРєР°Р»СЊ';
+      return 'РЎР»РµРґСѓСЋС‰РёРµ 3 С…РѕРґР° РІСЂР°РіРё РЅРµ РјРѕРіСѓС‚ РІСЃС‚Р°РІР°С‚СЊ РЅР° $axisName Р»Р°РґСЊРё, '
+          'РµСЃР»Рё СѓР¶Рµ РЅРµ РЅР°С…РѕРґСЏС‚СЃСЏ РЅР° РЅРµР№';
     }
     if (this == GameAbility.randomStrike &&
         affectedPieceType != null &&
         durationMoves != null) {
-      return 'Оба игрока не могут двигать ${_pieceTypeGenitivePlural(affectedPieceType)} '
-          'следующие $durationMoves ${_movesWord(durationMoves)}';
+      return 'РћР±Р° РёРіСЂРѕРєР° РЅРµ РјРѕРіСѓС‚ РґРІРёРіР°С‚СЊ ${_pieceTypeGenitivePlural(affectedPieceType)} '
+          'СЃР»РµРґСѓСЋС‰РёРµ $durationMoves ${_movesWord(durationMoves)}';
     }
     if (this == GameAbility.randomMagicShutdown && durationMoves != null) {
-      return 'Все моды отключены на $durationMoves '
+      return 'Р’СЃРµ РјРѕРґС‹ РѕС‚РєР»СЋС‡РµРЅС‹ РЅР° $durationMoves '
           '${_movesWord(durationMoves)}';
     }
     if (this == GameAbility.boardTide && forColor != null) {
       final ranks = boardRankCount ?? 8;
       final rankLabel = forColor == PieceColor.white ? 3 : ranks - 2;
-      return 'Ваши пешки стоят на $rankLabel-й горизонтали '
-          'и ходят только на 1 клетку вперёд';
+      return 'Р’Р°С€Рё РїРµС€РєРё СЃС‚РѕСЏС‚ РЅР° $rankLabel-Р№ РіРѕСЂРёР·РѕРЅС‚Р°Р»Рё '
+          'Рё С…РѕРґСЏС‚ С‚РѕР»СЊРєРѕ РЅР° 1 РєР»РµС‚РєСѓ РІРїРµСЂС‘Рґ';
     }
     if (this == GameAbility.boardLavaRank && lavaRank != null) {
-      return 'Горизонталь ${lavaRank + 1} покрывается лавой. '
-          'Фигура может простоять на ней не более 3 ходов';
+      return 'Р“РѕСЂРёР·РѕРЅС‚Р°Р»СЊ ${lavaRank + 1} РїРѕРєСЂС‹РІР°РµС‚СЃСЏ Р»Р°РІРѕР№. '
+          'Р¤РёРіСѓСЂР° РјРѕР¶РµС‚ РїСЂРѕСЃС‚РѕСЏС‚СЊ РЅР° РЅРµР№ РЅРµ Р±РѕР»РµРµ 3 С…РѕРґРѕРІ';
     }
     if (this == GameAbility.randomShift &&
         shiftFile != null &&
@@ -1426,34 +1426,34 @@ extension GameAbilityInfo on GameAbility {
       final towardHigherRanks = shiftDirection > 0;
       final String dir;
       if (forColor == PieceColor.black) {
-        dir = towardHigherRanks ? 'назад' : 'вперёд';
+        dir = towardHigherRanks ? 'РЅР°Р·Р°Рґ' : 'РІРїРµСЂС‘Рґ';
       } else {
-        dir = towardHigherRanks ? 'вперёд' : 'назад';
+        dir = towardHigherRanks ? 'РІРїРµСЂС‘Рґ' : 'РЅР°Р·Р°Рґ';
       }
-      return 'Все фигуры на вертикали '
+      return 'Р’СЃРµ С„РёРіСѓСЂС‹ РЅР° РІРµСЂС‚РёРєР°Р»Рё '
           '${fileLabel(shiftFile, fileCount: boardFileCount ?? 8, extraFile: boardExtraFile).toUpperCase()} '
-          'сдвигаются на 1 клетку $dir';
+          'СЃРґРІРёРіР°СЋС‚СЃСЏ РЅР° 1 РєР»РµС‚РєСѓ $dir';
     }
     if (this == GameAbility.boardExtraFile && extraFileOnLeft != null) {
       if (extraFileOnLeft) {
-        return 'Слева появляется новая вертикаль z';
+        return 'РЎР»РµРІР° РїРѕСЏРІР»СЏРµС‚СЃСЏ РЅРѕРІР°СЏ РІРµСЂС‚РёРєР°Р»СЊ z';
       }
-      return 'Справа появляется новая вертикаль i';
+      return 'РЎРїСЂР°РІР° РїРѕСЏРІР»СЏРµС‚СЃСЏ РЅРѕРІР°СЏ РІРµСЂС‚РёРєР°Р»СЊ i';
     }
     if (this == GameAbility.boardGhostCells && ghostCellCount != null) {
       final word = (ghostCellCount >= 2 && ghostCellCount <= 4)
-          ? 'клетки'
-          : 'клеток';
-      return '$ghostCellCount $word становятся призрачными: '
-          'через них можно ходить, но стоять нельзя';
+          ? 'РєР»РµС‚РєРё'
+          : 'РєР»РµС‚РѕРє';
+      return '$ghostCellCount $word СЃС‚Р°РЅРѕРІСЏС‚СЃСЏ РїСЂРёР·СЂР°С‡РЅС‹РјРё: '
+          'С‡РµСЂРµР· РЅРёС… РјРѕР¶РЅРѕ С…РѕРґРёС‚СЊ, РЅРѕ СЃС‚РѕСЏС‚СЊ РЅРµР»СЊР·СЏ';
     }
     if (this == GameAbility.boardMinefield && mineCount != null) {
       if (mineCount == 1) {
-        return 'На 1 свободную клетку ставится невидимая мина: '
-            'следующая фигура на ней уничтожается';
+        return 'РќР° 1 СЃРІРѕР±РѕРґРЅСѓСЋ РєР»РµС‚РєСѓ СЃС‚Р°РІРёС‚СЃСЏ РЅРµРІРёРґРёРјР°СЏ РјРёРЅР°: '
+            'СЃР»РµРґСѓСЋС‰Р°СЏ С„РёРіСѓСЂР° РЅР° РЅРµР№ СѓРЅРёС‡С‚РѕР¶Р°РµС‚СЃСЏ';
       }
-      return 'На $mineCount свободные клетки ставятся невидимые мины: '
-          'следующая фигура на мине уничтожается';
+      return 'РќР° $mineCount СЃРІРѕР±РѕРґРЅС‹Рµ РєР»РµС‚РєРё СЃС‚Р°РІСЏС‚СЃСЏ РЅРµРІРёРґРёРјС‹Рµ РјРёРЅС‹: '
+          'СЃР»РµРґСѓСЋС‰Р°СЏ С„РёРіСѓСЂР° РЅР° РјРёРЅРµ СѓРЅРёС‡С‚РѕР¶Р°РµС‚СЃСЏ';
     }
     if (this == GameAbility.boardTeleport &&
         teleportA != null &&
@@ -1468,20 +1468,20 @@ extension GameAbilityInfo on GameAbility {
         fileCount: boardFileCount ?? 8,
         extraFile: boardExtraFile,
       );
-      return 'Клетки $a и $b связаны: вход на одну = выход на другую';
+      return 'РљР»РµС‚РєРё $a Рё $b СЃРІСЏР·Р°РЅС‹: РІС…РѕРґ РЅР° РѕРґРЅСѓ = РІС‹С…РѕРґ РЅР° РґСЂСѓРіСѓСЋ';
     }
     if (this == GameAbility.randomQuarantine && quarantineSquare != null) {
       final moves = quarantineMoves ?? 5;
-      final movesWord = (moves == 3 || moves == 4) ? 'хода' : 'ходов';
-      return 'Клетка '
+      final movesWord = (moves == 3 || moves == 4) ? 'С…РѕРґР°' : 'С…РѕРґРѕРІ';
+      return 'РљР»РµС‚РєР° '
           '${squareLabel(quarantineSquare, fileCount: boardFileCount ?? 8, extraFile: boardExtraFile)} '
-          'недоступна следующие $moves $movesWord';
+          'РЅРµРґРѕСЃС‚СѓРїРЅР° СЃР»РµРґСѓСЋС‰РёРµ $moves $movesWord';
     }
     if (this == GameAbility.randomEarthquake &&
         quakeRank != null &&
         quakeDirection != null) {
-      final dir = quakeDirection > 0 ? 'вправо' : 'влево';
-      return 'Горизонталь ${quakeRank + 1} сдвигается на 1 клетку $dir';
+      final dir = quakeDirection > 0 ? 'РІРїСЂР°РІРѕ' : 'РІР»РµРІРѕ';
+      return 'Р“РѕСЂРёР·РѕРЅС‚Р°Р»СЊ ${quakeRank + 1} СЃРґРІРёРіР°РµС‚СЃСЏ РЅР° 1 РєР»РµС‚РєСѓ $dir';
     }
     if (this == GameAbility.randomTyphoon && typhoonOrigin != null) {
       final a = squareLabel(
@@ -1494,31 +1494,31 @@ extension GameAbilityInfo on GameAbility {
         fileCount: boardFileCount ?? 8,
         extraFile: boardExtraFile,
       );
-      return 'Область $a–$b поворачивается по часовой стрелке';
+      return 'РћР±Р»Р°СЃС‚СЊ $aвЂ“$b РїРѕРІРѕСЂР°С‡РёРІР°РµС‚СЃСЏ РїРѕ С‡Р°СЃРѕРІРѕР№ СЃС‚СЂРµР»РєРµ';
     }
     if (this == GameAbility.randomWormhole && wormholeSquare != null) {
-      return 'Клетка '
+      return 'РљР»РµС‚РєР° '
           '${squareLabel(wormholeSquare, fileCount: boardFileCount ?? 8, extraFile: boardExtraFile)} '
-          'недоступна до конца партии';
+          'РЅРµРґРѕСЃС‚СѓРїРЅР° РґРѕ РєРѕРЅС†Р° РїР°СЂС‚РёРё';
     }
     if (this == GameAbility.randomClone && cloneSquare != null) {
-      return 'Пешка появляется на '
+      return 'РџРµС€РєР° РїРѕСЏРІР»СЏРµС‚СЃСЏ РЅР° '
           '${squareLabel(cloneSquare, fileCount: boardFileCount ?? 8, extraFile: boardExtraFile)}';
     }
     if (this == GameAbility.queenShadowEmpress && landOnLight != null) {
       return landOnLight
-          ? 'Ферзь ходит ещё как конь, но может вставать только на светлые клетки'
-          : 'Ферзь ходит ещё как конь, но может вставать только на тёмные клетки';
+          ? 'Р¤РµСЂР·СЊ С…РѕРґРёС‚ РµС‰С‘ РєР°Рє РєРѕРЅСЊ, РЅРѕ РјРѕР¶РµС‚ РІСЃС‚Р°РІР°С‚СЊ С‚РѕР»СЊРєРѕ РЅР° СЃРІРµС‚Р»С‹Рµ РєР»РµС‚РєРё'
+          : 'Р¤РµСЂР·СЊ С…РѕРґРёС‚ РµС‰С‘ РєР°Рє РєРѕРЅСЊ, РЅРѕ РјРѕР¶РµС‚ РІСЃС‚Р°РІР°С‚СЊ С‚РѕР»СЊРєРѕ РЅР° С‚С‘РјРЅС‹Рµ РєР»РµС‚РєРё';
     }
     if (this == GameAbility.boardSilentFile && silentFile != null) {
-      return 'Вертикаль '
+      return 'Р’РµСЂС‚РёРєР°Р»СЊ '
           '${fileLabel(silentFile, fileCount: boardFileCount ?? 8, extraFile: boardExtraFile).toUpperCase()} '
-          'немая: фигуры на ней не могут дать шах или мат';
+          'РЅРµРјР°СЏ: С„РёРіСѓСЂС‹ РЅР° РЅРµР№ РЅРµ РјРѕРіСѓС‚ РґР°С‚СЊ С€Р°С… РёР»Рё РјР°С‚';
     }
     if (this == GameAbility.randomAuction && auctionSquare != null) {
-      return 'Клетка '
+      return 'РљР»РµС‚РєР° '
           '${squareLabel(auctionSquare, fileCount: boardFileCount ?? 8, extraFile: boardExtraFile)} '
-          '— аукцион: кто первым встанет, получит мод';
+          'вЂ” Р°СѓРєС†РёРѕРЅ: РєС‚Рѕ РїРµСЂРІС‹Рј РІСЃС‚Р°РЅРµС‚, РїРѕР»СѓС‡РёС‚ РјРѕРґ';
     }
     return description;
   }
@@ -1526,33 +1526,33 @@ extension GameAbilityInfo on GameAbility {
 
 String _movesWord(int moves) {
   final lastTwo = moves % 100;
-  if (lastTwo >= 11 && lastTwo <= 14) return 'ходов';
+  if (lastTwo >= 11 && lastTwo <= 14) return 'С…РѕРґРѕРІ';
   switch (moves % 10) {
     case 1:
-      return 'ход';
+      return 'С…РѕРґ';
     case 2:
     case 3:
     case 4:
-      return 'хода';
+      return 'С…РѕРґР°';
     default:
-      return 'ходов';
+      return 'С…РѕРґРѕРІ';
   }
 }
 
 String _pieceTypeGenitivePlural(PieceType type) {
   switch (type) {
     case PieceType.pawn:
-      return 'пешек';
+      return 'РїРµС€РµРє';
     case PieceType.knight:
-      return 'коней';
+      return 'РєРѕРЅРµР№';
     case PieceType.bishop:
-      return 'слонов';
+      return 'СЃР»РѕРЅРѕРІ';
     case PieceType.rook:
-      return 'ладей';
+      return 'Р»Р°РґРµР№';
     case PieceType.queen:
-      return 'ферзей';
+      return 'С„РµСЂР·РµР№';
     case PieceType.king:
-      return 'королей';
+      return 'РєРѕСЂРѕР»РµР№';
   }
 }
 
@@ -1652,10 +1652,10 @@ class AbilityOffer {
   final List<Square> route;
   final Map<String, dynamic> hiddenData;
 
-  /// Цвет игрока, которому предлагают / который выбирает мод.
+  /// Р¦РІРµС‚ РёРіСЂРѕРєР°, РєРѕС‚РѕСЂРѕРјСѓ РїСЂРµРґР»Р°РіР°СЋС‚ / РєРѕС‚РѕСЂС‹Р№ РІС‹Р±РёСЂР°РµС‚ РјРѕРґ.
   final PieceColor? forColor;
 
-  /// Seed для детерминированного RNG при применении (онлайн-синхронизация).
+  /// Seed РґР»СЏ РґРµС‚РµСЂРјРёРЅРёСЂРѕРІР°РЅРЅРѕРіРѕ RNG РїСЂРё РїСЂРёРјРµРЅРµРЅРёРё (РѕРЅР»Р°Р№РЅ-СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ).
   final int? rngSeed;
 
   AbilityOffer withChooser(PieceColor color, {int? rankCount}) {
@@ -1831,7 +1831,7 @@ Square? _squareFromJson(Object? value) {
   return Square(file, rank);
 }
 
-/// Мод с названием и текстом для экрана активных модов.
+/// РњРѕРґ СЃ РЅР°Р·РІР°РЅРёРµРј Рё С‚РµРєСЃС‚РѕРј РґР»СЏ СЌРєСЂР°РЅР° Р°РєС‚РёРІРЅС‹С… РјРѕРґРѕРІ.
 class ChosenAbilityInfo {
   const ChosenAbilityInfo({
     required this.ability,
@@ -1844,7 +1844,7 @@ class ChosenAbilityInfo {
   final String description;
 }
 
-/// Снимок стартовых модов доски и выбранных по ходу модов.
+/// РЎРЅРёРјРѕРє СЃС‚Р°СЂС‚РѕРІС‹С… РјРѕРґРѕРІ РґРѕСЃРєРё Рё РІС‹Р±СЂР°РЅРЅС‹С… РїРѕ С…РѕРґСѓ РјРѕРґРѕРІ.
 class ActiveAbilitiesSnapshot {
   const ActiveAbilitiesSnapshot({
     this.whiteStart,

@@ -108,8 +108,10 @@ RU/EN выбирается по языку системы/браузера; на
 - История и прогресс модов — для залогиненного в каждой его партии (в т.ч. vs аноним, без Elo).
 - Достижение **Коллекционер** (`all_abilities`): использовать все моды за карьеру в logged-in играх.
 - Профиль: иконка человека на главном / тап по нику.
-- **Против Stockfish**: локально в браузере (`web/stockfish/stockfish.js`) или на Android/iOS (плагин `stockfish`). Игрок выбирает моды, Stockfish — нет. Если движок недоступен — запасной встроенный бот.
-- При `flutter build web` файл `web/stockfish/stockfish.js` попадает в выходную папку; для Render копируйте его в `public/stockfish/` вместе с билдом.
+- **Против Stockfish**: в браузере — **Stockfish 18 NNUE** (`web/stockfish/stockfish-18-single.*`, ~108MB wasm). На Android/iOS — плагин `stockfish`. Игрок выбирает моды, Stockfish — нет. Запасного бота нет: без движка ход не делается.
+- Wasm лежит в Git LFS. После клона: `git lfs pull`. Если файлов нет: `.\scripts\fetch_stockfish.ps1`.
+- Первый запуск режима «против Stockfish» может долго грузить wasm (десятки секунд на медленной сети).
+- `.\scripts\build_web.ps1` сам подтягивает движок при необходимости и копирует `web/stockfish/` → `public/stockfish/`.
 
 ---
 
