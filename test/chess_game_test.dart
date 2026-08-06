@@ -3,11 +3,11 @@ import 'dart:math';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:super_chess/chess/chess_game.dart';
 import 'package:super_chess/chess/move.dart';
-import 'package:super_chess/models/ability_catalog.dart';
-import 'package:super_chess/models/ability_group.dart';
-import 'package:super_chess/models/game_ability.dart';
-import 'package:super_chess/models/piece.dart';
-import 'package:super_chess/models/square.dart';
+import 'package:super_chess/l10n/models/ability_catalog.dart';
+import 'package:super_chess/l10n/models/ability_group.dart';
+import 'package:super_chess/l10n/models/game_ability.dart';
+import 'package:super_chess/l10n/models/piece.dart';
+import 'package:super_chess/l10n/models/square.dart';
 
 ChessGame _readyGame() => _readyGameWithKingSwap();
 
@@ -2504,5 +2504,89 @@ void main() {
       expect(game.winnerColor, PieceColor.white);
       expect(game.endReason, GameEndReason.alternativeVictory);
     });
+  });
+
+  test('castling works by clicking king destination or the rook', () {
+    final game = ChessGame(catalog: AbilityCatalog(random: Random(1)));
+    game.applyStartAbility(
+      PieceColor.white,
+      GameAbility.boardSkipTurn,
+      remoteOffer: const AbilityOffer(
+        ability: GameAbility.boardSkipTurn,
+        applyMode: AbilityApplyMode.boardWide,
+        forColor: PieceColor.white,
+      ),
+    );
+    game.applyStartAbility(
+      PieceColor.black,
+      GameAbility.boardSkipTurn,
+      remoteOffer: const AbilityOffer(
+        ability: GameAbility.boardSkipTurn,
+        applyMode: AbilityApplyMode.boardWide,
+        forColor: PieceColor.black,
+      ),
+    );
+
+    // Clear path for kingside castling.
+    game.debugSetPiece(const Square(5, 0), null);
+    game.debugSetPiece(const Square(6, 0), null);
+
+    final byKingSquare = game.getLegalMoves(from: const Square(4, 0)).where(
+      (m) => m.isCastle && m.to == const Square(6, 0),
+    );
+    final byRookSquare = game.getLegalMoves(from: const Square(4, 0)).where(
+      (m) => m.isCastle && m.to == const Square(7, 0),
+    );
+    expect(byKingSquare, isNotEmpty);
+    expect(byRookSquare, isNotEmpty);
+
+    expect(
+      game.makeMove(
+        const Move(from: Square(4, 0), to: Square(7, 0), isCastle: true),
+      ),
+      isNotNull,
+    );
+    expect(game.pieceAt(const Square(6, 0))?.type, PieceType.king);
+    expect(game.pieceAt(const Square(5, 0))?.type, PieceType.rook);
+    expect(game.pieceAt(const Square(7, 0)), isNull);
+  });
+
+  test('attraction pulse moves c6 queen diagonally to d5', () {
+    final game = _emptyReadyGame();
+    game.debugSetPiece(const Square(7, 0), null);
+    game.debugSetPiece(const Square(7, 7), null);
+    // Keep kings off the board center path; place them in corners.
+    game.debugSetPiece(
+      const Square(0, 0),
+      const Piece(
+        pieceId: 'wk',
+        type: PieceType.king,
+        color: PieceColor.white,
+        hasMoved: true,
+      ),
+    );
+    game.debugSetPiece(
+      const Square(0, 7),
+      const Piece(
+        pieceId: 'bk',
+        type: PieceType.king,
+        color: PieceColor.black,
+        hasMoved: true,
+      ),
+    );
+    game.debugSetPiece(
+      const Square(2, 5), // c6
+      const Piece(
+        pieceId: 'wq',
+        type: PieceType.queen,
+        color: PieceColor.white,
+        hasMoved: true,
+      ),
+    );
+
+    game.debugAttractionPulse();
+
+    expect(game.pieceAt(const Square(2, 5)), isNull);
+    expect(game.pieceAt(const Square(3, 4))?.type, PieceType.queen); // d5
   });
 }

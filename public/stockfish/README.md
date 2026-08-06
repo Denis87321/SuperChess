@@ -4,9 +4,9 @@ Engine builds from [nmrugg/stockfish.js](https://github.com/nmrugg/stockfish.js)
 
 | File | Role |
 |------|------|
-| `stockfish-18-single.js` + `.wasm` | **Primary** — full Stockfish 18 NNUE, single-thread (~108MB). No COOP/COEP. |
-| `stockfish-18-lite-single.js` + `.wasm` | Fallback if the full wasm fails to load. |
-| `stockfish-18-lite.js` + `.wasm` | Optional multi-thread lite (needs `Cross-Origin-Opener-Policy` + `Cross-Origin-Embedder-Policy`). |
+| `stockfish-18-lite-single.js` + `.wasm` | **Primary** — Stockfish 18 NNUE lite (~7MB), fast load. |
+| `stockfish-18-single.js` + `.wasm` | Fallback full NNUE (~108MB) if lite fails. |
+| `stockfish-18-lite.js` + `.wasm` | Optional multi-thread lite (needs COOP/COEP). |
 
 Dart loads workers via `lib/chess/stockfish_engine_web.dart` (full single → lite single).
 

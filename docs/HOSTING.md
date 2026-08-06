@@ -108,7 +108,7 @@ RU/EN выбирается по языку системы/браузера; на
 - История и прогресс модов — для залогиненного в каждой его партии (в т.ч. vs аноним, без Elo).
 - Достижение **Коллекционер** (`all_abilities`): использовать все моды за карьеру в logged-in играх.
 - Профиль: иконка человека на главном / тап по нику.
-- **Против Stockfish**: в браузере — **Stockfish 18 NNUE** (`web/stockfish/stockfish-18-single.*`, ~108MB wasm). На Android/iOS — плагин `stockfish`. Игрок выбирает моды, Stockfish — нет. Запасного бота нет: без движка ход не делается.
+- **Против Stockfish**: в браузере — **Stockfish 18 NNUE lite** (`stockfish-18-lite-single.*`, ~7MB; при сбое — full ~108MB). На Android/iOS — плагин `stockfish`. Игрок выбирает моды, Stockfish — нет. Запасного бота нет: без движка ход не делается.
 - Wasm лежит в Git LFS. После клона: `git lfs pull`. Если файлов нет: `.\scripts\fetch_stockfish.ps1`.
 - Первый запуск режима «против Stockfish» может долго грузить wasm (десятки секунд на медленной сети).
 - `.\scripts\build_web.ps1` сам подтягивает движок при необходимости и копирует `web/stockfish/` → `public/stockfish/`.

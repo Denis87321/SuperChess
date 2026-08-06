@@ -24,6 +24,9 @@ class AppStrings {
       isRu ? 'Stockfish думает…' : 'Stockfish is thinking…';
   String get computerLoading =>
       isRu ? 'Загрузка Stockfish…' : 'Loading Stockfish…';
+  String get computerLoadingHint => isRu
+      ? 'Первый раз ~5–15 с (движок ~7 МБ)'
+      : 'First time ~5–15s (engine ~7 MB)';
   String get computerUnavailable => isRu
       ? 'Stockfish не запустился — ход не будет сделан'
       : 'Stockfish failed to start — it will not move';

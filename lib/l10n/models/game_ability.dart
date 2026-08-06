@@ -203,7 +203,6 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.boardExtraRank:
       case GameAbility.boardExtraFile:
       case GameAbility.boardFogOfWar:
-      case GameAbility.boardTide:
       case GameAbility.boardDoubleStart:
       case GameAbility.boardSprint:
       case GameAbility.boardZebras:
@@ -247,15 +246,17 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.boardBigAssortment:
       case GameAbility.boardBlindSpot:
       case GameAbility.boardOnlyEqualsKill:
-      case GameAbility.boardMarseillesChess:
       case GameAbility.boardInitiativeFear:
       case GameAbility.boardSwamp:
       case GameAbility.boardCollectiveMyopia:
       case GameAbility.boardTerritoryExpand:
       case GameAbility.boardFrostMap:
       case GameAbility.boardScorchingSun:
-      case GameAbility.boardTurncoats:
         return AbilityGroup.board;
+      case GameAbility.boardTide:
+      case GameAbility.boardMarseillesChess:
+      case GameAbility.boardTurncoats:
+        return AbilityGroup.mode;
       case GameAbility.pawnSideways:
       case GameAbility.pawnInverted:
       case GameAbility.pawnAlwaysDoubleStep:
@@ -789,7 +790,7 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.boardGhostCells:
         return 'Несколько случайных клеток становятся призрачными: через них можно ходить, но стоять нельзя';
       case GameAbility.boardAttraction:
-        return 'Каждые 10 ходов все фигуры сдвигаются на 1 клетку к центру доски (d4, d5, e4, e5), если это возможно';
+        return 'Каждые 10 ходов все фигуры сдвигаются на 1 клетку к центру доски (d4/d5/e4/e5), в том числе по диагонали, если клетка свободна';
       case GameAbility.boardVirus:
         return 'После взятия фигура заражает соседнюю вражескую: та теряет одну мод';
       case GameAbility.boardInvisibleRegiment:
@@ -807,7 +808,7 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.boardUnbridledHorse:
         return 'В начале хода с вероятностью 5% случайный ваш конь сам делает ход на случайную доступную клетку';
       case GameAbility.boardBaskerville:
-        return 'Для обоих игроков: если игрок поставит вражескому королю 2 шаха за партию, король умрёт от страха';
+        return 'Для обоих игроков: если игрок поставит вражескому королю 3 шаха за партию, король умрёт от страха';
       case GameAbility.boardBloodOath:
         return 'При мате король может съесть свою фигуру рядом и встать на её место, чтобы избежать мата';
       case GameAbility.boardSilentFile:
@@ -943,7 +944,7 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.knightSurveyor:
         return 'Клетки, посещённые выбранным конём, защищены от случайных катаклизмов';
       case GameAbility.knightCornerQuest:
-        return 'Если выбранный конь посетит любые 3 из 4 угловых клеток — победа';
+        return 'Если кони игрока вместе посетили любые 3 из 4 угловых клеток — победа';
       case GameAbility.knightRideMe:
         return 'Перед ходом выбранного коня выберите соседнюю пешку: она поедет с ним, сохраняя относительную позицию';
       case GameAbility.knightMagicHooves:
@@ -1069,7 +1070,7 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.randomMutation:
         return 'Случайная ваша пешка становится случайной лёгкой фигурой (конь или слон) того же цвета';
       case GameAbility.randomAuction:
-        return 'Случайная клетка становится аукционной: кто первым на неё встанет, получит мод';
+        return 'Случайная клетка становится аукционной: кто первым на неё встанет, получит 2 мода';
       case GameAbility.randomRightToMove:
         return 'Выберите вражескую фигуру: в следующий ход соперник обязан сходить ей, если может';
       case GameAbility.randomFurtherMore:

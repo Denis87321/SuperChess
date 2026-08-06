@@ -5,13 +5,13 @@ import 'package:web/web.dart' as web;
 
 import 'stockfish_engine.dart';
 
-/// Stockfish 18 NNUE workers (strongest first).
+/// Stockfish 18 NNUE workers (fastest usable first).
 ///
-/// Full single-thread (~108MB wasm) needs no COOP/COEP.
-/// Lite single is a smaller offline fallback.
+/// Lite single (~7MB) is still modern SF18 NNUE and loads quickly.
+/// Full single (~108MB) is stronger but slow to download on first visit.
 const _engineScripts = <String>[
-  'stockfish/stockfish-18-single.js',
   'stockfish/stockfish-18-lite-single.js',
+  'stockfish/stockfish-18-single.js',
 ];
 
 Future<StockfishEngine?> createStockfishEngineImpl() async {

@@ -2,12 +2,12 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 
-import '../models/ability_group.dart';
-import '../models/ability_catalog.dart';
-import '../models/ability_effects.dart';
-import '../models/game_ability.dart';
-import '../models/piece.dart';
-import '../models/square.dart';
+import '../l10n/models/ability_group.dart';
+import '../l10n/models/ability_catalog.dart';
+import '../l10n/models/ability_effects.dart';
+import '../l10n/models/game_ability.dart';
+import '../l10n/models/piece.dart';
+import '../l10n/models/square.dart';
 import 'board_cataclysm_state.dart';
 import 'board_labels.dart';
 import 'move.dart';
@@ -949,6 +949,11 @@ class ChessGame {
     } else {
       _setPrimary(square, piece);
     }
+  }
+
+  @visibleForTesting
+  void debugAttractionPulse() {
+    _applyAttractionPulse();
   }
 
   @visibleForTesting
@@ -1924,10 +1929,11 @@ class ChessGame {
   }
 
   MoveResult? makeMove(Move move) {
-    return _executeLegalMove(move);
+    return _executeLegalMove(_normalizeCastleMove(move));
   }
 
   MoveResult? _executeLegalMove(Move move, {bool skipReaction = false}) {
+    move = _normalizeCastleMove(move);
     if (!isReadyToPlay || isGameOver || enginePhase != GameEnginePhase.play) {
       return null;
     }
@@ -2345,14 +2351,14 @@ class ChessGame {
       final mover = current.opponent;
       if (mover == PieceColor.white) {
         _whiteBaskervilleChecks++;
-        if (_whiteBaskervilleChecks >= 2) {
+        if (_whiteBaskervilleChecks >= 3) {
           _clearSquare(kingSquare);
           _finishGame(winner: mover, reason: GameEndReason.baskerville);
           return true;
         }
       } else {
         _blackBaskervilleChecks++;
-        if (_blackBaskervilleChecks >= 2) {
+        if (_blackBaskervilleChecks >= 3) {
           _clearSquare(kingSquare);
           _finishGame(winner: mover, reason: GameEndReason.baskerville);
           return true;
@@ -5266,9 +5272,10 @@ class ChessGame {
     if (move.isKnightRearSwap && !_isLandingAllowed(move.from)) return false;
     if (move.isCastleSwap && !_isLandingAllowed(move.from)) return false;
     if (move.isCastle) {
-      final rookTarget = move.to.file == 6
-          ? Square(5, move.from.rank)
-          : Square(3, move.from.rank);
+      final castle = _normalizeCastleMove(move);
+      final rookTarget = castle.to.file == 6
+          ? Square(5, castle.from.rank)
+          : Square(3, castle.from.rank);
       if (!_isLandingAllowed(rookTarget)) return false;
     }
 
@@ -5278,7 +5285,7 @@ class ChessGame {
     _isSimulatingLegality = true;
     late final bool legal;
     try {
-      _applyMove(move);
+      _applyMove(_normalizeCastleMove(move));
       _tickLava(acting, recordDeaths: false);
       final kingAlive = findKing(acting) != null;
       legal = kingAlive && !isInCheck(acting);
@@ -6003,6 +6010,30 @@ class ChessGame {
     return moves;
   }
 
+  /// King→rook click uses the rook square as [Move.to]; canonicalize to the
+  /// king's landing square (g/c-file) before applying.
+  Move _normalizeCastleMove(Move move) {
+    if (!move.isCastle) return move;
+    final rank = move.from.rank;
+    if (move.to.file == 7) {
+      return Move(
+        from: move.from,
+        to: Square(6, rank),
+        isCastle: true,
+        pieceIndex: move.pieceIndex,
+      );
+    }
+    if (move.to.file == 0) {
+      return Move(
+        from: move.from,
+        to: Square(2, rank),
+        isCastle: true,
+        pieceIndex: move.pieceIndex,
+      );
+    }
+    return move;
+  }
+
   List<Move> _castlingMoves(
     Square from,
     Piece piece, {
@@ -6028,6 +6059,15 @@ class ChessGame {
           pieceIndex: pieceIndex,
         ),
       );
+      // Also allow selecting the rook square (king → rook click).
+      moves.add(
+        Move(
+          from: from,
+          to: Square(7, rank),
+          isCastle: true,
+          pieceIndex: pieceIndex,
+        ),
+      );
     }
 
     final queensideRook = pieceAt(Square(0, rank));
@@ -6044,6 +6084,14 @@ class ChessGame {
         Move(
           from: from,
           to: Square(2, rank),
+          isCastle: true,
+          pieceIndex: pieceIndex,
+        ),
+      );
+      moves.add(
+        Move(
+          from: from,
+          to: Square(0, rank),
           isCastle: true,
           pieceIndex: pieceIndex,
         ),
@@ -6651,6 +6699,7 @@ class ChessGame {
   }
 
   void _applyMove(Move move) {
+    move = _normalizeCastleMove(move);
     if (move.isInquisitorStrip) {
       final target = pieceAt(move.to);
       if (target != null && target.abilities.isNotEmpty) {
