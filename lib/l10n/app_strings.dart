@@ -22,6 +22,17 @@ class AppStrings {
   String get computer => 'Stockfish';
   String get computerThinking =>
       isRu ? 'Stockfish думает…' : 'Stockfish is thinking…';
+  String get computerLoading =>
+      isRu ? 'Загрузка Stockfish…' : 'Loading Stockfish…';
+  String get computerUnavailable => isRu
+      ? 'Stockfish не запустился — ход не будет сделан'
+      : 'Stockfish failed to start — it will not move';
+  String get computerUnsupportedPosition => isRu
+      ? 'Stockfish не видит эту позицию (нестандартная доска) — ход не будет сделан'
+      : 'Stockfish cannot read this position — it will not move';
+  String get computerNoMove => isRu
+      ? 'Stockfish не смог сходить — ход не будет сделан'
+      : 'Stockfish could not find a move — it will not move';
   String get computerHint => isRu
       ? 'Вы с модами, Stockfish играет без модов'
       : 'You get mods; Stockfish plays without mods';

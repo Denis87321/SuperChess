@@ -5,6 +5,15 @@ import 'fen_export.dart';
 import 'move.dart';
 import 'stockfish_engine.dart';
 
+/// Why Stockfish did not (or cannot) play a move.
+enum StockfishIssue {
+  none,
+  loading,
+  engineUnavailable,
+  unsupportedPosition,
+  noMove,
+}
+
 /// Opponent that uses Stockfish only (no ComputerPlayer fallback).
 ///
 /// Web builds load Stockfish 18 NNUE (`stockfish-18-single`); think time is
@@ -15,12 +24,19 @@ class StockfishPlayer {
   final int movetimeMs;
   StockfishEngine? _engine;
   Future<void>? _init;
+  StockfishIssue _issue = StockfishIssue.loading;
 
   bool get isStockfishActive => _engine != null;
+  bool get isLoading => _issue == StockfishIssue.loading && _init != null;
+  StockfishIssue get issue => _issue;
 
   Future<void> ensureReady() {
     return _init ??= () async {
+      _issue = StockfishIssue.loading;
       _engine = await createStockfishEngine();
+      _issue = _engine == null
+          ? StockfishIssue.engineUnavailable
+          : StockfishIssue.none;
     }();
   }
 
@@ -38,18 +54,29 @@ class StockfishPlayer {
     if (legal.isEmpty) return null;
 
     final engine = _engine;
-    if (engine == null) return null;
+    if (engine == null) {
+      _issue = StockfishIssue.engineUnavailable;
+      return null;
+    }
 
     final fen = tryBuildFen(game);
     // Non-8×8 / non-classical geometry: Stockfish cannot see the board.
-    if (fen == null) return null;
+    if (fen == null) {
+      _issue = StockfishIssue.unsupportedPosition;
+      return null;
+    }
 
     final uci = await engine.goBestMove(fen: fen, movetimeMs: movetimeMs);
     final mapped = _mapUci(uci, legal);
-    if (mapped != null) return mapped;
+    if (mapped != null) {
+      _issue = StockfishIssue.none;
+      return mapped;
+    }
 
     // Stockfish move illegal under mods — score a few legal candidates.
-    return _pickByStockfishEval(game, engine, legal, forColor);
+    final fallback = await _pickByStockfishEval(game, engine, legal, forColor);
+    _issue = fallback == null ? StockfishIssue.noMove : StockfishIssue.none;
+    return fallback;
   }
 
   Future<Move?> _pickByStockfishEval(

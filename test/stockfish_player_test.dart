@@ -30,8 +30,10 @@ void main() {
     await player.ensureReady();
     // Desktop has no stockfish plugin binary; no ComputerPlayer fallback.
     expect(player.isStockfishActive, isFalse);
+    expect(player.issue, StockfishIssue.engineUnavailable);
     final move = await player.chooseMove(game, forColor: PieceColor.black);
     expect(move, isNull);
+    expect(player.issue, StockfishIssue.engineUnavailable);
     player.dispose();
   });
 }

@@ -11,10 +11,10 @@ import '../chess/chess_game.dart';
 import '../chess/move.dart';
 import '../chess/stockfish_player.dart';
 import '../l10n/app_strings.dart';
-import '../models/game_ability.dart';
-import '../models/piece.dart';
-import '../models/square.dart';
-import '../models/stockfish_ability_filter.dart';
+import '../l10n/models/game_ability.dart';
+import '../l10n/models/piece.dart';
+import '../l10n/models/square.dart';
+import '../l10n/models/stockfish_ability_filter.dart';
 import '../online/game_clock.dart';
 import '../online/online_game_service.dart';
 import '../theme/balatro_theme.dart';
@@ -94,6 +94,8 @@ class _GameScreenState extends State<GameScreen> {
   _PieceFlight? _pieceFlight;
   bool _botThinking = false;
   int _botMoveGen = 0;
+  /// Sticky issue after Stockfish fails to move / load (vs-computer only).
+  StockfishIssue _stockfishIssue = StockfishIssue.none;
 
   /// Локальная игра: при ходе чёрных переворачивать фигуры и текст на 180°.
   bool _rotateForBlack = false;
@@ -123,8 +125,18 @@ class _GameScreenState extends State<GameScreen> {
         abilityChoosingColors: {widget.localColor!},
         excludedAbilities: stockfishExcludedAbilities,
       );
-      _stockfish = StockfishPlayer();
-      unawaited(_stockfish!.ensureReady());
+      final stockfish = StockfishPlayer();
+      _stockfish = stockfish;
+      _stockfishIssue = StockfishIssue.loading;
+      unawaited(() async {
+        await stockfish.ensureReady();
+        if (!mounted) return;
+        setState(() {
+          _stockfishIssue = stockfish.isStockfishActive
+              ? StockfishIssue.none
+              : StockfishIssue.engineUnavailable;
+        });
+      }());
     } else {
       _game = ChessGame();
       _stockfish = null;
@@ -703,13 +715,29 @@ class _GameScreenState extends State<GameScreen> {
     if (_game.turn != bot) return;
 
     final gen = ++_botMoveGen;
-    setState(() => _botThinking = true);
+    setState(() {
+      _botThinking = true;
+      if (!stockfish.isStockfishActive) {
+        _stockfishIssue = stockfish.issue == StockfishIssue.loading
+            ? StockfishIssue.loading
+            : StockfishIssue.engineUnavailable;
+      }
+    });
     Future<void>(() async {
       await Future<void>.delayed(const Duration(milliseconds: 200));
       if (!mounted || gen != _botMoveGen) return;
       final move = await stockfish.chooseMove(_game, forColor: bot);
       if (!mounted || gen != _botMoveGen) return;
-      setState(() => _botThinking = false);
+      setState(() {
+        _botThinking = false;
+        if (move == null) {
+          _stockfishIssue = stockfish.issue == StockfishIssue.none
+              ? StockfishIssue.noMove
+              : stockfish.issue;
+        } else {
+          _stockfishIssue = StockfishIssue.none;
+        }
+      });
       if (move == null) return;
       await _executeMove(move);
     });
@@ -796,10 +824,44 @@ class _GameScreenState extends State<GameScreen> {
       _game.status == GameStatus.checkmate ||
       _game.status == GameStatus.stalemate;
 
+  String? get _stockfishIssueBanner {
+    if (!widget.vsComputer) return null;
+    final s = AppStrings.of(context);
+    return switch (_stockfishIssue) {
+      StockfishIssue.none => null,
+      StockfishIssue.loading => s.computerLoading,
+      StockfishIssue.engineUnavailable => s.computerUnavailable,
+      StockfishIssue.unsupportedPosition => s.computerUnsupportedPosition,
+      StockfishIssue.noMove => s.computerNoMove,
+    };
+  }
+
+  bool get _stockfishIssueIsError =>
+      _stockfishIssue == StockfishIssue.engineUnavailable ||
+      _stockfishIssue == StockfishIssue.unsupportedPosition ||
+      _stockfishIssue == StockfishIssue.noMove;
+
+  Color get _phaseBannerColor {
+    if (_stockfishIssueIsError) {
+      return const Color(0xFFFF6B6B);
+    }
+    return BalatroTheme.gold;
+  }
+
   String? get _phaseBannerText {
     if (_showEndOverlay) return 'Игра окончена';
+    final stockfishBanner = _stockfishIssueBanner;
+    if (stockfishBanner != null && _stockfishIssueIsError) {
+      return stockfishBanner;
+    }
     if (_botThinking) {
+      if (_stockfishIssue == StockfishIssue.loading) {
+        return AppStrings.of(context).computerLoading;
+      }
       return AppStrings.of(context).computerThinking;
+    }
+    if (_stockfishIssue == StockfishIssue.loading && widget.vsComputer) {
+      return AppStrings.of(context).computerLoading;
     }
     if ((widget.isOnline || widget.vsComputer) && !_game.isReadyToPlay) {
       final waitingOpp = widget.localColor != null &&
@@ -2183,7 +2245,7 @@ class _GameScreenState extends State<GameScreen> {
                       textAlign: TextAlign.center,
                       style: BalatroTheme.statusStyle.copyWith(
                         fontSize: 13,
-                        color: BalatroTheme.gold,
+                        color: _phaseBannerColor,
                       ),
                     ),
                   ],
@@ -2431,7 +2493,15 @@ class _GameScreenState extends State<GameScreen> {
               Material(
                 color: BalatroTheme.felt.withValues(alpha: 0.92),
                 borderRadius: BorderRadius.circular(10),
-                child: Padding(
+                child: Container(
+                  decoration: _stockfishIssueIsError
+                      ? BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: const Color(0xFFFF6B6B).withValues(alpha: 0.7),
+                          ),
+                        )
+                      : null,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 14,
                     vertical: 10,
@@ -2441,7 +2511,7 @@ class _GameScreenState extends State<GameScreen> {
                     textAlign: TextAlign.center,
                     style: BalatroTheme.statusStyle.copyWith(
                       fontSize: 13,
-                      color: BalatroTheme.gold,
+                      color: _phaseBannerColor,
                     ),
                   ),
                 ),
