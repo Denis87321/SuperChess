@@ -1678,15 +1678,10 @@ class _GameScreenState extends State<GameScreen> {
 
     final movers = _game.piecesAt(move.from);
     if (movers.isEmpty) return;
-    final moverIndex = move.pieceIndex.clamp(0, movers.length - 1);
-    final flyingPiece = movers[moverIndex];
 
-    if (!move.isInquisitorStrip) {
-      await _playPieceFlight(move, flyingPiece);
-      if (!mounted) return;
-      setState(() => _pieceFlight = null);
-    }
-
+    // Lichess/chessground style: apply the move, then animate pieces from their
+    // previous squares to the new ones in one paint (no end blink / teleport).
+    final before = _snapshotBoard();
     final result = _game.makeMove(move);
     if (result == null) return;
 
@@ -1694,21 +1689,10 @@ class _GameScreenState extends State<GameScreen> {
     _syncClockAfterMove();
     _ensureClockRunning();
 
-    if (mounted) {
-      if (_game.isAwaitingGallop) {
-        final from = _game.awaitingGallopFrom!;
-        setState(() {
-          _selectedSquare = from;
-          _selectedPieceIndex = 0;
-          _availableMoves = _game.getLegalMoves(from: from);
-        });
-      } else {
-        setState(() {
-          _selectedSquare = null;
-          _selectedPieceIndex = 0;
-          _availableMoves = [];
-        });
-      }
+    if (!move.isInquisitorStrip) {
+      await _playBoardAnim(before, moveHint: move);
+    } else if (mounted) {
+      setState(_clearSelectionAfterMove);
     }
 
     final lavaDeaths = _game.consumeLavaDeaths();
@@ -1732,68 +1716,162 @@ class _GameScreenState extends State<GameScreen> {
     if (_pieceFlight != null) {
       await _pieceFlight!.completer.future;
     }
-
-    final movers = _game.piecesAt(move.from);
-    final flyingPiece = movers.isEmpty
-        ? null
-        : movers[move.pieceIndex.clamp(0, movers.length - 1)];
-
-    if (flyingPiece != null && !move.isInquisitorStrip) {
-      await _playPieceFlight(move, flyingPiece);
-    }
-
     if (!mounted) return;
-    setState(() {
-      _pieceFlight = null;
-      _game.applyRemoteMove(move);
-      _opponentChoosingSkill = _game.isAwaitingSkillChoice;
-      if (_game.isAwaitingGallop) {
-        final from = _game.awaitingGallopFrom!;
-        _selectedSquare = from;
-        _selectedPieceIndex = 0;
-        _availableMoves = _game.getLegalMoves(from: from);
-      } else {
-        _selectedSquare = null;
-        _selectedPieceIndex = 0;
-        _availableMoves = [];
-      }
-    });
+
+    final before = _snapshotBoard();
+    _game.applyRemoteMove(move);
     _ensureClockRunning();
+
+    if (!move.isInquisitorStrip) {
+      await _playBoardAnim(before, remote: true, moveHint: move);
+    } else if (mounted) {
+      setState(() {
+        _opponentChoosingSkill = _game.isAwaitingSkillChoice;
+        _clearSelectionAfterMove();
+      });
+    }
 
     await _playLavaDeaths(_game.consumeLavaDeaths());
   }
 
-  Future<void> _playPieceFlight(Move move, Piece piece) async {
-    final dist = math.max(
-      (move.to.file - move.from.file).abs(),
-      (move.to.rank - move.from.rank).abs(),
-    );
-    // Slightly longer on web so the flight is readable at lower browser FPS.
-    final ms = kIsWeb
-        ? (260 + dist * 60).clamp(300, 560)
-        : (160 + dist * 45).clamp(180, 360);
+  /// pieceId → (square, piece) before a move is applied.
+  Map<String, ({Square square, Piece piece})> _snapshotBoard() {
+    final out = <String, ({Square square, Piece piece})>{};
+    for (var rank = 0; rank < _game.rankCount; rank++) {
+      for (var file = 0; file < _game.fileCount; file++) {
+        final square = Square(file, rank);
+        for (final piece in _game.piecesAt(square)) {
+          if (piece.pieceId.isEmpty) continue;
+          out[piece.pieceId] = (square: square, piece: piece);
+        }
+      }
+    }
+    return out;
+  }
+
+  void _clearSelectionAfterMove() {
+    if (_game.isAwaitingGallop) {
+      final from = _game.awaitingGallopFrom!;
+      _selectedSquare = from;
+      _selectedPieceIndex = 0;
+      _availableMoves = _game.getLegalMoves(from: from);
+    } else {
+      _selectedSquare = null;
+      _selectedPieceIndex = 0;
+      _availableMoves = [];
+    }
+  }
+
+  /// Chessground default is 200ms.
+  int get _pieceAnimMs => kIsWeb ? 240 : 200;
+
+  Future<void> _playBoardAnim(
+    Map<String, ({Square square, Piece piece})> before, {
+    bool remote = false,
+    Move? moveHint,
+  }) async {
+    final after = _snapshotBoard();
+
+    final movers = <_AnimMover>[];
+    final hideIds = <String>{};
+    final hideSquares = <Square>{};
+
+    for (final entry in after.entries) {
+      final id = entry.key;
+      final to = entry.value.square;
+      final prev = before[id];
+      if (prev == null || prev.square == to) continue;
+      final piece = entry.value.piece;
+      movers.add(
+        _AnimMover(
+          from: prev.square,
+          to: to,
+          piece: piece,
+          displayAs: _displayTypeFor(piece),
+          isZebra: _game.zebrasActive && piece.type == PieceType.knight,
+        ),
+      );
+      hideIds.add(id);
+    }
+
+    // Fallback when piece ids didn't survive the move (shouldn't happen, but
+    // keeps UX from snapping).
+    if (movers.isEmpty && moveHint != null && moveHint.from != moveHint.to) {
+      final atTo = _game.piecesAt(moveHint.to);
+      if (atTo.isNotEmpty) {
+        final piece = atTo[moveHint.pieceIndex.clamp(0, atTo.length - 1)];
+        movers.add(
+          _AnimMover(
+            from: moveHint.from,
+            to: moveHint.to,
+            piece: piece,
+            displayAs: _displayTypeFor(piece),
+            isZebra: _game.zebrasActive && piece.type == PieceType.knight,
+          ),
+        );
+        if (piece.pieceId.isNotEmpty) {
+          hideIds.add(piece.pieceId);
+        } else {
+          hideSquares.add(moveHint.to);
+        }
+      }
+    }
+
+    final faders = <_AnimFader>[];
+    for (final entry in before.entries) {
+      final id = entry.key;
+      if (after.containsKey(id)) continue;
+      // Skip origins of movers (identity-shifted pieces).
+      if (movers.any((m) => m.from == entry.value.square &&
+          m.piece.color == entry.value.piece.color &&
+          (m.piece.type == entry.value.piece.type ||
+              entry.value.piece.type == PieceType.pawn))) {
+        continue;
+      }
+      final piece = entry.value.piece;
+      faders.add(
+        _AnimFader(
+          square: entry.value.square,
+          piece: piece,
+          displayAs: _displayTypeFor(piece),
+          isZebra: _game.zebrasActive && piece.type == PieceType.knight,
+        ),
+      );
+    }
+
+    if (movers.isEmpty && faders.isEmpty) {
+      if (mounted) {
+        setState(() {
+          if (remote) _opponentChoosingSkill = _game.isAwaitingSkillChoice;
+          _clearSelectionAfterMove();
+        });
+      }
+      return;
+    }
+
+    final ms = _pieceAnimMs;
     final completer = Completer<void>();
     final flight = _PieceFlight(
-      from: move.from,
-      to: move.to,
-      piece: piece,
-      displayAs: _displayTypeFor(piece),
-      isZebra: _game.zebrasActive && piece.type == PieceType.knight,
+      movers: movers,
+      faders: faders,
+      hideIds: hideIds,
+      hideSquares: hideSquares,
       duration: Duration(milliseconds: ms),
       completer: completer,
     );
 
+    if (!mounted) return;
     setState(() {
       _pieceFlight = flight;
-      _selectedSquare = null;
-      _selectedPieceIndex = 0;
-      _availableMoves = [];
+      if (remote) _opponentChoosingSkill = _game.isAwaitingSkillChoice;
+      _clearSelectionAfterMove();
     });
 
     await completer.future.timeout(
-      Duration(milliseconds: ms + (kIsWeb ? 500 : 120)),
+      Duration(milliseconds: ms + 200),
       onTimeout: () {},
     );
+    if (mounted) setState(() => _pieceFlight = null);
   }
 
   void _onPieceFlightFinished() {
@@ -2725,15 +2803,13 @@ class _GameScreenState extends State<GameScreen> {
   }
 }
 
-class _PieceFlight {
-  _PieceFlight({
+class _AnimMover {
+  const _AnimMover({
     required this.from,
     required this.to,
     required this.piece,
     required this.displayAs,
     required this.isZebra,
-    required this.duration,
-    required this.completer,
   });
 
   final Square from;
@@ -2741,8 +2817,50 @@ class _PieceFlight {
   final Piece piece;
   final PieceType? displayAs;
   final bool isZebra;
+}
+
+class _AnimFader {
+  const _AnimFader({
+    required this.square,
+    required this.piece,
+    required this.displayAs,
+    required this.isZebra,
+  });
+
+  final Square square;
+  final Piece piece;
+  final PieceType? displayAs;
+  final bool isZebra;
+}
+
+class _PieceFlight {
+  _PieceFlight({
+    required this.movers,
+    required this.faders,
+    required this.hideIds,
+    required this.hideSquares,
+    required this.duration,
+    required this.completer,
+  });
+
+  final List<_AnimMover> movers;
+  final List<_AnimFader> faders;
+  final Set<String> hideIds;
+  final Set<Square> hideSquares;
   final Duration duration;
   final Completer<void> completer;
+}
+
+/// Chessground cubic ease-in-out: t<0.5 ? 4t³ : (t-1)(2t-2)²+1
+class _LichessEase extends Curve {
+  const _LichessEase();
+
+  @override
+  double transformInternal(double t) {
+    return t < 0.5
+        ? 4 * t * t * t
+        : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1;
+  }
 }
 
 class _ChessBoard extends StatelessWidget {
@@ -2860,9 +2978,14 @@ class _ChessBoard extends StatelessWidget {
     String? rankCoord,
   }) {
     final pieces = game.piecesAt(square);
+    final hideIds = pieceFlight?.hideIds ?? const <String>{};
+    final hideSquares = pieceFlight?.hideSquares ?? const <Square>{};
     final visiblePieces = [
       for (final p in pieces)
-        if (!game.isPieceHiddenFrom(p, viewerColor)) p,
+        if (!game.isPieceHiddenFrom(p, viewerColor) &&
+            !hideIds.contains(p.pieceId) &&
+            !hideSquares.contains(square))
+          p,
     ];
     final piece = visiblePieces.isEmpty ? null : visiblePieces.first;
     final isSelected = selectedSquare == square;
@@ -2883,12 +3006,8 @@ class _ChessBoard extends StatelessWidget {
     final isCustoms = customsSquares.contains(square);
     final territoryOwner = game.territory[square];
     final lavaDeath = _lavaDeathAt(square);
-    final hidingForFlight = pieceFlight != null && square == pieceFlight!.from;
     final showPieces =
-        visiblePieces.isNotEmpty &&
-        lavaDeath == null &&
-        isVisible &&
-        !hidingForFlight;
+        visiblePieces.isNotEmpty && lavaDeath == null && isVisible;
     final showLavaDeath = lavaDeath != null && isVisible;
 
     Color backgroundColor;
@@ -3320,10 +3439,10 @@ class _ChessBoard extends StatelessWidget {
             }),
           ),
           if (pieceFlight != null)
-            _FlyingPiece(
+            _BoardAnimOverlay(
               key: ValueKey(
-                '${pieceFlight!.from.file},${pieceFlight!.from.rank}->'
-                '${pieceFlight!.to.file},${pieceFlight!.to.rank}',
+                'anim-${pieceFlight!.movers.map((m) => '${m.from}${m.to}').join('|')}'
+                '-${pieceFlight!.faders.map((f) => '${f.square}').join('|')}',
               ),
               flight: pieceFlight!,
               cellSize: cellSize,
@@ -3339,8 +3458,8 @@ class _ChessBoard extends StatelessWidget {
   }
 }
 
-class _FlyingPiece extends StatefulWidget {
-  const _FlyingPiece({
+class _BoardAnimOverlay extends StatefulWidget {
+  const _BoardAnimOverlay({
     super.key,
     required this.flight,
     required this.cellSize,
@@ -3360,13 +3479,13 @@ class _FlyingPiece extends StatefulWidget {
   final bool rotatePiece;
 
   @override
-  State<_FlyingPiece> createState() => _FlyingPieceState();
+  State<_BoardAnimOverlay> createState() => _BoardAnimOverlayState();
 }
 
-class _FlyingPieceState extends State<_FlyingPiece>
+class _BoardAnimOverlayState extends State<_BoardAnimOverlay>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
-  late final Animation<Offset> _position;
+  late final Animation<double> _t;
 
   Offset _offsetFor(Square square) {
     final displayFile =
@@ -3383,24 +3502,16 @@ class _FlyingPieceState extends State<_FlyingPiece>
       vsync: this,
       duration: widget.flight.duration,
     );
-    _position = Tween<Offset>(
-      begin: _offsetFor(widget.flight.from),
-      end: _offsetFor(widget.flight.to),
-    ).animate(
-      CurvedAnimation(
-        parent: _controller,
-        // Softer ease reads better on web where frame pacing is uneven.
-        curve: kIsWeb ? Curves.easeInOutCubicEmphasized : Curves.easeInOutCubic,
-      ),
+    _t = CurvedAnimation(
+      parent: _controller,
+      curve: const _LichessEase(),
     );
-
     _controller.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
         widget.onFinished();
       }
     });
-    // Wait one frame so the piece is painted at the origin before moving
-    // (otherwise the first web frames often skip and the move looks like a snap).
+    // Paint hidden destinations + overlays at t=0 before the first tick.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _controller.forward();
     });
@@ -3412,40 +3523,76 @@ class _FlyingPieceState extends State<_FlyingPiece>
     super.dispose();
   }
 
+  Widget _pieceAt({
+    required Piece piece,
+    required PieceType? displayAs,
+    required bool isZebra,
+    required double size,
+  }) {
+    return Transform.rotate(
+      angle: widget.rotatePiece ? math.pi : 0,
+      child: ChessPieceWidget(
+        piece: piece,
+        size: size,
+        displayAs: displayAs,
+        isZebra: isZebra,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = widget.cellSize * 0.88;
     final pad = (widget.cellSize - size) / 2;
 
-    // Transform.translate composites without relayout — critical on Flutter web,
-    // where animating Positioned left/top every frame drops frames and looks abrupt.
     return Positioned.fill(
       child: IgnorePointer(
         child: AnimatedBuilder(
-          animation: _position,
-          builder: (context, child) {
-            return Transform.translate(
-              offset: Offset(
-                _position.value.dx + pad,
-                _position.value.dy + pad,
-              ),
-              child: child,
+          animation: _t,
+          builder: (context, _) {
+            final progress = _t.value;
+            final fadeOpacity = (1.0 - progress).clamp(0.0, 1.0);
+            return Stack(
+              clipBehavior: Clip.none,
+              children: [
+                for (final fader in widget.flight.faders)
+                  if (fadeOpacity > 0.01)
+                    Transform.translate(
+                      offset: _offsetFor(fader.square) + Offset(pad, pad),
+                      filterQuality: FilterQuality.low,
+                      child: Opacity(
+                        opacity: fadeOpacity,
+                        child: RepaintBoundary(
+                          child: _pieceAt(
+                            piece: fader.piece,
+                            displayAs: fader.displayAs,
+                            isZebra: fader.isZebra,
+                            size: size,
+                          ),
+                        ),
+                      ),
+                    ),
+                for (final mover in widget.flight.movers)
+                  Transform.translate(
+                    offset: Offset.lerp(
+                          _offsetFor(mover.from),
+                          _offsetFor(mover.to),
+                          progress,
+                        )! +
+                        Offset(pad, pad),
+                    filterQuality: FilterQuality.low,
+                    child: RepaintBoundary(
+                      child: _pieceAt(
+                        piece: mover.piece,
+                        displayAs: mover.displayAs,
+                        isZebra: mover.isZebra,
+                        size: size,
+                      ),
+                    ),
+                  ),
+              ],
             );
           },
-          child: Align(
-            alignment: Alignment.topLeft,
-            child: RepaintBoundary(
-              child: Transform.rotate(
-                angle: widget.rotatePiece ? math.pi : 0,
-                child: ChessPieceWidget(
-                  piece: widget.flight.piece,
-                  size: size,
-                  displayAs: widget.flight.displayAs,
-                  isZebra: widget.flight.isZebra,
-                ),
-              ),
-            ),
-          ),
         ),
       ),
     );
