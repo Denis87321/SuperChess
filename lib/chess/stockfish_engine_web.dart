@@ -66,7 +66,11 @@ class _WebStockfishEngine implements StockfishEngine {
       onTimeout: () => false,
     );
     if (ok) {
+      // Max classical skill; do not limit Elo.
       _send('setoption name Skill Level value 20');
+      _send('setoption name UCI_LimitStrength value false');
+      _send('setoption name Threads value 2');
+      _send('setoption name Hash value 128');
       _send('ucinewgame');
     }
     return ok;

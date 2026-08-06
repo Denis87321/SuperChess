@@ -1,6 +1,8 @@
 import 'piece.dart';
 
 enum AbilityGroup {
+  /// Start-of-game only (before the first move). Never mid-game waves.
+  mode,
   board,
   pawn,
   knight,
@@ -14,6 +16,8 @@ enum AbilityGroup {
 extension AbilityGroupInfo on AbilityGroup {
   String get title {
     switch (this) {
+      case AbilityGroup.mode:
+        return 'Режим';
       case AbilityGroup.board:
         return 'Доска';
       case AbilityGroup.pawn:

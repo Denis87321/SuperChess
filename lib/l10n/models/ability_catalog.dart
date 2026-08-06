@@ -12,6 +12,12 @@ class AbilityCatalog {
 
   final Random _random;
 
+  static const modeAbilities = [
+    GameAbility.boardTide,
+    GameAbility.boardMarseillesChess,
+    GameAbility.boardTurncoats,
+  ];
+
   static const boardAbilities = [
     GameAbility.boardPawnsSideways,
     GameAbility.boardPawnsDiagonal,
@@ -21,7 +27,6 @@ class AbilityCatalog {
     GameAbility.boardExtraRank,
     GameAbility.boardExtraFile,
     GameAbility.boardFogOfWar,
-    GameAbility.boardTide,
     GameAbility.boardDoubleStart,
     GameAbility.boardSprint,
     GameAbility.boardZebras,
@@ -65,14 +70,12 @@ class AbilityCatalog {
     GameAbility.boardBigAssortment,
     GameAbility.boardBlindSpot,
     GameAbility.boardOnlyEqualsKill,
-    GameAbility.boardMarseillesChess,
     GameAbility.boardInitiativeFear,
     GameAbility.boardSwamp,
     GameAbility.boardCollectiveMyopia,
     GameAbility.boardTerritoryExpand,
     GameAbility.boardFrostMap,
     GameAbility.boardScorchingSun,
-    GameAbility.boardTurncoats,
   ];
 
   static const randomAbilities = [
@@ -217,6 +220,8 @@ class AbilityCatalog {
 
   static List<GameAbility> abilitiesForGroup(AbilityGroup group) {
     switch (group) {
+      case AbilityGroup.mode:
+        return modeAbilities;
       case AbilityGroup.board:
         return boardAbilities;
       case AbilityGroup.random:
@@ -240,9 +245,11 @@ class AbilityCatalog {
     required PieceColor forColor,
     Set<GameAbility> excludedAbilities = const {},
   }) {
-    final available = boardAbilities
-        .where((ability) => !excludedAbilities.contains(ability))
-        .toList();
+    // Start pool: Режим (start-only) + Доска.
+    final available = [
+      ...modeAbilities,
+      ...boardAbilities,
+    ].where((ability) => !excludedAbilities.contains(ability)).toList();
     final picked = _pickUnique(available, 3);
     return picked
         .map(_offerForStart)
@@ -290,7 +297,9 @@ class AbilityCatalog {
     pool = pool.where((ability) {
       if (blocked.contains(ability)) return false;
       final type = switch (ability.group) {
-        AbilityGroup.board || AbilityGroup.random => null,
+        AbilityGroup.mode ||
+        AbilityGroup.board ||
+        AbilityGroup.random => null,
         AbilityGroup.pawn => PieceType.pawn,
         AbilityGroup.knight => PieceType.knight,
         AbilityGroup.bishop => PieceType.bishop,

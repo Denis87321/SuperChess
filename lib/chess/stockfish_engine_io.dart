@@ -73,6 +73,9 @@ class _IoStockfishEngine implements StockfishEngine {
     );
     if (ok) {
       _engine.stdin = 'setoption name Skill Level value 20';
+      _engine.stdin = 'setoption name UCI_LimitStrength value false';
+      _engine.stdin = 'setoption name Threads value 2';
+      _engine.stdin = 'setoption name Hash value 128';
       _engine.stdin = 'ucinewgame';
     }
     return ok;

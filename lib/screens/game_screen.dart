@@ -788,8 +788,7 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   bool _canControlPiece(Piece piece) {
-    if (_game.zebrasActive && piece.type == PieceType.knight) return true;
-    return piece.color == _game.turn;
+    return _game.canControlPiece(piece);
   }
 
   bool get _showEndOverlay =>
@@ -1560,6 +1559,14 @@ class _GameScreenState extends State<GameScreen> {
     }
     if ((result.requiresSkillChoice || _game.isAwaitingSkillChoice) &&
         _canPickSkill) {
+      // Let the last opponent move stay visible before the mods sheet.
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      if (!mounted) return;
+      if (!_game.isAwaitingSkillChoice || !_canPickSkill) {
+        _maybeSendGameOver();
+        _maybeScheduleComputerMove();
+        return;
+      }
       setState(_beginSkillChoice);
       _maybeSendGameOver();
       return;
@@ -1699,7 +1706,10 @@ class _GameScreenState extends State<GameScreen> {
       (move.to.file - move.from.file).abs(),
       (move.to.rank - move.from.rank).abs(),
     );
-    final ms = (160 + dist * 45).clamp(180, 360);
+    // Web needs longer flights — short tweens look like teleportation there.
+    final ms = kIsWeb
+        ? (280 + dist * 70).clamp(320, 620)
+        : (160 + dist * 45).clamp(180, 360);
     final completer = Completer<void>();
     final flight = _PieceFlight(
       from: move.from,
@@ -1719,7 +1729,7 @@ class _GameScreenState extends State<GameScreen> {
     });
 
     await completer.future.timeout(
-      Duration(milliseconds: ms + 120),
+      Duration(milliseconds: ms + (kIsWeb ? 400 : 120)),
       onTimeout: () {},
     );
   }
@@ -2861,6 +2871,19 @@ class _ChessBoard extends StatelessWidget {
           ? BalatroTheme.lightSquare
           : BalatroTheme.darkSquare;
     }
+
+    final last = game.lastMove;
+    if (last != null &&
+        isVisible &&
+        !inCheck &&
+        !isSelected &&
+        (square == last.from || square == last.to)) {
+      backgroundColor = Color.alphaBlend(
+        const Color(0x99CDD26A),
+        backgroundColor,
+      );
+    }
+
     if (isVisible &&
         game.scorchingSunActive &&
         game.sunSquares.contains(square) &&
@@ -3289,7 +3312,12 @@ class _FlyingPieceState extends State<_FlyingPiece>
     _position = Tween<Offset>(
       begin: _offsetFor(widget.flight.from),
       end: _offsetFor(widget.flight.to),
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic));
+    ).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeInOutCubic,
+      ),
+    );
 
     _controller.addStatusListener((status) {
       if (status == AnimationStatus.completed) {

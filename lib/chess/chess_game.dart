@@ -593,6 +593,9 @@ class ChessGame {
     if (id == null || _rules.revealedTurncoats.contains(id)) return null;
     return id;
   }
+
+  Move? get lastMove => _lastMove;
+  Move? _lastMove;
   bool get royalPilgrimageActive => _rules.royalPilgrimageActive;
   bool get mightMakesRightActive => _rules.mightMakesRightActive;
   bool get expeditionaryCorpsActive => _rules.expeditionaryCorpsActive;
@@ -1454,13 +1457,15 @@ class ChessGame {
     final info = _infoFromOffer(offer);
     if (color == PieceColor.white) {
       _whiteStartChosen = true;
-      if (offer.ability.group == AbilityGroup.board) {
+      if (offer.ability.group == AbilityGroup.board ||
+          offer.ability.group == AbilityGroup.mode) {
         _whiteBoardAbility = offer.ability;
       }
       _whiteStartAbilityInfo = info;
     } else {
       _blackStartChosen = true;
-      if (offer.ability.group == AbilityGroup.board) {
+      if (offer.ability.group == AbilityGroup.board ||
+          offer.ability.group == AbilityGroup.mode) {
         _blackBoardAbility = offer.ability;
       }
       _blackStartAbilityInfo = info;
@@ -1491,6 +1496,10 @@ class ChessGame {
     if (_isUnrevealedEnemySpy(piece, side)) return true;
     return piece.color == side;
   }
+
+  /// Public UI gate (includes turncoat spies, zebras, …).
+  bool canControlPiece(Piece piece, [PieceColor? viewerColor]) =>
+      _canControl(piece, viewerColor);
 
   bool _isUnrevealedEnemySpy(Piece piece, [PieceColor? sideToMove]) {
     final side = sideToMove ?? _turn;
@@ -1929,6 +1938,9 @@ class ChessGame {
       if (!_isSimulatingLegality) {
         _undoSnapshot = createSnapshot();
       }
+      if (!_isSimulatingLegality) {
+        _lastMove = move;
+      }
       _applyMove(move);
       _awaitingGallopFrom = null;
       _tickLava(_turn);
@@ -1944,6 +1956,10 @@ class ChessGame {
 
     final legal = getLegalMoves(from: move.from);
     if (!legal.any((m) => _movesEqual(m, move))) return null;
+
+    if (!_isSimulatingLegality) {
+      _lastMove = move;
+    }
 
     final captured = _isCapture(move);
     final moverBefore = pieceAt(move.from, index: move.pieceIndex);
@@ -6450,6 +6466,13 @@ class ChessGame {
     _pendingAuctionSquare = null;
     _pendingAuctionColor = null;
     _auctionSquare = null;
+
+    // Stockfish / non-chooser: no reward.
+    if (!_abilityChoosingColors.contains(color)) {
+      return false;
+    }
+    // Human gets two mods: this choice + one queued follow-up.
+    _rules.queuedSkillChoices = max(_rules.queuedSkillChoices, 1);
     _beginPeriodicSkillChoice(color);
     return isAwaitingSkillChoice;
   }
@@ -7766,10 +7789,12 @@ class ChessGame {
           .add(current.square);
     }
 
-    if (_hasEffect(moverBefore, AbilityEffect.cornerQuest)) {
+    if (moverBefore.type == PieceType.knight &&
+        _sideHasCornerQuest(color)) {
       final corners = _cornerSquares();
       if (corners.contains(current.square)) {
-        final visits = _rules.cornerQuestVisits.putIfAbsent(moverId, () => {});
+        final key = color == PieceColor.white ? 'white' : 'black';
+        final visits = _rules.cornerQuestVisits.putIfAbsent(key, () => {});
         visits.add(current.square);
         if (visits.length >= 3) {
           _finishGame(
@@ -7918,6 +7943,20 @@ class ChessGame {
         }
       }
     }
+  }
+
+  bool _sideHasCornerQuest(PieceColor color) {
+    for (var rank = 0; rank < _rankCount; rank++) {
+      for (var file = 0; file < _fileCount; file++) {
+        for (final piece in piecesAt(Square(file, rank))) {
+          if (piece.color == color &&
+              _hasEffect(piece, AbilityEffect.cornerQuest)) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
   }
 
   void _stripRandomAbilityFrom(PieceColor color) {

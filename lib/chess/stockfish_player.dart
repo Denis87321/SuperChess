@@ -7,13 +7,11 @@ import 'stockfish_engine.dart';
 
 /// Opponent that uses Stockfish only (no ComputerPlayer fallback).
 ///
-/// Experimental: if the position is not classical 8×8 FEN, or Stockfish has no
-/// legal SuperChess mapping, [chooseMove] returns null and the bot skips.
-///
-/// To restore fallback: re-add `ComputerPlayer` and
-/// `return _fallback.chooseMove(...)` when Stockfish cannot move.
+/// Think time is intentionally high: the bundled web engine is an older
+/// multi-variant WASM build (not modern NNUE top strength), so movetime is the
+/// main lever we have.
 class StockfishPlayer {
-  StockfishPlayer({this.movetimeMs = 900});
+  StockfishPlayer({this.movetimeMs = 3000});
 
   final int movetimeMs;
   StockfishEngine? _engine;
