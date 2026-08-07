@@ -490,6 +490,9 @@ class ChessGame {
           ? 'Выберите вражескую фигуру с модами'
           : 'Выберите мод для удаления';
     }
+    if (_pendingTargetAbility == GameAbility.modeMateVeto) {
+      return 'Статист: тайно выберите вражескую фигуру';
+    }
     if (_pendingTargetAbility == GameAbility.queenDelayedSentence) {
       return 'Выберите атакованную вражескую фигуру';
     }
@@ -1389,6 +1392,12 @@ class ChessGame {
           _rules.witnessProtectedPieceId[
                   _pendingTargetColor ?? selected.piece.color] =
               selected.piece.pieceId;
+        case GameAbility.modeMateVeto:
+          final chooser = _pendingTargetColor ?? PieceColor.white;
+          if (selected.piece.color == chooser.opponent &&
+              selected.piece.type != PieceType.king) {
+            _rules.mateVetoEnemyPieceId[chooser] = selected.piece.pieceId;
+          }
         case GameAbility.randomRightToMove:
           _rules.forcedMovePieceId = selected.piece.pieceId;
           _rules.forcedMoveOwner = selected.piece.color;
@@ -5733,6 +5742,8 @@ class ChessGame {
             reason: GameEndReason.stalemate,
             status: GameStatus.stalemate,
           );
+        } else if (_tryShopTokenCancelMate(_turn)) {
+          _status = GameStatus.playing;
         } else if (_mateVetoBlocksMate(_turn)) {
           _status = GameStatus.playing;
         } else {
@@ -7066,9 +7077,9 @@ class ChessGame {
     return pieceAt(move.to)?.pieceId;
   }
 
-  /// True when the only mating attacks come from a piece under mate-veto ("1").
+  /// True when the only mating attacks come from the opponent's «Статист».
   bool _mateVetoBlocksMate(PieceColor matedColor) {
-    final vetoId = _rules.mateVetoEnemyPieceId[matedColor];
+    final vetoId = _rules.mateVetoEnemyPieceId[matedColor.opponent];
     if (vetoId == null) return false;
     final kingSq = findKing(matedColor);
     if (kingSq == null) return false;
@@ -7085,7 +7096,24 @@ class ChessGame {
         }
       }
     }
-    return attackers.isNotEmpty && attackers.every((id) => id == vetoId);
+    final blocked =
+        attackers.isNotEmpty && attackers.every((id) => id == vetoId);
+    if (blocked) {
+      _rules.mateVetoBanner =
+          'Статист не может поставить мат — партия продолжается';
+    }
+    return blocked;
+  }
+
+  bool _tryShopTokenCancelMate(PieceColor matedColor) {
+    if (!_rules.shopTokenActive) return false;
+    if (!(_rules.shopTokenHeld[matedColor] ?? false)) return false;
+    if (!canTakeback) return false;
+    _rules.shopTokenHeld[matedColor] = false;
+    takeback();
+    _rules.shopMateCancelBanner =
+        'Жетон «Во имя высшей цели»: мат отменён, ход возвращён';
+    return true;
   }
 
   Piece _pieceAfterMove(
@@ -8168,14 +8196,9 @@ class ChessGame {
     }
     // Wasteland claims.
     if (_rules.wastelandActive) {
-      _rules.wastelandClaims[move.from] = (
-        owner: moved.color,
-        pliesLeft: 3,
-      );
-      final claim = _rules.wastelandClaims[landed];
-      if (claim != null &&
-          claim.owner != moved.color &&
-          claim.pliesLeft > 0) {
+      _rules.wastelandClaims[move.from] = moved.color;
+      final claimOwner = _rules.wastelandClaims[landed];
+      if (claimOwner != null && claimOwner != moved.color) {
         _rules.wastelandTollSkip[moved.pieceId] = 1;
       }
       _rules.wastelandClaims.remove(landed);
@@ -9442,25 +9465,17 @@ class ChessGame {
     switch (offer.ability) {
       case GameAbility.modeTimeZone:
         _rules.timeZoneActive = true;
-        // Secret: chooser gets odd hour if rng even, else even — both get opposite.
-        final whiteOdd = _random.nextBool();
-        _rules.timeZoneOddHour[PieceColor.white] = whiteOdd;
-        _rules.timeZoneOddHour[PieceColor.black] = !whiteOdd;
+        // Fixed: white normal on odd plies, black on even.
+        _rules.timeZoneOddHour[PieceColor.white] = true;
+        _rules.timeZoneOddHour[PieceColor.black] = false;
       case GameAbility.modeMateVeto:
-        final enemyPieces = <String>[];
-        for (var r = 0; r < _rankCount; r++) {
-          for (var f = 0; f < _fileCount; f++) {
-            for (final p in piecesAt(Square(f, r))) {
-              if (p.color == color.opponent && p.type != PieceType.king) {
-                enemyPieces.add(p.pieceId);
-              }
-            }
-          }
-        }
-        if (enemyPieces.isNotEmpty) {
-          _rules.mateVetoEnemyPieceId[color] =
-              enemyPieces[_random.nextInt(enemyPieces.length)];
-        }
+        _beginAbilityTarget(
+          ability: offer.ability,
+          sourceId: _pendingSkillPieceId ?? 'mode-mate-veto-${color.name}',
+          color: color,
+          selection: AbilityTargetSelection.enemyPiece,
+          passesTurn: false,
+        );
       case GameAbility.modeDebtPit:
         _rules.debtPitActive = true;
         _rules.whiteDebt = 0;
@@ -9864,16 +9879,7 @@ class ChessGame {
     }
     // Wasteland claim decay
     if (_rules.wastelandActive) {
-      final keys = _rules.wastelandClaims.keys.toList();
-      for (final s in keys) {
-        final claim = _rules.wastelandClaims[s]!;
-        final left = claim.pliesLeft - 1;
-        if (left <= 0) {
-          _rules.wastelandClaims.remove(s);
-        } else {
-          _rules.wastelandClaims[s] = (owner: claim.owner, pliesLeft: left);
-        }
-      }
+      // Claims persist until stepped on; no ply decay.
     }
     // Forbidden file
     if (_rules.forbiddenFilePlies > 0) {
@@ -10244,6 +10250,10 @@ class ChessGame {
       List.unmodifiable(_rules.crazyhouseHand[c] ?? const []);
   String? get bloodFeudBanner => _rules.bloodFeudBanner;
   void clearBloodFeudBanner() => _rules.bloodFeudBanner = null;
+  String? get mateVetoBanner => _rules.mateVetoBanner;
+  void clearMateVetoBanner() => _rules.mateVetoBanner = null;
+  String? get shopMateCancelBanner => _rules.shopMateCancelBanner;
+  void clearShopMateCancelBanner() => _rules.shopMateCancelBanner = null;
   Square? get kansasTyphoon => _rules.kansasTyphoon;
   Square? get kansasTyphoonNext => _rules.kansasTyphoonNext;
   int? get forbiddenFile => _rules.forbiddenFile;

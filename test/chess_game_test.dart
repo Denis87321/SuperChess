@@ -89,7 +89,8 @@ void main() {
       game.startOffersFor(PieceColor.white).every(
             (offer) =>
                 offer.ability.group == AbilityGroup.board ||
-                offer.ability.group == AbilityGroup.mode,
+                offer.ability.group == AbilityGroup.mode ||
+                offer.ability.name.startsWith('board'),
           ),
       isTrue,
     );

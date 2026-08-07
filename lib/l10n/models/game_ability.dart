@@ -283,23 +283,13 @@ enum GameAbility {
 extension GameAbilityInfo on GameAbility {
   AbilityGroup get group {
     switch (this) {
-      case GameAbility.boardPawnsSideways:
-      case GameAbility.boardPawnsDiagonal:
-      case GameAbility.boardPawnsBackward:
-      case GameAbility.boardKingSwap:
       case GameAbility.boardLavaRank:
       case GameAbility.boardExtraRank:
       case GameAbility.boardExtraFile:
-      case GameAbility.boardDoubleStart:
       case GameAbility.boardSprint:
-      case GameAbility.boardZebras:
-      case GameAbility.boardFisher:
-      case GameAbility.boardFisherMadness:
       case GameAbility.boardNight:
       case GameAbility.boardDay:
       case GameAbility.boardColorblind:
-      case GameAbility.boardPawnFront:
-      case GameAbility.boardCavalry:
       case GameAbility.boardMirror:
       case GameAbility.boardGhostCells:
       case GameAbility.boardAttraction:
@@ -349,8 +339,22 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.boardForbiddenLetter:
       case GameAbility.boardEarnedRest:
       case GameAbility.boardRestlessKings:
+      case GameAbility.modeWasteland:
         return AbilityGroup.board;
+      case GameAbility.boardPawnsSideways:
+      case GameAbility.boardPawnsDiagonal:
+      case GameAbility.boardPawnsBackward:
       case GameAbility.boardTide:
+      case GameAbility.boardDoubleStart:
+      case GameAbility.boardPawnFront:
+      case GameAbility.boardCavalry:
+        return AbilityGroup.pawn;
+      case GameAbility.boardKingSwap:
+        return AbilityGroup.king;
+      case GameAbility.boardZebras:
+        return AbilityGroup.knight;
+      case GameAbility.boardFisher:
+      case GameAbility.boardFisherMadness:
       case GameAbility.boardMarseillesChess:
       case GameAbility.boardTurncoats:
       case GameAbility.boardFrostMap:
@@ -358,7 +362,6 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.modeTimeZone:
       case GameAbility.modeMateVeto:
       case GameAbility.modeDebtPit:
-      case GameAbility.modeWasteland:
       case GameAbility.modeBus:
       case GameAbility.modeShopToken:
       case GameAbility.modeSeasons:
@@ -561,6 +564,19 @@ extension GameAbilityInfo on GameAbility {
     }
   }
 
+  /// Extra catalog shelves (UI / piece pools). Primary [group] is unchanged.
+  /// The same ability must never be weighted twice when picking — pools are deduped.
+  Set<AbilityGroup> get catalogGroups {
+    switch (this) {
+      case GameAbility.boardKingSwap:
+        return const {AbilityGroup.king, AbilityGroup.rook};
+      case GameAbility.boardCavalry:
+        return const {AbilityGroup.pawn, AbilityGroup.knight};
+      default:
+        return {group};
+    }
+  }
+
   String get title {
     switch (this) {
       case GameAbility.boardPawnsSideways:
@@ -706,7 +722,7 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.modeTimeZone:
         return 'Часовая зона';
       case GameAbility.modeMateVeto:
-        return '1';
+        return 'Статист';
       case GameAbility.modeDebtPit:
         return 'Долговая яма';
       case GameAbility.modeWasteland:
@@ -714,7 +730,7 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.modeBus:
         return 'Автобус';
       case GameAbility.modeShopToken:
-        return '2';
+        return 'Во имя высшей цели';
       case GameAbility.modeSeasons:
         return 'Времена года';
       case GameAbility.modeBloodFeud:
@@ -1097,51 +1113,49 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.boardPawnsSideways:
         return 'Ваши пешки могут ходить прямо, налево и направо';
       case GameAbility.boardPawnsDiagonal:
-        return 'Ваши пешки: ход по диагонали, взятие по прямой';
+        return 'Ваши пешки теперь ходят по диагонали и едят по прямой';
       case GameAbility.boardPawnsBackward:
-        return 'Ваши пешки могут ходить на назад';
+        return 'Ваши пешки могут ходить назад';
       case GameAbility.boardKingSwap:
-        return 'Вместо рокировки король и ладья меняются местами, даже если между ними есть фигуры';
+        return 'Вместо рокировки король и ладья могут поменяться местами (даже если между ними есть фигуры)';
       case GameAbility.boardLavaRank:
-        return 'Горизонталь ? покрывается лавой';
+        return 'Случайная горизонталь покрывается лавой';
       case GameAbility.boardExtraRank:
-        return 'Между горизонталями 4 и 5 появляется новая пустая горизонталь';
+        return 'Доска становится выше на 1 линию';
       case GameAbility.boardExtraFile:
-        return 'Появляется новая вертикаль ?';
+        return 'Появляется новая вертикаль';
       case GameAbility.boardFogOfWar:
-        return 'Шахматы втёмную: видны свои фигуры и поля их хода/атаки. Цель — взять короля. Король может ходить под удар. В логе ходов виден только предыдущий полный ход';
+        return 'Игроки видят только свои фигуры и клетки, которые они атакуют.';
       case GameAbility.boardTide:
-        return 'Ваши пешки выдвигаются вперёд и ходят только на 1 клетку вперёд';
+        return 'Ваши пешки стоят на 1 линию дальше.';
       case GameAbility.boardDoubleStart:
-        return 'Пешки с начальной линии один раз за партию могут пройти 3 клетки вперёд';
+        return 'Пешки с начальной линии могут пройти 3 клетки вперёд';
       case GameAbility.boardSprint:
         return 'На выбор мода даётся 10 секунд вместо 30';
       case GameAbility.boardZebras:
         return 'Все кони становятся общими: оба игрока ходят ими в свой ход. Этими конями нельзя дать шах или мат';
       case GameAbility.boardFisher:
-        return 'Только на старте: расстановка обоих игроков по правилам шахмат Фишера: '
-            'пешки на месте, слоны на разных цветах, король между ладьями, '
-            'стороны зеркальны друг другу';
+        return 'Королевская линия обоих игроков перемешивается.';
       case GameAbility.boardFisherMadness:
-        return 'Только на старте: все фигуры обоих игроков перемешиваются между собой. Слоны на разных цветах, без рокировки';
+        return 'Все фигуры игроков перемешиваются';
       case GameAbility.boardNight:
         return 'Следующие 3 хода фигуры могут вставать только на тёмные клетки';
       case GameAbility.boardDay:
         return 'Следующие 3 хода фигуры могут вставать только на светлые клетки';
       case GameAbility.boardColorblind:
-        return 'Все фигуры переливаются случайными цветами. По цвету нельзя понять, кому принадлежит фигура';
+        return 'Все фигуры теперь разных цветов';
       case GameAbility.boardPawnFront:
         return 'Все ваши пешки продвигаются на 1 клетку вперёд, если путь свободен';
       case GameAbility.boardCavalry:
-        return 'Все ваши пешки на 3 полухода становятся конями (могут ходить и брать как кони), затем снова превращаются в пешки';
+        return 'Все ваши пешки на 3 хода становятся конями';
       case GameAbility.boardMirror:
         return 'Левая и правая границы доски соединяются';
       case GameAbility.boardGhostCells:
-        return 'Несколько случайных клеток становятся призрачными: через них можно ходить, но стоять нельзя';
+        return 'Через несколько случайных клеток можно только ходить, стоять на них нельзя';
       case GameAbility.boardAttraction:
-        return 'Каждые 10 ходов все фигуры сдвигаются на 1 клетку к центру доски (d4/d5/e4/e5), в том числе по диагонали, если клетка свободна';
+        return 'Каждые 10 ходов все фигуры сдвигаются на 1 клетку к центру доски';
       case GameAbility.boardVirus:
-        return 'После взятия фигура заражает соседнюю вражескую: та теряет одну мод';
+        return 'После взятия фигура заражает соседнюю вражескую: та теряет одну особенность';
       case GameAbility.boardInvisibleRegiment:
         return 'Оба игрока не видят пешки соперника, пока те не сделают взятие или не дойдут до 4-й линии (для чёрных — до 5-й)';
       case GameAbility.boardShuffle:
@@ -1211,9 +1225,7 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.boardTerritoryExpand:
         return 'На доске появляются вертикали Z и I сразу';
       case GameAbility.boardFrostMap:
-        return 'У каждой фигуры счётчик мороза 0–3 (нормально → холодно → стынет → замерз). '
-            'За ход без факела рядом +1, рядом с факелом −1. На 3 фигура не ходит. '
-            'У каждого игрока 3 факела; съеденный факел переходит ближайшему союзнику. Только старт партии.';
+        return 'У каждой фигуры счётчик мороза 0–3 (нормально → холодно → стынет → замерз). За ход без факела рядом +1, рядом с факелом −1. На 3 фигура не ходит. У каждого игрока 3 факела; съеденный факел переходит ближайшему союзнику. Только старт партии.';
       case GameAbility.boardScorchingSun:
         return 'Солнце палит 3–6 клеток (меняет каждые 5 ходов). Нагрев 0→3: на 3 фигура погибает. Вне солнца нагрев падает';
       case GameAbility.boardTurncoats:
@@ -1239,19 +1251,19 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.boardEarnedRest:
         return 'Фигура после серии тихих ходов может объявить отдых: один полуход она не ходит и её нельзя взять.';
       case GameAbility.modeTimeZone:
-        return 'Каждый выбирает «час»: нечётные или чётные полуходы. В «чужой» час ваши фигуры ходят максимум на 1 клетку своим обычным способом.';
+        return 'В нечётные ходы фигуры белых ходят как обычно, а чёрных — максимум на 1 клетку; в чётные — наоборот.';
       case GameAbility.modeMateVeto:
         return 'Тайно выберите вражескую фигуру — она не может поставить мат (атаковать клетку короля можно).';
       case GameAbility.modeDebtPit:
-        return 'Взятия дороже пешки копят долг. Ход без взятия снижает долг на 1; при долге 6 — проигрыш.';
+        return 'Взятие вражеских фигур увеличивает ваш долг на 1, а потеря фигуры — уменьшает на 1. При долге 6 — проигрыш.';
       case GameAbility.modeWasteland:
-        return 'Свободные клетки после ухода остаются «вашими» 3 полухода: враг при входе пропускает следующий ход этой фигурой.';
+        return 'После хода Вы оставляете бесплодную землю — вражеская фигура, ступившая на клетку, пропускает следующий ход.';
       case GameAbility.modeBus:
-        return 'Пат выигрывает тот, у кого меньше фигур на доске.';
+        return 'В случае пата выигрывает игрок, у которого меньше фигур на доске.';
       case GameAbility.modeShopToken:
-        return 'Раз за партию можно «продать» свою не-короля фигуру за жетон. Жетон тратится на отмену одного вашего хода (takeback).';
+        return 'Игроки могут продать одну свою фигуру за жетон. Жетон тратится на отмену одного вашего хода.';
       case GameAbility.modeSeasons:
-        return 'Цикл из 4 сезонов по 6 полных ходов: весна усиливает пешки, лето — слонов/коней, осень ограничивает ладьи, зима — коней по цвету.';
+        return 'Каждые 6 ходов меняется погода: вначале Вулкан.';
       case GameAbility.modeBloodFeud:
         return 'Если после вашего взятия соперник не ответил взятием за 2 полухода, вспыхивает вражда: вы получаете бонусный мод.';
       case GameAbility.modePrioritySetup:
@@ -2058,6 +2070,12 @@ extension GameAbilityInfo on GameAbility {
     if (this == GameAbility.randomMagicShutdown && durationMoves != null) {
       return 'Все моды отключены на $durationMoves '
           '${_movesWord(durationMoves)}';
+    }
+    if (this == GameAbility.modeTimeZone && forColor != null) {
+      if (forColor == PieceColor.white) {
+        return 'В нечётные ходы ваши фигуры ходят как обычно, а вражеские — максимум на 1 клетку. В чётные ходы все наоборот.';
+      }
+      return 'В чётные ходы ваши фигуры ходят как обычно, а вражеские — максимум на 1 клетку. В нечётные ходы все наоборот.';
     }
     if (this == GameAbility.boardTide && forColor != null) {
       final ranks = boardRankCount ?? 8;

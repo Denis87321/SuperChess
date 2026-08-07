@@ -13,15 +13,15 @@ class AbilityCatalog {
   final Random _random;
 
   static const modeAbilities = [
-    GameAbility.boardTide,
     GameAbility.boardMarseillesChess,
     GameAbility.boardTurncoats,
     GameAbility.boardFrostMap,
     GameAbility.boardFogOfWar,
+    GameAbility.boardFisher,
+    GameAbility.boardFisherMadness,
     GameAbility.modeTimeZone,
     GameAbility.modeMateVeto,
     GameAbility.modeDebtPit,
-    GameAbility.modeWasteland,
     GameAbility.modeBus,
     GameAbility.modeShopToken,
     GameAbility.modeSeasons,
@@ -42,23 +42,14 @@ class AbilityCatalog {
   ];
 
   static const boardAbilities = [
-    GameAbility.boardPawnsSideways,
-    GameAbility.boardPawnsDiagonal,
-    GameAbility.boardPawnsBackward,
-    GameAbility.boardKingSwap,
+    GameAbility.modeWasteland,
     GameAbility.boardLavaRank,
     GameAbility.boardExtraRank,
     GameAbility.boardExtraFile,
-    GameAbility.boardDoubleStart,
     GameAbility.boardSprint,
-    GameAbility.boardZebras,
-    GameAbility.boardFisher,
-    GameAbility.boardFisherMadness,
     GameAbility.boardNight,
     GameAbility.boardDay,
     GameAbility.boardColorblind,
-    GameAbility.boardPawnFront,
-    GameAbility.boardCavalry,
     GameAbility.boardMirror,
     GameAbility.boardGhostCells,
     GameAbility.boardAttraction,
@@ -157,6 +148,13 @@ class AbilityCatalog {
   ];
 
   static const pawnAbilities = [
+    GameAbility.boardPawnsSideways,
+    GameAbility.boardPawnsDiagonal,
+    GameAbility.boardPawnsBackward,
+    GameAbility.boardTide,
+    GameAbility.boardDoubleStart,
+    GameAbility.boardPawnFront,
+    GameAbility.boardCavalry,
     GameAbility.pawnSideways,
     GameAbility.pawnInverted,
     GameAbility.pawnAlwaysDoubleStep,
@@ -193,6 +191,8 @@ class AbilityCatalog {
   ];
 
   static const knightAbilities = [
+    GameAbility.boardCavalry,
+    GameAbility.boardZebras,
     GameAbility.knightRearing,
     GameAbility.knightLongJump,
     GameAbility.knightSecondChance,
@@ -260,6 +260,7 @@ class AbilityCatalog {
   ];
 
   static const rookAbilities = [
+    GameAbility.boardKingSwap,
     GameAbility.rookHopAlly,
     GameAbility.rookRam,
     GameAbility.rookAstronomicon,
@@ -292,6 +293,7 @@ class AbilityCatalog {
   ];
 
   static const kingAbilities = [
+    GameAbility.boardKingSwap,
     GameAbility.kingRoyalDecree,
     GameAbility.kingExtraStep,
     GameAbility.kingShield,
@@ -332,11 +334,16 @@ class AbilityCatalog {
     required PieceColor forColor,
     Set<GameAbility> excludedAbilities = const {},
   }) {
-    // Start pool: Режим (start-only) + Доска.
-    final available = [
+    // Start: Режим + Доска + бывшие досочные моды, ушедшие в piece-группы.
+    // Deduped so multi-shelf mods are not weighted twice.
+    final available = _dedupe([
       ...modeAbilities,
       ...boardAbilities,
-    ].where((ability) => !excludedAbilities.contains(ability)).toList();
+      ...pawnAbilities.where((a) => a.name.startsWith('board')),
+      ...knightAbilities.where((a) => a.name.startsWith('board')),
+      ...rookAbilities.where((a) => a.name.startsWith('board')),
+      ...kingAbilities.where((a) => a.name.startsWith('board')),
+    ]).where((ability) => !excludedAbilities.contains(ability)).toList();
     final picked = _pickUnique(available, 3);
     return picked
         .map(_offerForStart)
@@ -370,7 +377,7 @@ class AbilityCatalog {
     }
 
     final blocked = {...chosenAbilities, ...excludedAbilities};
-    var pool = <GameAbility>[
+    var pool = _dedupe([
       ...boardAbilities,
       ...randomAbilities,
       ...pawnAbilities,
@@ -379,23 +386,33 @@ class AbilityCatalog {
       ...rookAbilities,
       ...queenAbilities,
       ...kingAbilities,
-    ];
+    ]);
 
     pool = pool.where((ability) {
       if (blocked.contains(ability)) return false;
-      final type = switch (ability.group) {
-        AbilityGroup.mode ||
-        AbilityGroup.board ||
-        AbilityGroup.random => null,
-        AbilityGroup.pawn => PieceType.pawn,
-        AbilityGroup.knight => PieceType.knight,
-        AbilityGroup.bishop => PieceType.bishop,
-        AbilityGroup.rook => PieceType.rook,
-        AbilityGroup.queen => PieceType.queen,
-        AbilityGroup.king => PieceType.king,
-      };
-      if (type == null) return true;
-      return availableTypes.contains(type);
+      // Available if ANY catalog shelf matches an owned piece type (or board/mode/random).
+      final shelves = ability.catalogGroups;
+      if (shelves.any(
+        (g) =>
+            g == AbilityGroup.mode ||
+            g == AbilityGroup.board ||
+            g == AbilityGroup.random,
+      )) {
+        return true;
+      }
+      for (final g in shelves) {
+        final type = switch (g) {
+          AbilityGroup.pawn => PieceType.pawn,
+          AbilityGroup.knight => PieceType.knight,
+          AbilityGroup.bishop => PieceType.bishop,
+          AbilityGroup.rook => PieceType.rook,
+          AbilityGroup.queen => PieceType.queen,
+          AbilityGroup.king => PieceType.king,
+          _ => null,
+        };
+        if (type != null && availableTypes.contains(type)) return true;
+      }
+      return false;
     }).toList();
 
     if (!minesActive) {
@@ -1692,8 +1709,18 @@ class AbilityCatalog {
 
   int pickLavaRank() => 2 + _random.nextInt(4);
 
+  /// Preserve first occurrence order while removing duplicates (multi-group mods).
+  static List<GameAbility> _dedupe(List<GameAbility> pool) {
+    final seen = <GameAbility>{};
+    final out = <GameAbility>[];
+    for (final a in pool) {
+      if (seen.add(a)) out.add(a);
+    }
+    return out;
+  }
+
   List<GameAbility> _pickUnique(List<GameAbility> pool, int count) {
-    final copy = List<GameAbility>.from(pool)..shuffle(_random);
+    final copy = List<GameAbility>.from(_dedupe(pool))..shuffle(_random);
     return copy.take(count.clamp(0, copy.length)).toList();
   }
 

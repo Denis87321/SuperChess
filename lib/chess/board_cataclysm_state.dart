@@ -168,8 +168,8 @@ class BoardCataclysmState {
   int blackDebt = 0;
 
   bool wastelandActive = false;
-  /// square -> (owner, plies left of claim after leaving)
-  final Map<Square, ({PieceColor owner, int pliesLeft})> wastelandClaims = {};
+  /// square -> owner of barren land left after a move
+  final Map<Square, PieceColor> wastelandClaims = {};
   final Map<String, int> wastelandTollSkip = {}; // pieceId -> skip turns
 
   bool busActive = false;
@@ -185,6 +185,8 @@ class BoardCataclysmState {
   };
   String? shopPendingSellPieceId;
   PieceColor? shopPendingSellColor;
+  String? shopMateCancelBanner;
+  String? mateVetoBanner;
 
   bool seasonsActive = false;
   int seasonFullMoves = 0; // increments each black move completed
@@ -563,6 +565,8 @@ class BoardCataclysmState {
       ..addAll(other.shopTokenHeld);
     shopPendingSellPieceId = other.shopPendingSellPieceId;
     shopPendingSellColor = other.shopPendingSellColor;
+    shopMateCancelBanner = other.shopMateCancelBanner;
+    mateVetoBanner = other.mateVetoBanner;
     seasonsActive = other.seasonsActive;
     seasonFullMoves = other.seasonFullMoves;
     seasonIndex = other.seasonIndex;

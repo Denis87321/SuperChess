@@ -3563,6 +3563,33 @@ class _GameScreenState extends State<GameScreen> {
               ),
             ),
           ),
+        if ((_game.mateVetoBanner ?? _game.shopMateCancelBanner) != null &&
+            !_showEndOverlay)
+          Positioned(
+            left: 16,
+            right: 16,
+            bottom: math.max(72, bottomPad + 64),
+            child: _flipOverlay(
+              GestureDetector(
+                onTap: () => setState(() {
+                  _game.clearMateVetoBanner();
+                  _game.clearShopMateCancelBanner();
+                }),
+                child: Material(
+                  color: const Color(0xEE3A4A5C),
+                  borderRadius: BorderRadius.circular(10),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Text(
+                      _game.mateVetoBanner ?? _game.shopMateCancelBanner!,
+                      textAlign: TextAlign.center,
+                      style: BalatroTheme.statusStyle.copyWith(fontSize: 12),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
         if (_game.debtPitActive)
           Positioned(
             right: 8,
@@ -3608,7 +3635,7 @@ class _GameScreenState extends State<GameScreen> {
                         }
                       },
                       child: Text(
-                        'МАГАЗИН',
+                        'ПРОДАТЬ ФИГУРУ',
                         style: BalatroTheme.statusStyle.copyWith(
                           fontSize: 11,
                           color: BalatroTheme.gold,
@@ -3623,7 +3650,7 @@ class _GameScreenState extends State<GameScreen> {
                         }
                       },
                       child: Text(
-                        'ЖЕТОН',
+                        'ЖЕТОН (ОТМЕНА ХОДА)',
                         style: BalatroTheme.statusStyle.copyWith(
                           fontSize: 11,
                           color: BalatroTheme.gold,
