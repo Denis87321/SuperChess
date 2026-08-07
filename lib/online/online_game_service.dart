@@ -1,7 +1,7 @@
 import '../chess/move.dart';
-import '../models/game_ability.dart';
-import '../models/piece.dart';
-import '../models/square.dart';
+import '../l10n/models/game_ability.dart';
+import '../l10n/models/piece.dart';
+import '../l10n/models/square.dart';
 
 class OnlineMatch {
   const OnlineMatch({
@@ -106,11 +106,19 @@ class OnlineOpponentSkipTurn extends OnlineEvent {
 }
 
 class OnlineGameOver extends OnlineEvent {
-  OnlineGameOver({this.winner, this.reason, this.stateHash});
+  OnlineGameOver({this.winner, this.reason, this.detail, this.stateHash});
 
   final PieceColor? winner;
   final String? reason;
+  final String? detail;
   final String? stateHash;
+}
+
+class OnlineRematchOffer extends OnlineEvent {}
+
+class OnlineRematchStart extends OnlineEvent {
+  OnlineRematchStart(this.match);
+  final OnlineMatch match;
 }
 
 class OnlineStateResync extends OnlineEvent {
@@ -202,8 +210,13 @@ abstract class OnlineGameService {
   void sendGameOver({
     PieceColor? winner,
     String? reason,
+    String? detail,
     String? stateHash,
   });
+
+  void sendRematchOffer();
+
+  void sendRematchAccept();
 
   void sendChat(String text);
 

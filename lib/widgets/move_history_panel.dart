@@ -13,6 +13,7 @@ class MoveHistoryPanel extends StatelessWidget {
     required this.onSelectPly,
     required this.onGoLive,
     this.compact = false,
+    this.minBrowsablePly = 0,
   });
 
   final MoveHistoryLog log;
@@ -21,6 +22,8 @@ class MoveHistoryPanel extends StatelessWidget {
   final ValueChanged<int> onSelectPly;
   final VoidCallback onGoLive;
   final bool compact;
+  /// Oldest ply index that may be opened (fog of war lookback).
+  final int minBrowsablePly;
 
   bool get _isLive =>
       viewPlyIndex == null ||
@@ -31,16 +34,21 @@ class MoveHistoryPanel extends StatelessWidget {
     return viewPlyIndex ?? (log.length - 1);
   }
 
+  int get _minPly => minBrowsablePly.clamp(0, log.isEmpty ? 0 : log.length);
+
+  bool _canBrowse(int index) =>
+      index >= _minPly && index < log.length;
+
   void _step(int delta) {
     if (log.isEmpty) return;
-    final next = (_effectiveIndex + delta).clamp(0, log.length - 1);
+    final next = (_effectiveIndex + delta).clamp(_minPly, log.length - 1);
     if (next == log.length - 1 && viewPlyIndex == null) {
       onGoLive();
       return;
     }
     if (next == log.length - 1) {
       onGoLive();
-    } else {
+    } else if (_canBrowse(next)) {
       onSelectPly(next);
     }
   }
@@ -75,6 +83,7 @@ class MoveHistoryPanel extends StatelessWidget {
                       selectedIndex: viewPlyIndex,
                       isLive: _isLive,
                       lastPlyIndex: log.length - 1,
+                      minBrowsablePly: _minPly,
                       onSelect: onSelectPly,
                       compact: compact,
                     );
@@ -86,7 +95,7 @@ class MoveHistoryPanel extends StatelessWidget {
   }
 
   Widget _navBar() {
-    final canBack = log.isNotEmpty && _effectiveIndex > 0;
+    final canBack = log.isNotEmpty && _effectiveIndex > _minPly;
     final canForward = log.isNotEmpty && !_isLive;
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 2, 4, 6),
@@ -95,7 +104,8 @@ class MoveHistoryPanel extends StatelessWidget {
           _NavIcon(
             icon: Icons.first_page_rounded,
             tooltip: 'В начало',
-            onPressed: canBack ? () => onSelectPly(0) : null,
+            onPressed:
+                canBack ? () => onSelectPly(_minPly) : null,
           ),
           _NavIcon(
             icon: Icons.chevron_left_rounded,
@@ -169,6 +179,7 @@ class _MoveRow extends StatelessWidget {
     required this.selectedIndex,
     required this.isLive,
     required this.lastPlyIndex,
+    required this.minBrowsablePly,
     required this.onSelect,
     required this.compact,
   });
@@ -179,6 +190,7 @@ class _MoveRow extends StatelessWidget {
   final int? selectedIndex;
   final bool isLive;
   final int lastPlyIndex;
+  final int minBrowsablePly;
   final ValueChanged<int> onSelect;
   final bool compact;
 
@@ -205,6 +217,7 @@ class _MoveRow extends StatelessWidget {
                 : _PlyCell(
                     ply: white!,
                     selected: _isSelected(white!),
+                    enabled: white!.plyIndex >= minBrowsablePly,
                     onTap: () => onSelect(white!.plyIndex),
                     compact: compact,
                   ),
@@ -216,6 +229,7 @@ class _MoveRow extends StatelessWidget {
                 : _PlyCell(
                     ply: black!,
                     selected: _isSelected(black!),
+                    enabled: black!.plyIndex >= minBrowsablePly,
                     onTap: () => onSelect(black!.plyIndex),
                     compact: compact,
                   ),
@@ -238,21 +252,28 @@ class _PlyCell extends StatelessWidget {
     required this.selected,
     required this.onTap,
     required this.compact,
+    this.enabled = true,
   });
 
   final PlyRecord ply;
   final bool selected;
   final VoidCallback onTap;
   final bool compact;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
     final mods = ply.modEvents;
+    final textColor = !enabled
+        ? BalatroTheme.cream.withValues(alpha: 0.28)
+        : ply.side == PieceColor.white
+            ? BalatroTheme.cream
+            : BalatroTheme.cream.withValues(alpha: 0.92);
     return Material(
       color: selected ? const Color(0xFF3A4A5C) : Colors.transparent,
       borderRadius: BorderRadius.circular(4),
       child: InkWell(
-        onTap: onTap,
+        onTap: enabled ? onTap : null,
         borderRadius: BorderRadius.circular(4),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
@@ -264,9 +285,7 @@ class _PlyCell extends StatelessWidget {
                 style: BalatroTheme.statusStyle.copyWith(
                   fontSize: 13,
                   fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                  color: ply.side == PieceColor.white
-                      ? BalatroTheme.cream
-                      : BalatroTheme.cream.withValues(alpha: 0.92),
+                  color: textColor,
                 ),
               ),
               if (mods.isNotEmpty && !compact)
@@ -308,11 +327,13 @@ class MoveHistorySideChrome extends StatelessWidget {
   const MoveHistorySideChrome({
     super.key,
     required this.child,
-    this.width = 220,
+    this.width = 260,
+    this.footer,
   });
 
   final Widget child;
   final double width;
+  final Widget? footer;
 
   @override
   Widget build(BuildContext context) {
@@ -335,6 +356,7 @@ class MoveHistorySideChrome extends StatelessWidget {
             ),
           ),
           Expanded(child: child),
+          if (footer != null) footer!,
         ],
       ),
     );

@@ -4,6 +4,7 @@ import '../auth/auth_service.dart';
 import '../l10n/app_strings.dart';
 import '../theme/balatro_theme.dart';
 import 'history_screen.dart';
+import 'rivalries_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key, required this.auth});
@@ -111,6 +112,27 @@ class ProfileScreen extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
                 child: Text(s.history, style: BalatroTheme.statusStyle),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => RivalriesScreen(auth: auth),
+                    ),
+                  );
+                },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: BalatroTheme.cream,
+                  side: BorderSide(
+                    color: BalatroTheme.cream.withValues(alpha: 0.35),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+                child: Text(
+                  'Счёт с соперниками',
+                  style: BalatroTheme.statusStyle,
+                ),
               ),
             ],
           ),

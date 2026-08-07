@@ -157,10 +157,46 @@ Future<void> main() async {
             'ratingBefore': e.ratingBefore,
             'ratingAfter': e.ratingAfter,
             'reason': e.reason,
+            'reasonDetail': e.reasonDetail,
+            'hasReplay': e.hasReplay,
             'createdAt': e.createdAt.toUtc().toIso8601String(),
           },
       ],
     });
+  });
+
+  router.get('/user/rivalries', (Request request) async {
+    final user = await _userFromAuthHeader(request);
+    if (user == null) {
+      return _json({'error': 'Unauthorized'}, status: 401);
+    }
+    final entries = await _authDb!.rivalriesFor(user.id);
+    return _json({
+      'rivalries': [
+        for (final e in entries)
+          {
+            'opponentId': e.opponentId,
+            'opponentName': e.opponentName,
+            'wins': e.wins,
+            'losses': e.losses,
+            'draws': e.draws,
+            'lastPlayed': e.lastPlayed.toUtc().toIso8601String(),
+          },
+      ],
+    });
+  });
+
+  router.get('/user/matches/<gameId>', (Request request, String gameId) async {
+    final user = await _userFromAuthHeader(request);
+    if (user == null) {
+      return _json({'error': 'Unauthorized'}, status: 401);
+    }
+    final replay =
+        await _authDb!.matchReplayFor(userId: user.id, gameId: gameId);
+    if (replay == null) {
+      return _json({'error': 'Not found'}, status: 404);
+    }
+    return _json(replay);
   });
 
   router.post('/games/result', (Request request) async {
@@ -191,6 +227,24 @@ Future<void> main() async {
         if (a is String) abilities.add(a);
       }
     }
+    final opponentAbilities = <String>[];
+    final rawOppAbs = body['opponentAbilities'];
+    if (rawOppAbs is List) {
+      for (final a in rawOppAbs) {
+        if (a is String) opponentAbilities.add(a);
+      }
+    }
+    final plies = <Map<String, dynamic>>[];
+    final rawPlies = body['plies'];
+    if (rawPlies is List) {
+      for (final p in rawPlies) {
+        if (p is Map<String, dynamic>) {
+          plies.add(p);
+        } else if (p is Map) {
+          plies.add(Map<String, dynamic>.from(p));
+        }
+      }
+    }
 
     final room = _games[gameId];
     String? opponentUserId;
@@ -210,9 +264,12 @@ Future<void> main() async {
       color: color!,
       winner: winner,
       reason: body['reason'] as String?,
+      reasonDetail: body['reasonDetail'] as String?,
       opponentUserId: opponentUserId,
       opponentName: opponentName,
       abilities: abilities,
+      opponentAbilities: opponentAbilities,
+      plies: plies,
     );
     return _json({'ok': true, 'profile': profile});
   });
@@ -341,6 +398,33 @@ class _GameRoom {
   }
 }
 
+void _startRematch(_GameRoom room, {required WebSocketChannel accepter}) {
+  _games.remove(room.id);
+  final newId = '${DateTime.now().millisecondsSinceEpoch}_r';
+  // Swap colors for rematch.
+  final white = room.black;
+  final black = room.white;
+  final next = _GameRoom(id: newId, white: white, black: black);
+  _games[newId] = next;
+  final rated = white.userId != null && black.userId != null;
+
+  void sendMatched(_QueuedPlayer player, String color, _QueuedPlayer opp) {
+    player.channel.sink.add(jsonEncode({
+      'type': 'rematch_start',
+      'gameId': newId,
+      'color': color,
+      'opponentName': opp.name,
+      'rated': rated,
+      'yourRating': player.rating,
+      'opponentRating': opp.rating,
+      'opponentLoggedIn': opp.userId != null,
+    }));
+  }
+
+  sendMatched(white, 'white', black);
+  sendMatched(black, 'black', white);
+}
+
 class _ClientConnection {
   _ClientConnection(this._channel);
 
@@ -393,9 +477,15 @@ class _ClientConnection {
       case 'takeback_offer':
       case 'takeback_response':
       case 'clock_sync':
+      case 'rematch_offer':
+      case 'rematch_accept':
         final gameId = data['gameId'] as String?;
         final room = gameId != null ? _games[gameId] : null;
         if (room == null) return;
+        if (data['type'] == 'rematch_accept') {
+          _startRematch(room, accepter: _channel);
+          return;
+        }
         room.relay(_channel, data);
       default:
         _send({'type': 'error', 'message': 'Неизвестный тип сообщения'});

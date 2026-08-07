@@ -5,9 +5,9 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../chess/move.dart';
 import '../chess/move_codec.dart';
-import '../models/game_ability.dart';
-import '../models/piece.dart';
-import '../models/square.dart';
+import '../l10n/models/game_ability.dart';
+import '../l10n/models/piece.dart';
+import '../l10n/models/square.dart';
 import 'online_game_service.dart';
 
 class WebSocketOnlineService implements OnlineGameService {
@@ -143,6 +143,7 @@ class WebSocketOnlineService implements OnlineGameService {
   void sendGameOver({
     PieceColor? winner,
     String? reason,
+    String? detail,
     String? stateHash,
   }) {
     final winnerJson = winner == null
@@ -153,8 +154,19 @@ class WebSocketOnlineService implements OnlineGameService {
       'gameId': _gameId,
       'winner': winnerJson,
       'reason': ?reason,
+      'detail': ?detail,
       'stateHash': ?stateHash,
     });
+  }
+
+  @override
+  void sendRematchOffer() {
+    _send({'type': 'rematch_offer', 'gameId': _gameId});
+  }
+
+  @override
+  void sendRematchAccept() {
+    _send({'type': 'rematch_accept', 'gameId': _gameId});
   }
 
   @override
@@ -350,10 +362,32 @@ class WebSocketOnlineService implements OnlineGameService {
             OnlineGameOver(
               winner: winner,
               reason: data['reason'] as String?,
+              detail: data['detail'] as String?,
               stateHash: data['stateHash'] as String?,
             ),
           );
         }
+      case 'rematch_offer':
+        if (_inGame(data)) {
+          _events.add(OnlineRematchOffer());
+        }
+      case 'rematch_start':
+        _gameId = data['gameId'] as String;
+        _events.add(
+          OnlineRematchStart(
+            OnlineMatch(
+              gameId: _gameId!,
+              localColor: data['color'] == 'white'
+                  ? PieceColor.white
+                  : PieceColor.black,
+              opponentName: data['opponentName'] as String? ?? 'Соперник',
+              rated: data['rated'] == true,
+              yourRating: data['yourRating'] as int?,
+              opponentRating: data['opponentRating'] as int?,
+              opponentLoggedIn: data['opponentLoggedIn'] == true,
+            ),
+          ),
+        );
       case 'state_resync':
         if (_inGame(data)) {
           final snapshot = data['snapshot'];

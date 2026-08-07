@@ -111,6 +111,30 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         color: BalatroTheme.cream.withValues(alpha: 0.55),
                       ),
                     ),
+                    if (g.reason != null || g.reasonDetail != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        [
+                          if (g.reasonDetail != null) g.reasonDetail!,
+                          if (g.reason != null) g.reason!,
+                        ].join(' · '),
+                        style: BalatroTheme.statusStyle.copyWith(
+                          fontSize: 11,
+                          fontStyle: FontStyle.italic,
+                          color: BalatroTheme.cream.withValues(alpha: 0.45),
+                        ),
+                      ),
+                    ],
+                    if (g.hasReplay) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Есть запись ходов',
+                        style: BalatroTheme.statusStyle.copyWith(
+                          fontSize: 11,
+                          color: BalatroTheme.gold.withValues(alpha: 0.75),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               );

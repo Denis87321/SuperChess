@@ -1,3 +1,4 @@
+import '../l10n/models/game_ability.dart';
 import '../l10n/models/piece.dart';
 import '../l10n/models/square.dart';
 
@@ -69,7 +70,10 @@ class BoardCataclysmState {
   final Map<String, Set<Square>> rookCornerVisits = {};
 
   final Set<String> architectWalls = {}; // "f1,r1|f2,r2" canonical key
+  /// Legacy global flag; prefer [bigAssortmentOwners].
   bool bigAssortmentActive = false;
+  /// Players who chose «Большой ассортимент» (only they get 4 mid-game choices).
+  final Set<PieceColor> bigAssortmentOwners = {};
   bool blindSpotActive = false;
   bool onlyEqualsKillActive = false;
   bool marseillesActive = false;
@@ -143,6 +147,213 @@ class BoardCataclysmState {
 
   /// Choosers waiting in the current periodic wave (typically white then black).
   final List<PieceColor> pendingPeriodicChooserQueue = [];
+
+  // --- Expanded mode / board / cataclysm batch (2026) ---
+  bool timeZoneActive = false;
+  /// true = odd plies (1,3,5…), false = even; null = not chosen yet.
+  final Map<PieceColor, bool?> timeZoneOddHour = {
+    PieceColor.white: null,
+    PieceColor.black: null,
+  };
+  int globalPlyIndex = 0; // increments each completed half-move
+
+  /// Enemy piece ids that cannot deliver mate ("1").
+  final Map<PieceColor, String?> mateVetoEnemyPieceId = {
+    PieceColor.white: null,
+    PieceColor.black: null,
+  };
+
+  bool debtPitActive = false;
+  int whiteDebt = 0;
+  int blackDebt = 0;
+
+  bool wastelandActive = false;
+  /// square -> (owner, plies left of claim after leaving)
+  final Map<Square, ({PieceColor owner, int pliesLeft})> wastelandClaims = {};
+  final Map<String, int> wastelandTollSkip = {}; // pieceId -> skip turns
+
+  bool busActive = false;
+
+  bool shopTokenActive = false;
+  final Map<PieceColor, bool> shopAvailable = {
+    PieceColor.white: true,
+    PieceColor.black: true,
+  };
+  final Map<PieceColor, bool> shopTokenHeld = {
+    PieceColor.white: false,
+    PieceColor.black: false,
+  };
+  String? shopPendingSellPieceId;
+  PieceColor? shopPendingSellColor;
+
+  bool seasonsActive = false;
+  int seasonFullMoves = 0; // increments each black move completed
+  /// 0 spring, 1 summer, 2 autumn, 3 winter
+  int seasonIndex = 0;
+  final Set<String> springDoubleUsedThisSeason = {};
+
+  bool bloodFeudActive = false;
+  /// After a capture: victim color must capture within 2 of their plies.
+  PieceColor? bloodFeudVictimColor;
+  int bloodFeudPliesLeft = 0;
+  String? bloodFeudBanner; // UI toast text
+
+  bool prioritySetupActive = false;
+  final Set<Square> priorityCells = {};
+
+  bool brokenPerspectiveActive = false;
+
+  bool kriegspielActive = false;
+  String? kriegspielAnnouncement;
+
+  bool kingCenterActive = false;
+
+  bool atomicActive = false;
+
+  bool crazyhouseActive = false;
+  final Map<PieceColor, List<PieceType>> crazyhouseHand = {
+    PieceColor.white: [],
+    PieceColor.black: [],
+  };
+
+  bool duckChessActive = false;
+  Square? duckSquare;
+  bool duckNeedsPlacement = false;
+
+  // Board
+  bool inkBlotActive = false;
+  final Map<Square, int> inkBlotPlies = {}; // square -> plies left
+  Square? gravityWellSquare;
+  int gravityWellPlies = 0;
+  String? shadowPieceId;
+  bool shadowJumpAvailable = false;
+  bool centerTaxActive = false;
+  final Set<String> centerTaxSkipNext = {};
+  bool walkingCastleActive = false;
+  String? invisibleHandForcedPieceId;
+  PieceColor? invisibleHandOwner;
+  int invisibleHandPlies = 0;
+  int? riverRank;
+  int riverDirection = 1; // +file or -file
+  int? forbiddenFile;
+  int forbiddenFilePlies = 0;
+  Square? earnedRestSquare;
+  int earnedRestCaptures = 0;
+  bool earnedRestBurned = false;
+
+  // Cataclysm
+  bool moveStealPending = false;
+  final Map<String, int> serialCaptureCounts = {};
+  String? snailTrailPieceId;
+  final Map<Square, int> snailSlimePlies = {};
+  final Set<Square> disinfoFakeSquares = {};
+  PieceType? familyContractType;
+  PieceColor? familyContractOwner;
+  int familyContractMoves = 0;
+  Square? kansasTyphoon;
+  Square? kansasTyphoonNext;
+  int kansasPlies = 0;
+  String? loneWarriorPieceId;
+  bool twentyOneResolved = false;
+
+  // --- Batch: pawn / light / mode / board / cataclysm (2026-08) ---
+  bool holyRandomActive = false;
+  bool zooShuffleApplied = false;
+  bool insatiableHungerActive = false;
+  final Map<String, int> queenHungerPlies = {}; // queenId -> plies since capture
+  bool comeOnActive = false;
+  bool comeOnConsumed = false;
+  bool volcanoActive = false;
+  final Set<Square> volcanoSquares = {};
+  int volcanoPliesLeft = 4; // 2 full moves = 4 plies
+
+  /// Kings must leave these squares within [restlessKingsPliesLeft] plies.
+  final Map<PieceColor, Square> restlessKingStart = {};
+  int restlessKingsPliesLeft = 0;
+
+  PieceColor? ownHandsOwner; // kingOwnHands chooser
+  PieceColor? hereditaryEdictOwner; // opponent restricted on promo
+
+  bool warehouseActive = false;
+  GameAbility? warehousePendingAbility;
+  PieceType? warehousePendingType;
+
+  final Map<String, int> twilightInvisibleUntilPly = {}; // pieceId -> globalPly
+  PieceColor? twilightOwner;
+  int twilightOwnerPliesLeft = 0;
+
+  bool gestureMirrorPending = false;
+  bool? gestureMirrorRequiredLight; // color of last mover's landing square
+
+  String? blackMarkPieceId;
+  PieceColor? blackMarkChooser;
+
+  final Map<String, Set<Square>> archivistVisited = {};
+  final Set<String> archivistRecallUsed = {};
+  final Map<String, String> pairStepPartner = {}; // pawnId -> partnerId
+  final Map<String, int> mortarCooldown = {}; // 0 = fires this turn
+  final Map<String, int> starvationPlies = {}; // enemy pawn id
+  final Map<Square, ({PieceColor color, int fullMovesLeft})> pawnSeeds = {};
+  final Map<String, PieceType> doubleLifeHidden = {};
+  final Set<String> doubleLifeUsed = {};
+  final Map<String, int> spotlightUnderFire = {};
+  final Map<Square, int> fuseTimers = {}; // square -> plies until boom
+  final Map<Square, int> inkTrailBlocked = {}; // square -> plies (enemy pawns)
+  final Set<Square> donkeySwampSquares = {};
+  final Set<Square> hoofSmokeSquares = {};
+  final Map<String, String> nonAggressionLink = {}; // a->b and b->a
+  final Map<String, List<Square>> gallopContractRoute = {};
+  final Map<String, int> gallopContractProgress = {};
+  final Map<String, int> bucephalusCaptures = {};
+  final Set<String> bucephalusKingJumpUsed = {};
+  final Map<String, Square> relicDeathSquare = {};
+  final Map<String, int> relicPliesLeft = {};
+  final Map<Square, int> blindingSacristy = {}; // next lander skip attack 1 turn
+  final Set<String> blindingExemptPieceIds = {};
+  final Map<String, int> schismDiagSign = {}; // pieceId -> +1 or -1 (file*rank)
+  String? sealRookId;
+  String? sealVictimId;
+  String? illDriveRookId;
+  Square? illDriveFrom;
+  Square? illDriveTo;
+  String? courtIntrigueQueenId;
+  String? courtIntrigueVictimId;
+
+  // --- Interactive batch flows ---
+  final List<Square> multiCellPicks = [];
+  int multiCellNeeded = 0;
+  GameAbility? multiCellAbility;
+  String? multiCellSourceId;
+  PieceColor? multiCellColor;
+
+  bool rpsSessionActive = false;
+  final List<(Square, Square)> rpsPairs = [];
+  int? rpsPairIndex;
+  String? rpsLastA; // rock | paper | scissors
+  String? rpsLastB;
+  int rpsRound = 0;
+  PieceColor? rpsChooser;
+  bool rpsResolved = false;
+
+  String? tangledKnightBaseId;
+  Square? tangledFrom;
+  Square? tangledFirstDest;
+  String? tangledCloneId;
+  bool tangledAwaitingKeep = false;
+  bool tangledAwaitingSecondDest = false;
+
+  String? customsKnightId;
+  Square? customsFrom;
+  Square? customsTo;
+  final List<List<Square>> customsPaths = [];
+  bool awaitingCustomsPath = false;
+  bool customsPathResolvedSkip = false;
+
+  final Set<String> doubleLifeArmed = {};
+  String? spotlightPromoId;
+  final Set<String> kingGuardPieceIds = {};
+  final Set<String> littleBrotherSkipIds = {};
+  final Set<String> archivistRecallArmed = {};
 
   bool get abilityEffectsActive => magicShutdownTurnsLeft <= 0;
 
@@ -229,6 +440,9 @@ class BoardCataclysmState {
       ..clear()
       ..addAll(other.architectWalls);
     bigAssortmentActive = other.bigAssortmentActive;
+    bigAssortmentOwners
+      ..clear()
+      ..addAll(other.bigAssortmentOwners);
     blindSpotActive = other.blindSpotActive;
     onlyEqualsKillActive = other.onlyEqualsKillActive;
     marseillesActive = other.marseillesActive;
@@ -320,6 +534,269 @@ class BoardCataclysmState {
     pendingPeriodicChooserQueue
       ..clear()
       ..addAll(other.pendingPeriodicChooserQueue);
+
+    timeZoneActive = other.timeZoneActive;
+    timeZoneOddHour
+      ..clear()
+      ..addAll(other.timeZoneOddHour);
+    globalPlyIndex = other.globalPlyIndex;
+    mateVetoEnemyPieceId
+      ..clear()
+      ..addAll(other.mateVetoEnemyPieceId);
+    debtPitActive = other.debtPitActive;
+    whiteDebt = other.whiteDebt;
+    blackDebt = other.blackDebt;
+    wastelandActive = other.wastelandActive;
+    wastelandClaims
+      ..clear()
+      ..addAll(other.wastelandClaims);
+    wastelandTollSkip
+      ..clear()
+      ..addAll(other.wastelandTollSkip);
+    busActive = other.busActive;
+    shopTokenActive = other.shopTokenActive;
+    shopAvailable
+      ..clear()
+      ..addAll(other.shopAvailable);
+    shopTokenHeld
+      ..clear()
+      ..addAll(other.shopTokenHeld);
+    shopPendingSellPieceId = other.shopPendingSellPieceId;
+    shopPendingSellColor = other.shopPendingSellColor;
+    seasonsActive = other.seasonsActive;
+    seasonFullMoves = other.seasonFullMoves;
+    seasonIndex = other.seasonIndex;
+    springDoubleUsedThisSeason
+      ..clear()
+      ..addAll(other.springDoubleUsedThisSeason);
+    bloodFeudActive = other.bloodFeudActive;
+    bloodFeudVictimColor = other.bloodFeudVictimColor;
+    bloodFeudPliesLeft = other.bloodFeudPliesLeft;
+    bloodFeudBanner = other.bloodFeudBanner;
+    prioritySetupActive = other.prioritySetupActive;
+    priorityCells
+      ..clear()
+      ..addAll(other.priorityCells);
+    brokenPerspectiveActive = other.brokenPerspectiveActive;
+    kriegspielActive = other.kriegspielActive;
+    kriegspielAnnouncement = other.kriegspielAnnouncement;
+    kingCenterActive = other.kingCenterActive;
+    atomicActive = other.atomicActive;
+    crazyhouseActive = other.crazyhouseActive;
+    crazyhouseHand
+      ..clear()
+      ..addAll({
+        for (final e in other.crazyhouseHand.entries)
+          e.key: List<PieceType>.from(e.value),
+      });
+    duckChessActive = other.duckChessActive;
+    duckSquare = other.duckSquare;
+    duckNeedsPlacement = other.duckNeedsPlacement;
+    inkBlotActive = other.inkBlotActive;
+    inkBlotPlies
+      ..clear()
+      ..addAll(other.inkBlotPlies);
+    gravityWellSquare = other.gravityWellSquare;
+    gravityWellPlies = other.gravityWellPlies;
+    shadowPieceId = other.shadowPieceId;
+    shadowJumpAvailable = other.shadowJumpAvailable;
+    centerTaxActive = other.centerTaxActive;
+    centerTaxSkipNext
+      ..clear()
+      ..addAll(other.centerTaxSkipNext);
+    walkingCastleActive = other.walkingCastleActive;
+    invisibleHandForcedPieceId = other.invisibleHandForcedPieceId;
+    invisibleHandOwner = other.invisibleHandOwner;
+    invisibleHandPlies = other.invisibleHandPlies;
+    riverRank = other.riverRank;
+    riverDirection = other.riverDirection;
+    forbiddenFile = other.forbiddenFile;
+    forbiddenFilePlies = other.forbiddenFilePlies;
+    earnedRestSquare = other.earnedRestSquare;
+    earnedRestCaptures = other.earnedRestCaptures;
+    earnedRestBurned = other.earnedRestBurned;
+    moveStealPending = other.moveStealPending;
+    serialCaptureCounts
+      ..clear()
+      ..addAll(other.serialCaptureCounts);
+    snailTrailPieceId = other.snailTrailPieceId;
+    snailSlimePlies
+      ..clear()
+      ..addAll(other.snailSlimePlies);
+    disinfoFakeSquares
+      ..clear()
+      ..addAll(other.disinfoFakeSquares);
+    familyContractType = other.familyContractType;
+    familyContractOwner = other.familyContractOwner;
+    familyContractMoves = other.familyContractMoves;
+    kansasTyphoon = other.kansasTyphoon;
+    kansasTyphoonNext = other.kansasTyphoonNext;
+    kansasPlies = other.kansasPlies;
+    loneWarriorPieceId = other.loneWarriorPieceId;
+    twentyOneResolved = other.twentyOneResolved;
+
+    holyRandomActive = other.holyRandomActive;
+    zooShuffleApplied = other.zooShuffleApplied;
+    insatiableHungerActive = other.insatiableHungerActive;
+    queenHungerPlies
+      ..clear()
+      ..addAll(other.queenHungerPlies);
+    comeOnActive = other.comeOnActive;
+    comeOnConsumed = other.comeOnConsumed;
+    volcanoActive = other.volcanoActive;
+    volcanoSquares
+      ..clear()
+      ..addAll(other.volcanoSquares);
+    volcanoPliesLeft = other.volcanoPliesLeft;
+    restlessKingStart
+      ..clear()
+      ..addAll(other.restlessKingStart);
+    restlessKingsPliesLeft = other.restlessKingsPliesLeft;
+    ownHandsOwner = other.ownHandsOwner;
+    hereditaryEdictOwner = other.hereditaryEdictOwner;
+    warehouseActive = other.warehouseActive;
+    warehousePendingAbility = other.warehousePendingAbility;
+    warehousePendingType = other.warehousePendingType;
+    twilightInvisibleUntilPly
+      ..clear()
+      ..addAll(other.twilightInvisibleUntilPly);
+    twilightOwner = other.twilightOwner;
+    twilightOwnerPliesLeft = other.twilightOwnerPliesLeft;
+    gestureMirrorPending = other.gestureMirrorPending;
+    gestureMirrorRequiredLight = other.gestureMirrorRequiredLight;
+    blackMarkPieceId = other.blackMarkPieceId;
+    blackMarkChooser = other.blackMarkChooser;
+    archivistVisited
+      ..clear()
+      ..addAll({
+        for (final e in other.archivistVisited.entries)
+          e.key: Set<Square>.from(e.value),
+      });
+    archivistRecallUsed
+      ..clear()
+      ..addAll(other.archivistRecallUsed);
+    pairStepPartner
+      ..clear()
+      ..addAll(other.pairStepPartner);
+    mortarCooldown
+      ..clear()
+      ..addAll(other.mortarCooldown);
+    starvationPlies
+      ..clear()
+      ..addAll(other.starvationPlies);
+    pawnSeeds
+      ..clear()
+      ..addAll(other.pawnSeeds);
+    doubleLifeHidden
+      ..clear()
+      ..addAll(other.doubleLifeHidden);
+    doubleLifeUsed
+      ..clear()
+      ..addAll(other.doubleLifeUsed);
+    spotlightUnderFire
+      ..clear()
+      ..addAll(other.spotlightUnderFire);
+    fuseTimers
+      ..clear()
+      ..addAll(other.fuseTimers);
+    inkTrailBlocked
+      ..clear()
+      ..addAll(other.inkTrailBlocked);
+    donkeySwampSquares
+      ..clear()
+      ..addAll(other.donkeySwampSquares);
+    hoofSmokeSquares
+      ..clear()
+      ..addAll(other.hoofSmokeSquares);
+    nonAggressionLink
+      ..clear()
+      ..addAll(other.nonAggressionLink);
+    gallopContractRoute
+      ..clear()
+      ..addAll({
+        for (final e in other.gallopContractRoute.entries)
+          e.key: List<Square>.from(e.value),
+      });
+    gallopContractProgress
+      ..clear()
+      ..addAll(other.gallopContractProgress);
+    bucephalusCaptures
+      ..clear()
+      ..addAll(other.bucephalusCaptures);
+    bucephalusKingJumpUsed
+      ..clear()
+      ..addAll(other.bucephalusKingJumpUsed);
+    relicDeathSquare
+      ..clear()
+      ..addAll(other.relicDeathSquare);
+    relicPliesLeft
+      ..clear()
+      ..addAll(other.relicPliesLeft);
+    blindingSacristy
+      ..clear()
+      ..addAll(other.blindingSacristy);
+    blindingExemptPieceIds
+      ..clear()
+      ..addAll(other.blindingExemptPieceIds);
+    schismDiagSign
+      ..clear()
+      ..addAll(other.schismDiagSign);
+    sealRookId = other.sealRookId;
+    sealVictimId = other.sealVictimId;
+    illDriveRookId = other.illDriveRookId;
+    illDriveFrom = other.illDriveFrom;
+    illDriveTo = other.illDriveTo;
+    courtIntrigueQueenId = other.courtIntrigueQueenId;
+    courtIntrigueVictimId = other.courtIntrigueVictimId;
+
+    multiCellPicks
+      ..clear()
+      ..addAll(other.multiCellPicks);
+    multiCellNeeded = other.multiCellNeeded;
+    multiCellAbility = other.multiCellAbility;
+    multiCellSourceId = other.multiCellSourceId;
+    multiCellColor = other.multiCellColor;
+
+    rpsSessionActive = other.rpsSessionActive;
+    rpsPairs
+      ..clear()
+      ..addAll(other.rpsPairs);
+    rpsPairIndex = other.rpsPairIndex;
+    rpsLastA = other.rpsLastA;
+    rpsLastB = other.rpsLastB;
+    rpsRound = other.rpsRound;
+    rpsChooser = other.rpsChooser;
+    rpsResolved = other.rpsResolved;
+
+    tangledKnightBaseId = other.tangledKnightBaseId;
+    tangledFrom = other.tangledFrom;
+    tangledFirstDest = other.tangledFirstDest;
+    tangledCloneId = other.tangledCloneId;
+    tangledAwaitingKeep = other.tangledAwaitingKeep;
+    tangledAwaitingSecondDest = other.tangledAwaitingSecondDest;
+
+    customsKnightId = other.customsKnightId;
+    customsFrom = other.customsFrom;
+    customsTo = other.customsTo;
+    customsPaths
+      ..clear()
+      ..addAll(other.customsPaths.map((p) => List<Square>.from(p)));
+    awaitingCustomsPath = other.awaitingCustomsPath;
+    customsPathResolvedSkip = other.customsPathResolvedSkip;
+
+    doubleLifeArmed
+      ..clear()
+      ..addAll(other.doubleLifeArmed);
+    spotlightPromoId = other.spotlightPromoId;
+    kingGuardPieceIds
+      ..clear()
+      ..addAll(other.kingGuardPieceIds);
+    littleBrotherSkipIds
+      ..clear()
+      ..addAll(other.littleBrotherSkipIds);
+    archivistRecallArmed
+      ..clear()
+      ..addAll(other.archivistRecallArmed);
   }
 
   static String wallKey(Square a, Square b) {

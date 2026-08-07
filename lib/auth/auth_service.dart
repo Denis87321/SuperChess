@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../models/game_ability.dart';
+import '../l10n/models/game_ability.dart';
 import '../online/server_config.dart';
 
 const _prefsTokenKey = 'auth_token';
@@ -36,6 +36,8 @@ class HistoryGame {
     this.ratingBefore,
     this.ratingAfter,
     this.reason,
+    this.reasonDetail,
+    this.hasReplay = false,
   });
 
   final String gameId;
@@ -46,12 +48,32 @@ class HistoryGame {
   final int? ratingBefore;
   final int? ratingAfter;
   final String? reason;
+  final String? reasonDetail;
+  final bool hasReplay;
   final DateTime createdAt;
 
   int? get ratingDelta {
     if (ratingBefore == null || ratingAfter == null) return null;
     return ratingAfter! - ratingBefore!;
   }
+}
+
+class RivalryScore {
+  RivalryScore({
+    required this.opponentId,
+    required this.opponentName,
+    required this.wins,
+    required this.losses,
+    required this.draws,
+    required this.lastPlayed,
+  });
+
+  final String opponentId;
+  final String opponentName;
+  final int wins;
+  final int losses;
+  final int draws;
+  final DateTime lastPlayed;
 }
 
 class AuthService extends ChangeNotifier {
@@ -181,10 +203,65 @@ class AuthService extends ChangeNotifier {
             ratingBefore: g['ratingBefore'] as int?,
             ratingAfter: g['ratingAfter'] as int?,
             reason: g['reason'] as String?,
+            reasonDetail: g['reasonDetail'] as String?,
+            hasReplay: g['hasReplay'] == true,
             createdAt: DateTime.tryParse('${g['createdAt']}') ??
                 DateTime.fromMillisecondsSinceEpoch(0),
           ),
     ];
+  }
+
+  Future<List<RivalryScore>> fetchRivalries() async {
+    final token = _token;
+    if (token == null) return const [];
+    final response = await http.get(
+      Uri.parse('$_httpBase/user/rivalries'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Accept': 'application/json',
+      },
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw AuthException(
+        _errorMessage(response) ?? 'Request failed',
+        statusCode: response.statusCode,
+      );
+    }
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final list = body['rivalries'] as List<dynamic>? ?? const [];
+    return [
+      for (final r in list)
+        if (r is Map)
+          RivalryScore(
+            opponentId: '${r['opponentId']}',
+            opponentName: '${r['opponentName'] ?? 'Anonymous'}',
+            wins: r['wins'] as int? ?? 0,
+            losses: r['losses'] as int? ?? 0,
+            draws: r['draws'] as int? ?? 0,
+            lastPlayed: DateTime.tryParse('${r['lastPlayed']}') ??
+                DateTime.fromMillisecondsSinceEpoch(0),
+          ),
+    ];
+  }
+
+  Future<Map<String, dynamic>?> fetchMatchReplay(String gameId) async {
+    final token = _token;
+    if (token == null) return null;
+    final response = await http.get(
+      Uri.parse('$_httpBase/user/matches/$gameId'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Accept': 'application/json',
+      },
+    );
+    if (response.statusCode == 404) return null;
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw AuthException(
+        _errorMessage(response) ?? 'Request failed',
+        statusCode: response.statusCode,
+      );
+    }
+    return jsonDecode(response.body) as Map<String, dynamic>;
   }
 
   Future<void> reportGameResult({
@@ -192,7 +269,10 @@ class AuthService extends ChangeNotifier {
     required String color,
     required String? winner,
     required String? reason,
+    String? reasonDetail,
     required List<String> abilities,
+    List<String>? opponentAbilities,
+    List<Map<String, dynamic>>? plies,
     String? opponentName,
   }) async {
     final token = _token;
@@ -209,7 +289,10 @@ class AuthService extends ChangeNotifier {
         'color': color,
         'winner': winner,
         'reason': reason,
+        'reasonDetail': reasonDetail,
         'abilities': abilities,
+        'opponentAbilities': opponentAbilities ?? const [],
+        'plies': plies ?? const [],
         'opponentName': opponentName,
       }),
     );

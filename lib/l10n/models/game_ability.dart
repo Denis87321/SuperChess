@@ -64,6 +64,39 @@ enum GameAbility {
   boardFrostMap,
   boardScorchingSun,
   boardTurncoats,
+  boardInkBlot,
+  boardGravityWell,
+  boardIdealSymmetry,
+  boardShadowRight,
+  boardCenterTax,
+  boardWalkingCastle,
+  boardInvisibleHand,
+  boardRiver,
+  boardForbiddenLetter,
+  boardEarnedRest,
+  boardRestlessKings,
+
+  modeTimeZone,
+  modeMateVeto,
+  modeDebtPit,
+  modeWasteland,
+  modeBus,
+  modeShopToken,
+  modeSeasons,
+  modeBloodFeud,
+  modePrioritySetup,
+  modeBrokenPerspective,
+  modeCallOf22,
+  modeKriegspiel,
+  modeKingCenter,
+  modeAtomic,
+  modeCrazyhouse,
+  modeDuckChess,
+  modeHolyRandom,
+  modeZooShuffle,
+  modeInsatiableHunger,
+  modeComeOn,
+  modeVolcano,
 
   pawnSideways,
   pawnInverted,
@@ -84,6 +117,20 @@ enum GameAbility {
   pawnAvengeMe,
   pawnCaravan,
   pawnFaceControl,
+  pawnArchivist,
+  pawnPairStep,
+  pawnFarsight,
+  pawnMortar,
+  pawnSapper,
+  pawnHereditaryEdict,
+  pawnInfantryShadow,
+  pawnStarvation,
+  pawnSeed,
+  pawnRockPaperScissors,
+  pawnDoubleLife,
+  pawnLittleBrother,
+  pawnSpotlight,
+  pawnFuse,
 
   knightRearing,
   knightLongJump,
@@ -106,6 +153,16 @@ enum GameAbility {
   knightRideMe,
   knightMagicHooves,
   knightSignalFire,
+  knightMaskSwap,
+  knightNonAggression,
+  knightKingGuard,
+  knightNightWatch,
+  knightGallopContract,
+  knightTangledTrail,
+  knightCustomsPath,
+  knightBucephalus,
+  knightHoofSmoke,
+  knightDonkey,
 
   bishopHopAlly,
   bishopColorChaos,
@@ -124,6 +181,19 @@ enum GameAbility {
   bishopGlassCeiling,
   bishopElusive,
   bishopSignalFire,
+  bishopMaskSwap,
+  bishopNonAggression,
+  bishopKingGuard,
+  bishopInkTrail,
+  bishopGanesha,
+  bishopHeretic,
+  bishopRelicPower,
+  bishopBlindingSacristy,
+  bishopLayman,
+  bishopProcession,
+  bishopSchism,
+  bishopLambs,
+  bishopCartographer,
 
   rookHopAlly,
   rookRam,
@@ -137,6 +207,9 @@ enum GameAbility {
   rookFerry,
   rookSignalTower,
   rookSignalFire,
+  rookSeal,
+  rookIllDrive,
+  rookCannotHide,
 
   queenKnightStep,
   queenHopAlly,
@@ -147,6 +220,8 @@ enum GameAbility {
   queenDelayedSentence,
   queenTrophyEmbargo,
   queenYouShallNotPass,
+  queenCourtIntrigue,
+  queenFatherDream,
 
   kingRoyalDecree,
   kingExtraStep,
@@ -158,6 +233,7 @@ enum GameAbility {
   kingPrisonerExchange,
   kingRemoveEnemyMod,
   kingAssemblyHall,
+  kingOwnHands,
 
   randomShift,
   randomCalm,
@@ -190,6 +266,18 @@ enum GameAbility {
   randomSuicideCapture,
   randomMeatGrinder,
   randomQuicksand,
+  randomMoveSteal,
+  randomSerialManiac,
+  randomSnailTrail,
+  randomDisinfo,
+  randomFamilyContract,
+  randomKansasHurricanes,
+  randomLoneWarrior,
+  randomTwentyOne,
+  randomWarehouse,
+  randomTwilightEclipse,
+  randomGestureMirror,
+  randomBlackMark,
 }
 
 extension GameAbilityInfo on GameAbility {
@@ -202,7 +290,6 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.boardLavaRank:
       case GameAbility.boardExtraRank:
       case GameAbility.boardExtraFile:
-      case GameAbility.boardFogOfWar:
       case GameAbility.boardDoubleStart:
       case GameAbility.boardSprint:
       case GameAbility.boardZebras:
@@ -251,11 +338,44 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.boardCollectiveMyopia:
       case GameAbility.boardTerritoryExpand:
       case GameAbility.boardScorchingSun:
+      case GameAbility.boardInkBlot:
+      case GameAbility.boardGravityWell:
+      case GameAbility.boardIdealSymmetry:
+      case GameAbility.boardShadowRight:
+      case GameAbility.boardCenterTax:
+      case GameAbility.boardWalkingCastle:
+      case GameAbility.boardInvisibleHand:
+      case GameAbility.boardRiver:
+      case GameAbility.boardForbiddenLetter:
+      case GameAbility.boardEarnedRest:
+      case GameAbility.boardRestlessKings:
         return AbilityGroup.board;
       case GameAbility.boardTide:
       case GameAbility.boardMarseillesChess:
       case GameAbility.boardTurncoats:
       case GameAbility.boardFrostMap:
+      case GameAbility.boardFogOfWar:
+      case GameAbility.modeTimeZone:
+      case GameAbility.modeMateVeto:
+      case GameAbility.modeDebtPit:
+      case GameAbility.modeWasteland:
+      case GameAbility.modeBus:
+      case GameAbility.modeShopToken:
+      case GameAbility.modeSeasons:
+      case GameAbility.modeBloodFeud:
+      case GameAbility.modePrioritySetup:
+      case GameAbility.modeBrokenPerspective:
+      case GameAbility.modeCallOf22:
+      case GameAbility.modeKriegspiel:
+      case GameAbility.modeKingCenter:
+      case GameAbility.modeAtomic:
+      case GameAbility.modeCrazyhouse:
+      case GameAbility.modeDuckChess:
+      case GameAbility.modeHolyRandom:
+      case GameAbility.modeZooShuffle:
+      case GameAbility.modeInsatiableHunger:
+      case GameAbility.modeComeOn:
+      case GameAbility.modeVolcano:
         return AbilityGroup.mode;
       case GameAbility.pawnSideways:
       case GameAbility.pawnInverted:
@@ -276,6 +396,20 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.pawnAvengeMe:
       case GameAbility.pawnCaravan:
       case GameAbility.pawnFaceControl:
+      case GameAbility.pawnArchivist:
+      case GameAbility.pawnPairStep:
+      case GameAbility.pawnFarsight:
+      case GameAbility.pawnMortar:
+      case GameAbility.pawnSapper:
+      case GameAbility.pawnHereditaryEdict:
+      case GameAbility.pawnInfantryShadow:
+      case GameAbility.pawnStarvation:
+      case GameAbility.pawnSeed:
+      case GameAbility.pawnRockPaperScissors:
+      case GameAbility.pawnDoubleLife:
+      case GameAbility.pawnLittleBrother:
+      case GameAbility.pawnSpotlight:
+      case GameAbility.pawnFuse:
         return AbilityGroup.pawn;
       case GameAbility.knightRearing:
       case GameAbility.knightLongJump:
@@ -298,6 +432,16 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.knightRideMe:
       case GameAbility.knightMagicHooves:
       case GameAbility.knightSignalFire:
+      case GameAbility.knightMaskSwap:
+      case GameAbility.knightNonAggression:
+      case GameAbility.knightKingGuard:
+      case GameAbility.knightNightWatch:
+      case GameAbility.knightGallopContract:
+      case GameAbility.knightTangledTrail:
+      case GameAbility.knightCustomsPath:
+      case GameAbility.knightBucephalus:
+      case GameAbility.knightHoofSmoke:
+      case GameAbility.knightDonkey:
         return AbilityGroup.knight;
       case GameAbility.bishopHopAlly:
       case GameAbility.bishopColorChaos:
@@ -316,6 +460,19 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.bishopGlassCeiling:
       case GameAbility.bishopElusive:
       case GameAbility.bishopSignalFire:
+      case GameAbility.bishopMaskSwap:
+      case GameAbility.bishopNonAggression:
+      case GameAbility.bishopKingGuard:
+      case GameAbility.bishopInkTrail:
+      case GameAbility.bishopGanesha:
+      case GameAbility.bishopHeretic:
+      case GameAbility.bishopRelicPower:
+      case GameAbility.bishopBlindingSacristy:
+      case GameAbility.bishopLayman:
+      case GameAbility.bishopProcession:
+      case GameAbility.bishopSchism:
+      case GameAbility.bishopLambs:
+      case GameAbility.bishopCartographer:
         return AbilityGroup.bishop;
       case GameAbility.rookHopAlly:
       case GameAbility.rookRam:
@@ -329,6 +486,9 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.rookFerry:
       case GameAbility.rookSignalTower:
       case GameAbility.rookSignalFire:
+      case GameAbility.rookSeal:
+      case GameAbility.rookIllDrive:
+      case GameAbility.rookCannotHide:
         return AbilityGroup.rook;
       case GameAbility.queenKnightStep:
       case GameAbility.queenHopAlly:
@@ -339,6 +499,8 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.queenDelayedSentence:
       case GameAbility.queenTrophyEmbargo:
       case GameAbility.queenYouShallNotPass:
+      case GameAbility.queenCourtIntrigue:
+      case GameAbility.queenFatherDream:
         return AbilityGroup.queen;
       case GameAbility.kingRoyalDecree:
       case GameAbility.kingExtraStep:
@@ -350,6 +512,7 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.kingPrisonerExchange:
       case GameAbility.kingRemoveEnemyMod:
       case GameAbility.kingAssemblyHall:
+      case GameAbility.kingOwnHands:
         return AbilityGroup.king;
       case GameAbility.randomShift:
       case GameAbility.randomCalm:
@@ -382,6 +545,18 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.randomSuicideCapture:
       case GameAbility.randomMeatGrinder:
       case GameAbility.randomQuicksand:
+      case GameAbility.randomMoveSteal:
+      case GameAbility.randomSerialManiac:
+      case GameAbility.randomSnailTrail:
+      case GameAbility.randomDisinfo:
+      case GameAbility.randomFamilyContract:
+      case GameAbility.randomKansasHurricanes:
+      case GameAbility.randomLoneWarrior:
+      case GameAbility.randomTwentyOne:
+      case GameAbility.randomWarehouse:
+      case GameAbility.randomTwilightEclipse:
+      case GameAbility.randomGestureMirror:
+      case GameAbility.randomBlackMark:
         return AbilityGroup.random;
     }
   }
@@ -508,6 +683,58 @@ extension GameAbilityInfo on GameAbility {
         return 'Палящее солнце';
       case GameAbility.boardTurncoats:
         return 'Отступники';
+      case GameAbility.boardInkBlot:
+        return 'Чернильное пятно';
+      case GameAbility.boardGravityWell:
+        return 'Гравитационный колодец';
+      case GameAbility.boardIdealSymmetry:
+        return 'Идеальная симметрия';
+      case GameAbility.boardShadowRight:
+        return 'Право тени';
+      case GameAbility.boardCenterTax:
+        return 'Налог на центр';
+      case GameAbility.boardWalkingCastle:
+        return 'Ходячий замок';
+      case GameAbility.boardInvisibleHand:
+        return 'Невидимая рука';
+      case GameAbility.boardRiver:
+        return 'Река';
+      case GameAbility.boardForbiddenLetter:
+        return 'Запретная буква';
+      case GameAbility.boardEarnedRest:
+        return 'Заслуженный отдых';
+      case GameAbility.modeTimeZone:
+        return 'Часовая зона';
+      case GameAbility.modeMateVeto:
+        return '1';
+      case GameAbility.modeDebtPit:
+        return 'Долговая яма';
+      case GameAbility.modeWasteland:
+        return 'Бесплодные земли';
+      case GameAbility.modeBus:
+        return 'Автобус';
+      case GameAbility.modeShopToken:
+        return '2';
+      case GameAbility.modeSeasons:
+        return 'Времена года';
+      case GameAbility.modeBloodFeud:
+        return 'Кровная вражда';
+      case GameAbility.modePrioritySetup:
+        return 'Расстановка приоритетов';
+      case GameAbility.modeBrokenPerspective:
+        return 'Сломанная перспектива';
+      case GameAbility.modeCallOf22:
+        return 'Призыв 22-ого года';
+      case GameAbility.modeKriegspiel:
+        return 'Кригшпиль';
+      case GameAbility.modeKingCenter:
+        return '3';
+      case GameAbility.modeAtomic:
+        return 'Атомные шахматы';
+      case GameAbility.modeCrazyhouse:
+        return 'Crazyhouse';
+      case GameAbility.modeDuckChess:
+        return 'Утиные шахматы';
       case GameAbility.pawnSideways:
         return 'Карцинизация';
       case GameAbility.pawnInverted:
@@ -740,6 +967,128 @@ extension GameAbilityInfo on GameAbility {
         return 'Мясорубка';
       case GameAbility.randomQuicksand:
         return 'Зыбучие пески';
+      case GameAbility.randomMoveSteal:
+        return 'Кража хода';
+      case GameAbility.randomSerialManiac:
+        return 'Серийный маньяк';
+      case GameAbility.randomSnailTrail:
+        return 'След улитки';
+      case GameAbility.randomDisinfo:
+        return 'Дезинформация';
+      case GameAbility.randomFamilyContract:
+        return 'Семейный подряд';
+      case GameAbility.randomKansasHurricanes:
+        return 'Ураганы в Канзасе';
+      case GameAbility.randomLoneWarrior:
+        return 'Один в поле воин';
+      case GameAbility.randomTwentyOne:
+        return 'Двадцать одно';
+      case GameAbility.pawnArchivist:
+        return 'Архивариус';
+      case GameAbility.pawnPairStep:
+        return 'Парный шаг';
+      case GameAbility.pawnFarsight:
+        return 'Дальнозоркость';
+      case GameAbility.pawnMortar:
+        return 'Миномет';
+      case GameAbility.pawnSapper:
+        return 'Сапёр';
+      case GameAbility.pawnHereditaryEdict:
+        return 'Наследный указ';
+      case GameAbility.pawnInfantryShadow:
+        return 'Тень пехотинца';
+      case GameAbility.pawnStarvation:
+        return 'Голодовка';
+      case GameAbility.pawnSeed:
+        return 'Семечко';
+      case GameAbility.pawnRockPaperScissors:
+        return 'Цу-е-фа';
+      case GameAbility.pawnDoubleLife:
+        return 'Двойная жизнь';
+      case GameAbility.pawnLittleBrother:
+        return 'Маленький брат';
+      case GameAbility.pawnSpotlight:
+        return 'Под прожекторами';
+      case GameAbility.pawnFuse:
+        return 'Фитиль';
+      case GameAbility.knightMaskSwap:
+        return 'Смена масок';
+      case GameAbility.bishopMaskSwap:
+        return 'Смена масок 1';
+      case GameAbility.knightNonAggression:
+        return 'Пакт о ненападении';
+      case GameAbility.bishopNonAggression:
+        return 'Пакт о ненападении 1';
+      case GameAbility.knightKingGuard:
+        return 'Гвардия короля';
+      case GameAbility.bishopKingGuard:
+        return 'Гвардия короля 1';
+      case GameAbility.knightNightWatch:
+        return 'Ночной дозор коня';
+      case GameAbility.knightGallopContract:
+        return 'Контракт галопа';
+      case GameAbility.knightTangledTrail:
+        return 'Запутанный след';
+      case GameAbility.knightCustomsPath:
+        return 'Таможенный досмотр';
+      case GameAbility.knightBucephalus:
+        return 'Буцефал';
+      case GameAbility.knightHoofSmoke:
+        return 'Дым из под копыт';
+      case GameAbility.knightDonkey:
+        return 'Осёл';
+      case GameAbility.bishopInkTrail:
+        return 'Чернильный след';
+      case GameAbility.bishopGanesha:
+        return 'Ганеша';
+      case GameAbility.bishopHeretic:
+        return 'Еретик';
+      case GameAbility.bishopRelicPower:
+        return 'Сила мощей';
+      case GameAbility.bishopBlindingSacristy:
+        return 'Слепящая ризница';
+      case GameAbility.bishopLayman:
+        return 'Мирянин';
+      case GameAbility.bishopProcession:
+        return 'Процессия';
+      case GameAbility.bishopSchism:
+        return 'Церковный раскол';
+      case GameAbility.bishopLambs:
+        return 'Агнцы';
+      case GameAbility.bishopCartographer:
+        return 'Картограф';
+      case GameAbility.rookSeal:
+        return 'Пломба';
+      case GameAbility.rookIllDrive:
+        return 'Довезу';
+      case GameAbility.rookCannotHide:
+        return 'Не скроешь';
+      case GameAbility.queenCourtIntrigue:
+        return 'Придворные интриги';
+      case GameAbility.queenFatherDream:
+        return 'Которая и не снилась моему отцу';
+      case GameAbility.kingOwnHands:
+        return 'Своими руками';
+      case GameAbility.modeHolyRandom:
+        return 'Святой рандом';
+      case GameAbility.modeZooShuffle:
+        return 'Перетасовка в зоопарке';
+      case GameAbility.modeInsatiableHunger:
+        return 'Неутолимый голод';
+      case GameAbility.modeComeOn:
+        return 'Давай, давай';
+      case GameAbility.modeVolcano:
+        return 'Вулкан';
+      case GameAbility.boardRestlessKings:
+        return 'Не сидится на месте';
+      case GameAbility.randomWarehouse:
+        return 'Склад';
+      case GameAbility.randomTwilightEclipse:
+        return 'Сумерки. Сага. Затмение';
+      case GameAbility.randomGestureMirror:
+        return 'Зеркало жестов';
+      case GameAbility.randomBlackMark:
+        return 'Чёрная метка';
     }
   }
 
@@ -760,7 +1109,7 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.boardExtraFile:
         return 'Появляется новая вертикаль ?';
       case GameAbility.boardFogOfWar:
-        return 'Видны только клетки вокруг ваших фигур и клетки, на которые они могут сходить';
+        return 'Шахматы втёмную: видны свои фигуры и поля их хода/атаки. Цель — взять короля. Король может ходить под удар. В логе ходов виден только предыдущий полный ход';
       case GameAbility.boardTide:
         return 'Ваши пешки выдвигаются вперёд и ходят только на 1 клетку вперёд';
       case GameAbility.boardDoubleStart:
@@ -784,7 +1133,7 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.boardPawnFront:
         return 'Все ваши пешки продвигаются на 1 клетку вперёд, если путь свободен';
       case GameAbility.boardCavalry:
-        return 'Все ваши пешки на 3 хода становятся конями, затем снова превращаются в пешки';
+        return 'Все ваши пешки на 3 полухода становятся конями (могут ходить и брать как кони), затем снова превращаются в пешки';
       case GameAbility.boardMirror:
         return 'Левая и правая границы доски соединяются';
       case GameAbility.boardGhostCells:
@@ -846,7 +1195,7 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.boardArchitect:
         return 'Между случайными соседними клетками появляются 3–8 стен: через них нельзя ходить и атаковать';
       case GameAbility.boardBigAssortment:
-        return 'До конца игры вы выбираете из 4 модов';
+        return 'Только вы до конца игры выбираете из 4 модов в волне; соперник по-прежнему из 3';
       case GameAbility.boardBlindSpot:
         return 'Моды соперника скрыты знаками вопроса; свои видны как обычно';
       case GameAbility.boardOnlyEqualsKill:
@@ -869,6 +1218,58 @@ extension GameAbilityInfo on GameAbility {
         return 'Солнце палит 3–6 клеток (меняет каждые 5 ходов). Нагрев 0→3: на 3 фигура погибает. Вне солнца нагрев падает';
       case GameAbility.boardTurncoats:
         return 'У каждого игрока один шпион среди лёгких фигур. Вы видите вражеского шпиона и можете сходить им, раскрыв его на свою сторону. Шпион не может поставить мат «своему» королю';
+      case GameAbility.boardInkBlot:
+        return 'После взятия на клетке остаётся пятно на 4 хода: фигуры на пятне не могут давать шах.';
+      case GameAbility.boardGravityWell:
+        return 'Выберите пустую клетку-колодец. Каждые 6 полуходов фигуры в радиусе 2 сдвигаются к нему на 1, если свободно (короли нет).';
+      case GameAbility.boardIdealSymmetry:
+        return 'Доска стремится к зеркальной симметрии относительно центра: несимметричные пары клеток периодически выравниваются.';
+      case GameAbility.boardShadowRight:
+        return 'У каждой вашей фигуры есть «тень» — клетка, симметричная относительно центра. Раз за партию фигура может шагнуть в свою тень вместо хода, если та свободна.';
+      case GameAbility.boardCenterTax:
+        return 'Вход на d4/d5/e4/e5 стоит налог: эта фигура не берёт на своём следующем ходе.';
+      case GameAbility.boardWalkingCastle:
+        return 'На доске появляются стены как у Архитектора, но каждые 5 ходов каждая стена сдвигается на 1 ортогонально, если путь свободен.';
+      case GameAbility.boardInvisibleHand:
+        return 'Раз в 8 ваших ходов соперник выбирает одну вашу фигуру (не король): следующий ваш ход этой фигурой обязателен, если есть легальный.';
+      case GameAbility.boardRiver:
+        return 'Выберите горизонталь-реку с двумя бродами. Переходить можно только через броды; оставаться на реке нельзя.';
+      case GameAbility.boardForbiddenLetter:
+        return 'Случайная вертикаль запрещена для входа на 6 ходов всем, кроме королей. Уже стоящие фигуры могут уйти, но не войти обратно.';
+      case GameAbility.boardEarnedRest:
+        return 'Фигура после серии тихих ходов может объявить отдых: один полуход она не ходит и её нельзя взять.';
+      case GameAbility.modeTimeZone:
+        return 'Каждый выбирает «час»: нечётные или чётные полуходы. В «чужой» час ваши фигуры ходят максимум на 1 клетку своим обычным способом.';
+      case GameAbility.modeMateVeto:
+        return 'Тайно выберите вражескую фигуру — она не может поставить мат (атаковать клетку короля можно).';
+      case GameAbility.modeDebtPit:
+        return 'Взятия дороже пешки копят долг. Ход без взятия снижает долг на 1; при долге 6 — проигрыш.';
+      case GameAbility.modeWasteland:
+        return 'Свободные клетки после ухода остаются «вашими» 3 полухода: враг при входе пропускает следующий ход этой фигурой.';
+      case GameAbility.modeBus:
+        return 'Пат выигрывает тот, у кого меньше фигур на доске.';
+      case GameAbility.modeShopToken:
+        return 'Раз за партию можно «продать» свою не-короля фигуру за жетон. Жетон тратится на отмену одного вашего хода (takeback).';
+      case GameAbility.modeSeasons:
+        return 'Цикл из 4 сезонов по 6 полных ходов: весна усиливает пешки, лето — слонов/коней, осень ограничивает ладьи, зима — коней по цвету.';
+      case GameAbility.modeBloodFeud:
+        return 'Если после вашего взятия соперник не ответил взятием за 2 полухода, вспыхивает вражда: вы получаете бонусный мод.';
+      case GameAbility.modePrioritySetup:
+        return 'На доске отмечаются 4 приоритетные клетки (по 2 на сторону). Кто первым займёт все свои — побеждает.';
+      case GameAbility.modeBrokenPerspective:
+        return 'Пешки превращаются на 7-й горизонтали у белых и на 2-й у чёрных.';
+      case GameAbility.modeCallOf22:
+        return 'Доска расширяется до 10×8; на крайних вертикалях Z и I появляются дополнительные пешки.';
+      case GameAbility.modeKriegspiel:
+        return 'Видны только свои фигуры. Ходы пробуются вслепую; объявляются взятия, шахи и невозможность хода.';
+      case GameAbility.modeKingCenter:
+        return 'Первый король, вставший на d4, d5, e4 или e5, побеждает.';
+      case GameAbility.modeAtomic:
+        return 'При взятии взрывается область 3×3 (пешки не взрываются). Король в зоне взрыва — поражение его стороны.';
+      case GameAbility.modeCrazyhouse:
+        return 'Взятые фигуры попадают в руку и могут быть сброшены на свободную клетку вместо хода (пешки — не на крайние горизонтали).';
+      case GameAbility.modeDuckChess:
+        return 'После каждого хода нужно переставить «утку» на свободную клетку. Через утку ходить и брать нельзя — она блокирует клетку.';
       case GameAbility.pawnSideways:
         return 'Выбранная пешка может сходить на 1 клетку вбок';
       case GameAbility.pawnInverted:
@@ -1022,7 +1423,7 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.kingRoyalDecree:
         return 'Выбранный король и ладья меняются местами, даже если между ними есть фигуры';
       case GameAbility.kingExtraStep:
-        return 'Выбранный король может ходить на 2 клетки в любую сторону';
+        return 'Ваш король может ходить на 2 клетки в любую сторону (например, с e1 на e3)';
       case GameAbility.kingShield:
         return 'Один раз выбранный король избегает мата, телепортируясь на случайную свободную клетку';
       case GameAbility.kingAura:
@@ -1101,6 +1502,128 @@ extension GameAbilityInfo on GameAbility {
         return 'Следующий ход обоих игроков должен быть взятием, если взятие возможно';
       case GameAbility.randomQuicksand:
         return '2–5 скрытых клеток — зыбучие пески. Вставшая фигура не ходит 2–5 ходов; клетка раскрывается навсегда';
+      case GameAbility.randomMoveSteal:
+        return 'Раз за партию вместо своего хода объявите «кражу»: соперник ходит, но фигуру выбираете вы. Затем ваш ход пропускается.';
+      case GameAbility.randomSerialManiac:
+        return 'Третье взятие одной и той же вашей фигурой за партию превращает её в пешку (кроме короля).';
+      case GameAbility.randomSnailTrail:
+        return 'Фигура оставляет слизь на клетке ухода на 2 хода: дальнобойные через слизь ходят максимум на 1 клетку.';
+      case GameAbility.randomDisinfo:
+        return 'Вы получаете 3 ложные метки клеток: соперник видит их как мины, лаву или стены, но они фейк до взаимодействия.';
+      case GameAbility.randomFamilyContract:
+        return 'Все ваши фигуры одного случайного типа копят общий счётчик ходов. На 6-м — бесплатный ход любой фигурой этого типа без взятия.';
+      case GameAbility.randomKansasHurricanes:
+        return 'Каждая вертикаль получает ветер ←/→ на несколько ходов: пешки после хода вперёд сносятся на 1 по ветру, если свободно.';
+      case GameAbility.randomLoneWarrior:
+        return 'Фигура (кроме короля) может брать только если хотя бы одна союзная фигура тоже атакует клетку жертвы.';
+      case GameAbility.randomTwentyOne:
+        return 'Взятия копят очки по ценности фигур. Ровно 21 — бонусный мод; перебор — штраф: пропуск хода или сброс счёта.';
+      case GameAbility.pawnArchivist:
+        return 'Игрок выбирает одну из своих пешек. Она помнит все клетки, на которые наступала. Раз за партию можно вернуться на одну из них, если клетка свободна.';
+      case GameAbility.pawnPairStep:
+        return 'Выбранная пешка выбирает союзницу-пешку на соседней клетке: пока обе живы, ход одной может сдвинуть обе вперёд на 1, если путь чист.';
+      case GameAbility.pawnFarsight:
+        return 'Выбранная пешка ходит только на 2 клетки вперёд и бьёт на 2 клетки по диагонали вперёд. Перепрыгивать и бить через фигуры нельзя.';
+      case GameAbility.pawnMortar:
+        return 'Выбранная пешка раз в 3 своих хода стреляет на 2 клетки прямо перед собой: фигура там уничтожается. Таймер виден обоим.';
+      case GameAbility.pawnSapper:
+        return 'Выбранная пешка обезвреживает скрытую ловушку при входе на клетку и сама не страдает. Появляется только при активных ловушках.';
+      case GameAbility.pawnHereditaryEdict:
+        return 'При превращении пешки соперник может выбрать только тип фигуры, которого у него сейчас нет на доске.';
+      case GameAbility.pawnInfantryShadow:
+        return 'Пока выбранная пешка жива, клетка прямо за ней (к вашему краю) — укрытие: союзная фигура там не берётся пешкой.';
+      case GameAbility.pawnStarvation:
+        return 'Игрок выбирает вражескую пешку. Если она не ест 6 полуходов владельца — исчезает. Счётчик виден обоим; взятие сбрасывает его.';
+      case GameAbility.pawnSeed:
+        return 'После смерти выбранной пешки на клетке остаётся семечко: через 3 полных хода, если клетка свободна, снова ваша пешка без модов.';
+      case GameAbility.pawnRockPaperScissors:
+        return 'Появляется, если на доске есть взаимно блокирующие пешки. Игрок выбирает такую пару: камень-ножницы-бумага до победы; проигравшая гибнет. Выбор виден обоим.';
+      case GameAbility.pawnDoubleLife:
+        return 'У выбранной пешки скрытый второй тип (конь или слон). Раз за партию на один ваш ход она ходит как он, затем снова пешка. Тип тайный для врага.';
+      case GameAbility.pawnLittleBrother:
+        return 'Если прямо перед выбранной пешкой стоит вражеская не-король фигура, та пропускает следующий ход.';
+      case GameAbility.pawnSpotlight:
+        return 'Если выбранная пешка 6 ходов подряд под атакой вражеских пешек и не съедена, она превращается в лёгкую фигуру на ваш выбор.';
+      case GameAbility.pawnFuse:
+        return 'Выбранная пешка ставит фитиль на клетке ухода: через 2 хода клетка взрывается (не-короли). Видно обоим.';
+      case GameAbility.knightMaskSwap:
+        return 'Выбранная лёгкая фигура после каждого своего хода чередует тип: конь ↔ слон.';
+      case GameAbility.bishopMaskSwap:
+        return 'Выбранная лёгкая фигура после каждого своего хода чередует тип: слон ↔ конь.';
+      case GameAbility.knightNonAggression:
+        return 'Выберите свою и вражескую лёгкие фигуры: они не атакуют друг друга, но бьют остальных и их бьют остальные.';
+      case GameAbility.bishopNonAggression:
+        return 'Выберите свою и вражескую лёгкие фигуры: они не атакуют друг друга, но бьют остальных и их бьют остальные.';
+      case GameAbility.knightKingGuard:
+        return 'При шахе выбранная лёгкая фигура автоматически съедает шахующую или закрывается, если может — это не тратит ваш ход.';
+      case GameAbility.bishopKingGuard:
+        return 'При шахе выбранная лёгкая фигура автоматически съедает шахующую или закрывается, если может — это не тратит ваш ход.';
+      case GameAbility.knightNightWatch:
+        return 'Только при тумане войны: выбранный конь видит всё в радиусе 2 клеток сквозь туман.';
+      case GameAbility.knightGallopContract:
+        return 'Объявите 3 клетки маршрута. Если выбранный конь проходит их по порядку, гибнет случайная вражеская не-король фигура.';
+      case GameAbility.knightTangledTrail:
+        return 'Выбранный конь на один ход раздваивается: выбираются 2 клетки назначения. На следующем ходу оставляете одного коня.';
+      case GameAbility.knightCustomsPath:
+        return 'При ходе конём выбираете один из двух маршрутов прыжка; с врагов на маршруте снимается случайный мод. Маршрут виден как линия.';
+      case GameAbility.knightBucephalus:
+        return 'Если выбранный конь съест 3 вражеские фигуры, ваш король один раз за партию сможет сходить как конь.';
+      case GameAbility.knightHoofSmoke:
+        return 'Все клетки, на которых отныне стоит выбранный конь, покрыты туманом для обоих игроков.';
+      case GameAbility.knightDonkey:
+        return 'Клетки, которые посетит выбранный конь, увязывают фигуру на 1 ход (как «болото»).';
+      case GameAbility.bishopInkTrail:
+        return 'После хода выбранным слоном по клеткам пути 1 ход вражеские пешки не могут туда встать.';
+      case GameAbility.bishopGanesha:
+        return 'После хода выбранным слоном он становится ладьёй, затем снова слоном — и так чередуется.';
+      case GameAbility.bishopHeretic:
+        return 'Только если ваших фигур меньше, чем у врага: выбранный слон распадается на 4 пешки на вашей половине поля.';
+      case GameAbility.bishopRelicPower:
+        return 'Если выбранного слона взяли, у вас 3 полухода: встаньте на клетку смерти и уйдите — слон возродится без модов.';
+      case GameAbility.bishopBlindingSacristy:
+        return 'Взятие выбранным слоном ослепляет клетку: следующий, кто туда встанет (не этот слон), не бьёт 1 ход.';
+      case GameAbility.bishopLayman:
+        return 'Выбранный слон не бьёт пешек; пешки не бьют его.';
+      case GameAbility.bishopProcession:
+        return 'Ход выбранного слона может сдвинуть одну союзную пешку на диагонали на 1 вдоль того же луча, если свободно.';
+      case GameAbility.bishopSchism:
+        return 'Выбранный слон делится на 2 полуслона: каждый ходит только по одной из двух диагоналей.';
+      case GameAbility.bishopLambs:
+        return 'Выбранный слон защищает все фигуры в радиусе 1 от катаклизмов (например, метеоритного дождя).';
+      case GameAbility.bishopCartographer:
+        return 'Только при тумане войны: слон отмечает клетку на своей диагонали — с неё навсегда снимается туман для вас.';
+      case GameAbility.rookSeal:
+        return 'Выбранная ладья выбирает атакуемую вражескую не-король фигуру: та не ходит, пока ладья жива или пока ладья не сделала ход.';
+      case GameAbility.rookIllDrive:
+        return 'Когда выбранная ладья в следующий раз сходит и затем уйдёт с конечной клетки, между стартом и финишем образуется портал.';
+      case GameAbility.rookCannotHide:
+        return 'Только если соперник скрывает моды: выбранная ладья раскрывает моды фигур на своей горизонтали и вертикали.';
+      case GameAbility.queenCourtIntrigue:
+        return 'Выбранный ферзь помечает вражескую не-король фигуру вне радиуса 2 от её короля: пока ферзь жив, она не может подойти к своему королю ближе чем на 2.';
+      case GameAbility.queenFatherDream:
+        return 'Если выбранный ферзь получит 5 усиливающих модов, вы сразу побеждаете.';
+      case GameAbility.kingOwnHands:
+        return 'Если ваш король окажется в радиусе 2 клеток от вражеского короля — вы побеждаете. Мод может быть только у одного игрока.';
+      case GameAbility.modeHolyRandom:
+        return 'Актуален для обоих. После хода фигура с вероятностью 25% меняет тип (тот же цвет). Король не меняется и никто не становится королём.';
+      case GameAbility.modeZooShuffle:
+        return 'У каждого игрока кони и слоны меняются местами: кони на c и f, слоны на b и g.';
+      case GameAbility.modeInsatiableHunger:
+        return 'Ферзи обоих игроков должны брать фигуру каждые 5 своих ходов, иначе погибают. Можно брать и своих, кроме короля.';
+      case GameAbility.modeComeOn:
+        return 'Фигура, которая первой на доске сделает взятие, сразу получает мод вне зачёта.';
+      case GameAbility.modeVolcano:
+        return 'Каждые 2 полных хода на 2 видимых случайных клетках взрывается вулкан, уничтожая фигуру. Затем выбираются новые клетки.';
+      case GameAbility.boardRestlessKings:
+        return 'В течение 3 следующих полуходов короли обоих игроков должны покинуть свои клетки, иначе проигрывают.';
+      case GameAbility.randomWarehouse:
+        return 'Следующий мод, который соперник потеряет с фигуры, вы можете передать своей фигуре того же типа (если есть); иначе ждёте подходящий.';
+      case GameAbility.randomTwilightEclipse:
+        return 'Случайные 4 ваши фигуры становятся невидимыми для противника на 10 ваших полуходов.';
+      case GameAbility.randomGestureMirror:
+        return 'Следующий ход соперника после вашего должен закончиться на клетке того же цвета, что и ваш последний ход.';
+      case GameAbility.randomBlackMark:
+        return 'Случайная вражеская фигура получает метку: следующее ваше взятие этой фигуры даёт два выбора модов подряд.';
     }
   }
 
@@ -1132,6 +1655,20 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.pawnAvengeMe:
       case GameAbility.pawnCaravan:
       case GameAbility.pawnFaceControl:
+      case GameAbility.pawnArchivist:
+      case GameAbility.pawnPairStep:
+      case GameAbility.pawnFarsight:
+      case GameAbility.pawnMortar:
+      case GameAbility.pawnSapper:
+      case GameAbility.pawnHereditaryEdict:
+      case GameAbility.pawnInfantryShadow:
+      case GameAbility.pawnStarvation:
+      case GameAbility.pawnSeed:
+      case GameAbility.pawnRockPaperScissors:
+      case GameAbility.pawnDoubleLife:
+      case GameAbility.pawnLittleBrother:
+      case GameAbility.pawnSpotlight:
+      case GameAbility.pawnFuse:
       case GameAbility.randomClone:
         return PieceType.pawn;
       case GameAbility.boardKingSwap:
@@ -1145,6 +1682,7 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.kingPrisonerExchange:
       case GameAbility.kingRemoveEnemyMod:
       case GameAbility.kingAssemblyHall:
+      case GameAbility.kingOwnHands:
         return PieceType.king;
       case GameAbility.boardZebras:
       case GameAbility.knightRearing:
@@ -1168,6 +1706,16 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.knightRideMe:
       case GameAbility.knightMagicHooves:
       case GameAbility.knightSignalFire:
+      case GameAbility.knightMaskSwap:
+      case GameAbility.knightNonAggression:
+      case GameAbility.knightKingGuard:
+      case GameAbility.knightNightWatch:
+      case GameAbility.knightGallopContract:
+      case GameAbility.knightTangledTrail:
+      case GameAbility.knightCustomsPath:
+      case GameAbility.knightBucephalus:
+      case GameAbility.knightHoofSmoke:
+      case GameAbility.knightDonkey:
         return PieceType.knight;
       case GameAbility.bishopHopAlly:
       case GameAbility.bishopColorChaos:
@@ -1186,6 +1734,19 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.bishopGlassCeiling:
       case GameAbility.bishopElusive:
       case GameAbility.bishopSignalFire:
+      case GameAbility.bishopMaskSwap:
+      case GameAbility.bishopNonAggression:
+      case GameAbility.bishopKingGuard:
+      case GameAbility.bishopInkTrail:
+      case GameAbility.bishopGanesha:
+      case GameAbility.bishopHeretic:
+      case GameAbility.bishopRelicPower:
+      case GameAbility.bishopBlindingSacristy:
+      case GameAbility.bishopLayman:
+      case GameAbility.bishopProcession:
+      case GameAbility.bishopSchism:
+      case GameAbility.bishopLambs:
+      case GameAbility.bishopCartographer:
         return PieceType.bishop;
       case GameAbility.rookHopAlly:
       case GameAbility.rookRam:
@@ -1199,6 +1760,9 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.rookFerry:
       case GameAbility.rookSignalTower:
       case GameAbility.rookSignalFire:
+      case GameAbility.rookSeal:
+      case GameAbility.rookIllDrive:
+      case GameAbility.rookCannotHide:
         return PieceType.rook;
       case GameAbility.queenKnightStep:
       case GameAbility.queenHopAlly:
@@ -1209,6 +1773,8 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.queenDelayedSentence:
       case GameAbility.queenTrophyEmbargo:
       case GameAbility.queenYouShallNotPass:
+      case GameAbility.queenCourtIntrigue:
+      case GameAbility.queenFatherDream:
         return PieceType.queen;
       case GameAbility.boardLavaRank:
       case GameAbility.boardExtraRank:
@@ -1261,6 +1827,42 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.boardFrostMap:
       case GameAbility.boardScorchingSun:
       case GameAbility.boardTurncoats:
+      case GameAbility.boardInkBlot:
+      case GameAbility.boardGravityWell:
+      case GameAbility.boardIdealSymmetry:
+      case GameAbility.boardShadowRight:
+      case GameAbility.boardCenterTax:
+      case GameAbility.boardWalkingCastle:
+      case GameAbility.boardInvisibleHand:
+      case GameAbility.boardRiver:
+      case GameAbility.boardForbiddenLetter:
+      case GameAbility.boardEarnedRest:
+      case GameAbility.modeTimeZone:
+      case GameAbility.modeMateVeto:
+      case GameAbility.modeDebtPit:
+      case GameAbility.modeWasteland:
+      case GameAbility.modeBus:
+      case GameAbility.modeShopToken:
+      case GameAbility.modeSeasons:
+      case GameAbility.modeBloodFeud:
+      case GameAbility.modePrioritySetup:
+      case GameAbility.modeBrokenPerspective:
+      case GameAbility.modeCallOf22:
+      case GameAbility.modeKriegspiel:
+      case GameAbility.modeKingCenter:
+      case GameAbility.modeAtomic:
+      case GameAbility.modeCrazyhouse:
+      case GameAbility.modeHolyRandom:
+      case GameAbility.modeZooShuffle:
+      case GameAbility.modeInsatiableHunger:
+      case GameAbility.modeComeOn:
+      case GameAbility.modeVolcano:
+      case GameAbility.boardRestlessKings:
+      case GameAbility.randomWarehouse:
+      case GameAbility.randomTwilightEclipse:
+      case GameAbility.randomGestureMirror:
+      case GameAbility.randomBlackMark:
+      case GameAbility.modeDuckChess:
       case GameAbility.randomShift:
       case GameAbility.randomCalm:
       case GameAbility.randomQuarantine:
@@ -1291,6 +1893,14 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.randomSuicideCapture:
       case GameAbility.randomMeatGrinder:
       case GameAbility.randomQuicksand:
+      case GameAbility.randomMoveSteal:
+      case GameAbility.randomSerialManiac:
+      case GameAbility.randomSnailTrail:
+      case GameAbility.randomDisinfo:
+      case GameAbility.randomFamilyContract:
+      case GameAbility.randomKansasHurricanes:
+      case GameAbility.randomLoneWarrior:
+      case GameAbility.randomTwentyOne:
         return null;
     }
   }
@@ -1351,6 +1961,42 @@ extension GameAbilityInfo on GameAbility {
       this == GameAbility.boardFrostMap ||
       this == GameAbility.boardScorchingSun ||
       this == GameAbility.boardTurncoats ||
+      this == GameAbility.boardInkBlot ||
+      this == GameAbility.boardGravityWell ||
+      this == GameAbility.boardIdealSymmetry ||
+      this == GameAbility.boardShadowRight ||
+      this == GameAbility.boardCenterTax ||
+      this == GameAbility.boardWalkingCastle ||
+      this == GameAbility.boardInvisibleHand ||
+      this == GameAbility.boardRiver ||
+      this == GameAbility.boardForbiddenLetter ||
+      this == GameAbility.boardEarnedRest ||
+      this == GameAbility.modeHolyRandom ||
+      this == GameAbility.modeZooShuffle ||
+      this == GameAbility.modeInsatiableHunger ||
+      this == GameAbility.modeComeOn ||
+      this == GameAbility.modeVolcano ||
+      this == GameAbility.boardRestlessKings ||
+      this == GameAbility.randomWarehouse ||
+      this == GameAbility.randomTwilightEclipse ||
+      this == GameAbility.randomGestureMirror ||
+      this == GameAbility.randomBlackMark ||
+      this == GameAbility.modeTimeZone ||
+      this == GameAbility.modeMateVeto ||
+      this == GameAbility.modeDebtPit ||
+      this == GameAbility.modeWasteland ||
+      this == GameAbility.modeBus ||
+      this == GameAbility.modeShopToken ||
+      this == GameAbility.modeSeasons ||
+      this == GameAbility.modeBloodFeud ||
+      this == GameAbility.modePrioritySetup ||
+      this == GameAbility.modeBrokenPerspective ||
+      this == GameAbility.modeCallOf22 ||
+      this == GameAbility.modeKriegspiel ||
+      this == GameAbility.modeKingCenter ||
+      this == GameAbility.modeAtomic ||
+      this == GameAbility.modeCrazyhouse ||
+      this == GameAbility.modeDuckChess ||
       this == GameAbility.randomShift ||
       this == GameAbility.randomCalm ||
       this == GameAbility.randomQuarantine ||
@@ -1368,6 +2014,7 @@ extension GameAbilityInfo on GameAbility {
       this == GameAbility.randomPlague ||
       this == GameAbility.randomMutation ||
       this == GameAbility.randomAuction ||
+      group == AbilityGroup.mode ||
       group == AbilityGroup.random;
 
   String descriptionFor({

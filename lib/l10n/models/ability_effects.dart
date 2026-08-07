@@ -95,6 +95,46 @@ enum AbilityEffect {
   ferry,
   signalTower,
   assemblyHall,
+  pawnArchivist,
+  pawnPairStep,
+  pawnFarsight,
+  pawnMortar,
+  pawnSapper,
+  pawnHereditaryEdict,
+  pawnInfantryShadow,
+  pawnStarvation,
+  pawnSeed,
+  pawnRockPaperScissors,
+  pawnDoubleLife,
+  pawnLittleBrother,
+  pawnSpotlight,
+  pawnFuse,
+  maskSwap,
+  nonAggression,
+  kingGuardAuto,
+  knightNightWatch,
+  knightGallopContract,
+  knightTangledTrail,
+  knightCustomsPath,
+  knightBucephalus,
+  knightHoofSmoke,
+  knightDonkey,
+  bishopInkTrail,
+  bishopGanesha,
+  bishopHeretic,
+  bishopRelicPower,
+  bishopBlindingSacristy,
+  bishopLayman,
+  bishopProcession,
+  bishopSchism,
+  bishopLambs,
+  bishopCartographer,
+  rookSeal,
+  rookIllDrive,
+  rookCannotHide,
+  queenCourtIntrigue,
+  queenFatherDream,
+  kingOwnHands,
 }
 
 extension GameAbilityEffects on GameAbility {
@@ -348,7 +388,41 @@ extension GameAbilityEffects on GameAbility {
       case GameAbility.boardFrostMap:
       case GameAbility.boardScorchingSun:
       case GameAbility.boardTurncoats:
+      case GameAbility.boardInkBlot:
+      case GameAbility.boardGravityWell:
+      case GameAbility.boardIdealSymmetry:
+      case GameAbility.boardShadowRight:
+      case GameAbility.boardCenterTax:
+      case GameAbility.boardWalkingCastle:
+      case GameAbility.boardInvisibleHand:
+      case GameAbility.boardRiver:
+      case GameAbility.boardForbiddenLetter:
+      case GameAbility.boardEarnedRest:
+      case GameAbility.modeTimeZone:
+      case GameAbility.modeMateVeto:
+      case GameAbility.modeDebtPit:
+      case GameAbility.modeWasteland:
+      case GameAbility.modeBus:
+      case GameAbility.modeShopToken:
+      case GameAbility.modeSeasons:
+      case GameAbility.modeBloodFeud:
+      case GameAbility.modePrioritySetup:
+      case GameAbility.modeBrokenPerspective:
+      case GameAbility.modeCallOf22:
+      case GameAbility.modeKriegspiel:
+      case GameAbility.modeKingCenter:
+      case GameAbility.modeAtomic:
+      case GameAbility.modeCrazyhouse:
+      case GameAbility.modeDuckChess:
       case GameAbility.randomQuicksand:
+      case GameAbility.randomMoveSteal:
+      case GameAbility.randomSerialManiac:
+      case GameAbility.randomSnailTrail:
+      case GameAbility.randomDisinfo:
+      case GameAbility.randomFamilyContract:
+      case GameAbility.randomKansasHurricanes:
+      case GameAbility.randomLoneWarrior:
+      case GameAbility.randomTwentyOne:
       case GameAbility.randomShift:
       case GameAbility.randomCalm:
       case GameAbility.randomQuarantine:
@@ -373,6 +447,102 @@ extension GameAbilityEffects on GameAbility {
       case GameAbility.randomTimeCapsule:
       case GameAbility.randomSuicideCapture:
       case GameAbility.randomMeatGrinder:
+      case GameAbility.pawnArchivist:
+        return {AbilityEffect.pawnArchivist};
+      case GameAbility.pawnPairStep:
+        return {AbilityEffect.pawnPairStep};
+      case GameAbility.pawnFarsight:
+        return {AbilityEffect.pawnFarsight};
+      case GameAbility.pawnMortar:
+        return {AbilityEffect.pawnMortar};
+      case GameAbility.pawnSapper:
+        return {AbilityEffect.pawnSapper};
+      case GameAbility.pawnHereditaryEdict:
+        return {AbilityEffect.pawnHereditaryEdict};
+      case GameAbility.pawnInfantryShadow:
+        return {AbilityEffect.pawnInfantryShadow};
+      case GameAbility.pawnStarvation:
+        return {AbilityEffect.pawnStarvation};
+      case GameAbility.pawnSeed:
+        return {AbilityEffect.pawnSeed};
+      case GameAbility.pawnRockPaperScissors:
+        return {AbilityEffect.pawnRockPaperScissors};
+      case GameAbility.pawnDoubleLife:
+        return {AbilityEffect.pawnDoubleLife};
+      case GameAbility.pawnLittleBrother:
+        return {AbilityEffect.pawnLittleBrother};
+      case GameAbility.pawnSpotlight:
+        return {AbilityEffect.pawnSpotlight};
+      case GameAbility.pawnFuse:
+        return {AbilityEffect.pawnFuse};
+      case GameAbility.knightMaskSwap:
+        return {AbilityEffect.maskSwap};
+      case GameAbility.bishopMaskSwap:
+        return {AbilityEffect.maskSwap};
+      case GameAbility.knightNonAggression:
+        return {AbilityEffect.nonAggression};
+      case GameAbility.bishopNonAggression:
+        return {AbilityEffect.nonAggression};
+      case GameAbility.knightKingGuard:
+        return {AbilityEffect.kingGuardAuto};
+      case GameAbility.bishopKingGuard:
+        return {AbilityEffect.kingGuardAuto};
+      case GameAbility.knightNightWatch:
+        return {AbilityEffect.knightNightWatch};
+      case GameAbility.knightGallopContract:
+        return {AbilityEffect.knightGallopContract};
+      case GameAbility.knightTangledTrail:
+        return {AbilityEffect.knightTangledTrail};
+      case GameAbility.knightCustomsPath:
+        return {AbilityEffect.knightCustomsPath};
+      case GameAbility.knightBucephalus:
+        return {AbilityEffect.knightBucephalus};
+      case GameAbility.knightHoofSmoke:
+        return {AbilityEffect.knightHoofSmoke};
+      case GameAbility.knightDonkey:
+        return {AbilityEffect.knightDonkey};
+      case GameAbility.bishopInkTrail:
+        return {AbilityEffect.bishopInkTrail};
+      case GameAbility.bishopGanesha:
+        return {AbilityEffect.bishopGanesha};
+      case GameAbility.bishopHeretic:
+        return {AbilityEffect.bishopHeretic};
+      case GameAbility.bishopRelicPower:
+        return {AbilityEffect.bishopRelicPower};
+      case GameAbility.bishopBlindingSacristy:
+        return {AbilityEffect.bishopBlindingSacristy};
+      case GameAbility.bishopLayman:
+        return {AbilityEffect.bishopLayman};
+      case GameAbility.bishopProcession:
+        return {AbilityEffect.bishopProcession};
+      case GameAbility.bishopSchism:
+        return {AbilityEffect.bishopSchism};
+      case GameAbility.bishopLambs:
+        return {AbilityEffect.bishopLambs};
+      case GameAbility.bishopCartographer:
+        return {AbilityEffect.bishopCartographer};
+      case GameAbility.rookSeal:
+        return {AbilityEffect.rookSeal};
+      case GameAbility.rookIllDrive:
+        return {AbilityEffect.rookIllDrive};
+      case GameAbility.rookCannotHide:
+        return {AbilityEffect.rookCannotHide};
+      case GameAbility.queenCourtIntrigue:
+        return {AbilityEffect.queenCourtIntrigue};
+      case GameAbility.queenFatherDream:
+        return {AbilityEffect.queenFatherDream};
+      case GameAbility.kingOwnHands:
+        return {AbilityEffect.kingOwnHands};
+      case GameAbility.modeHolyRandom:
+      case GameAbility.modeZooShuffle:
+      case GameAbility.modeInsatiableHunger:
+      case GameAbility.modeComeOn:
+      case GameAbility.modeVolcano:
+      case GameAbility.boardRestlessKings:
+      case GameAbility.randomWarehouse:
+      case GameAbility.randomTwilightEclipse:
+      case GameAbility.randomGestureMirror:
+      case GameAbility.randomBlackMark:
         return {};
     }
   }

@@ -19,6 +19,8 @@ class OnlineSidePanel extends StatelessWidget {
     this.opponentRating,
     this.localRating,
     this.moveHistory,
+    this.endFooter,
+    this.gameOver = false,
   });
 
   final String opponentName;
@@ -34,11 +36,13 @@ class OnlineSidePanel extends StatelessWidget {
   final int? opponentRating;
   final int? localRating;
   final Widget? moveHistory;
+  final Widget? endFooter;
+  final bool gameOver;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 260,
+      width: 280,
       color: BalatroTheme.felt,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -60,40 +64,43 @@ class OnlineSidePanel extends StatelessWidget {
             )
           else
             const Spacer(),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _ActionBtn(
-                    tooltip: 'Попросить вернуть ход',
-                    onPressed: canTakeback ? onTakeback : null,
-                    child: const Icon(Icons.u_turn_left_rounded, size: 22),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: _ActionBtn(
-                    tooltip: 'Предложить ничью',
-                    onPressed: onDraw,
-                    child: Text(
-                      '½',
-                      style: BalatroTheme.titleStyle.copyWith(fontSize: 16),
+          if (endFooter != null)
+            endFooter!
+          else if (!gameOver)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _ActionBtn(
+                      tooltip: 'Попросить вернуть ход',
+                      onPressed: canTakeback ? onTakeback : null,
+                      child: const Icon(Icons.u_turn_left_rounded, size: 22),
                     ),
                   ),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: _ActionBtn(
-                    tooltip: 'Сдаться',
-                    onPressed: onResign,
-                    color: const Color(0xFFB33A3A),
-                    child: const Icon(Icons.flag_rounded, size: 22),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: _ActionBtn(
+                      tooltip: 'Предложить ничью',
+                      onPressed: onDraw,
+                      child: Text(
+                        '½',
+                        style: BalatroTheme.titleStyle.copyWith(fontSize: 16),
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: _ActionBtn(
+                      tooltip: 'Сдаться',
+                      onPressed: onResign,
+                      color: const Color(0xFFB33A3A),
+                      child: const Icon(Icons.flag_rounded, size: 22),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
           const SizedBox(height: 8),
           _clockBlock(
             name: localName,

@@ -20,6 +20,7 @@ import '../online/game_clock.dart';
 import '../online/online_game_service.dart';
 import '../theme/balatro_theme.dart';
 import '../widgets/chess_piece_widget.dart';
+import '../widgets/game_end_side_panel.dart';
 import '../widgets/lava_death_overlay.dart';
 import '../widgets/move_history_panel.dart';
 import '../widgets/online_chat_panel.dart';
@@ -27,6 +28,7 @@ import '../widgets/online_game_menu.dart';
 import '../widgets/online_player_bar.dart';
 import '../widgets/online_side_panel.dart';
 import '../widgets/skill_choice_sheet.dart';
+import 'matchmaking_screen.dart';
 
 const _prefsRotateForBlackKey = 'rotate_for_black';
 const _onlineWideBreakpoint = 800.0;
@@ -111,6 +113,8 @@ class _GameScreenState extends State<GameScreen> {
   bool _awaitingDrawResponse = false;
   bool _awaitingTakebackResponse = false;
   bool _gameResultReported = false;
+  bool _rematchPending = false;
+  bool _rematchIncoming = false;
 
   final MoveHistoryLog _moveLog = MoveHistoryLog();
   /// `null` = live position; otherwise index into [_moveLog.plies].
@@ -125,6 +129,10 @@ class _GameScreenState extends State<GameScreen> {
     Map<String, String> beforeMods,
   })? _pendingPlyDraft;
   Move? _premove;
+  AbilityOffer? _previewOffer;
+  ChessGame? _previewGame;
+  bool _previewingMod = false;
+  PieceType? _pendingCrazyDrop;
 
   PieceColor? get _botColor {
     if (!widget.vsComputer || widget.localColor == null) return null;
@@ -220,9 +228,38 @@ class _GameScreenState extends State<GameScreen> {
   bool get _isBrowsingHistory => _viewPlyIndex != null;
 
   ChessGame get _displayGame {
+    final preview = _previewGame;
+    if (_previewingMod && preview != null) return preview;
     final browse = _browseGame;
     if (_viewPlyIndex != null && browse != null) return browse;
     return _game;
+  }
+
+  void _setModPreview(AbilityOffer? offer, {PieceColor? chooser}) {
+    if (offer == null) {
+      if (!_previewingMod && _previewOffer == null) return;
+      setState(() {
+        _previewOffer = null;
+        _previewGame = null;
+        _previewingMod = false;
+      });
+      return;
+    }
+    final color = chooser ??
+        _game.pendingSkillColor ??
+        widget.localColor ??
+        _game.turn;
+    final preview = ChessGame(
+      excludedAbilities: widget.vsComputer ? stockfishExcludedAbilities : null,
+    );
+    preview.restoreSnapshot(_game.createSnapshot());
+    preview.previewApplyOffer(color, offer);
+    setState(() {
+      _previewOffer = offer;
+      _previewGame = preview;
+      _previewingMod = true;
+      _exitHistoryView();
+    });
   }
 
   bool get _canSetPremove {
@@ -235,11 +272,20 @@ class _GameScreenState extends State<GameScreen> {
     return !_isMyTurn;
   }
 
+  /// Fog (dark chess): only the previous completed full move is browsable.
+  int get _historyMinBrowsablePly {
+    if (!_game.fogOfWarActive || _moveLog.isEmpty) return 0;
+    final completedFullMoves = _moveLog.length ~/ 2;
+    if (completedFullMoves <= 0) return _moveLog.length; // nothing yet
+    return (completedFullMoves - 1) * 2;
+  }
+
   Widget _buildMoveHistoryPanel({bool compact = false}) {
     return MoveHistoryPanel(
       log: _moveLog,
       viewPlyIndex: _viewPlyIndex,
       compact: compact,
+      minBrowsablePly: _historyMinBrowsablePly,
       onSelectPly: _viewHistoryPly,
       onGoLive: _goToLivePosition,
     );
@@ -259,6 +305,7 @@ class _GameScreenState extends State<GameScreen> {
       setState(_exitHistoryView);
       return;
     }
+    if (index < _historyMinBrowsablePly) return;
     final ply = _moveLog.plies[index];
     final browse = _browseGame ?? ChessGame();
     browse.restoreSnapshot(ply.after);
@@ -423,6 +470,7 @@ class _GameScreenState extends State<GameScreen> {
                     child: MoveHistoryPanel(
                       log: _moveLog,
                       viewPlyIndex: _viewPlyIndex,
+                      minBrowsablePly: _historyMinBrowsablePly,
                       onSelectPly: (index) {
                         _viewHistoryPly(index);
                         setModal(() {});
@@ -455,9 +503,11 @@ class _GameScreenState extends State<GameScreen> {
       offers: offers,
       seconds: _game.skillChoiceSeconds,
       rotate180: flipPicker,
+      onPreviewOffer: (offer) => _setModPreview(offer, chooser: color),
     );
 
     if (!mounted) return;
+    _setModPreview(null);
 
     // На всякий случай, если диалог закрылся без выбора.
     chosen ??= offers.isEmpty
@@ -556,6 +606,13 @@ class _GameScreenState extends State<GameScreen> {
         _checkStateHash(event.stateHash, 'skip_turn');
       case OnlineGameOver():
         _applyRemoteGameOver(event);
+      case OnlineRematchOffer():
+        setState(() {
+          _rematchIncoming = true;
+          _rematchPending = false;
+        });
+      case OnlineRematchStart():
+        _openRematchGame(event.match);
       case OnlineStateResync():
         developer.log(
           'Online state_resync received (${event.snapshot.keys.length} keys)',
@@ -640,7 +697,11 @@ class _GameScreenState extends State<GameScreen> {
     setState(() {
       _clock.pause();
       _clockTimer?.cancel();
-      _game.applyRemoteEnd(winner: event.winner, reason: reason);
+      _game.applyRemoteEnd(
+        winner: event.winner,
+        reason: reason,
+        detail: event.detail,
+      );
     });
     unawaited(_reportGameResultIfNeeded());
   }
@@ -895,6 +956,7 @@ class _GameScreenState extends State<GameScreen> {
     widget.onlineService?.sendGameOver(
       winner: _game.winnerColor,
       reason: _game.endReason?.name,
+      detail: _game.endDetail,
       stateHash: _game.stateHash,
     );
     unawaited(_reportGameResultIfNeeded());
@@ -913,12 +975,19 @@ class _GameScreenState extends State<GameScreen> {
 
     final snapshot = _game.activeAbilitiesSnapshot();
     final abilities = <String>{};
+    final opponentAbilities = <String>{};
     if (color == PieceColor.white) {
       if (snapshot.whiteStart != null) {
         abilities.add(snapshot.whiteStart!.ability.name);
       }
       for (final c in snapshot.whiteChosen) {
         abilities.add(c.ability.name);
+      }
+      if (snapshot.blackStart != null) {
+        opponentAbilities.add(snapshot.blackStart!.ability.name);
+      }
+      for (final c in snapshot.blackChosen) {
+        opponentAbilities.add(c.ability.name);
       }
     } else {
       if (snapshot.blackStart != null) {
@@ -927,7 +996,25 @@ class _GameScreenState extends State<GameScreen> {
       for (final c in snapshot.blackChosen) {
         abilities.add(c.ability.name);
       }
+      if (snapshot.whiteStart != null) {
+        opponentAbilities.add(snapshot.whiteStart!.ability.name);
+      }
+      for (final c in snapshot.whiteChosen) {
+        opponentAbilities.add(c.ability.name);
+      }
     }
+
+    final plies = [
+      for (final ply in _moveLog.plies)
+        {
+          'n': ply.plyIndex,
+          'side': ply.side == PieceColor.white ? 'white' : 'black',
+          'notation': ply.notation,
+          'from': {'f': ply.move.from.file, 'r': ply.move.from.rank},
+          'to': {'f': ply.move.to.file, 'r': ply.move.to.rank},
+          'mods': [for (final m in ply.modEvents) m.short],
+        },
+    ];
 
     await auth.reportGameResult(
       gameId: gameId,
@@ -936,7 +1023,10 @@ class _GameScreenState extends State<GameScreen> {
           ? null
           : (_game.winnerColor == PieceColor.white ? 'white' : 'black'),
       reason: _game.endReason?.name,
+      reasonDetail: _game.endDetail,
       abilities: abilities.toList(),
+      opponentAbilities: opponentAbilities.toList(),
+      plies: plies,
       opponentName: widget.opponentName,
     );
   }
@@ -1057,8 +1147,46 @@ class _GameScreenState extends State<GameScreen> {
 
   bool get _canReact {
     if (!_game.isAwaitingReaction) return false;
+    if (_game.isAwaitingSpotlightPromo) return false;
     if (!widget.hasFixedSeat) return true;
     return _game.pendingRansomColor == widget.localColor;
+  }
+
+  bool get _canActivateDoubleLife {
+    final sq = _selectedSquare;
+    if (sq == null) return false;
+    final piece = _game.pieceAt(sq, index: _selectedPieceIndex);
+    if (piece == null || piece.color != _game.turn) return false;
+    if (!piece.hasAbility(GameAbility.pawnDoubleLife)) return false;
+    return true;
+  }
+
+  bool get _canActivateArchivist {
+    final sq = _selectedSquare;
+    if (sq == null) return false;
+    final piece = _game.pieceAt(sq, index: _selectedPieceIndex);
+    if (piece == null || piece.color != _game.turn) return false;
+    if (!piece.hasAbility(GameAbility.pawnArchivist)) return false;
+    return true;
+  }
+
+  String _rpsLabel(String g) => switch (g) {
+        'rock' => 'Камень',
+        'paper' => 'Бумага',
+        'scissors' => 'Ножницы',
+        _ => g,
+      };
+
+  String _formatCustomsPath(List<Square> path) {
+    return path.map(_squareLabel).join(' → ');
+  }
+
+  String _squareLabel(Square s) {
+    final files = 'abcdefgh';
+    final file = s.file >= 0 && s.file < files.length
+        ? files[s.file]
+        : '${s.file}';
+    return '$file${s.rank + 1}';
   }
 
   bool get _canRerollSkill {
@@ -1108,7 +1236,7 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   String? get _phaseBannerText {
-    if (_showEndOverlay) return 'Игра окончена';
+    if (_showEndOverlay) return 'Игра окончена · смотрите ходы справа';
     final stockfishBanner = _stockfishIssueBanner;
     if (stockfishBanner != null && _stockfishIssueIsError) {
       return stockfishBanner;
@@ -1132,7 +1260,22 @@ class _GameScreenState extends State<GameScreen> {
       }
       return 'Выбор стартовых модов';
     }
-    if (_game.isAwaitingReaction) return 'Выкуп · реакция на взятие';
+    if (_game.isAwaitingReaction) {
+      if (_game.isAwaitingSpotlightPromo) return 'Под прожекторами · превращение';
+      return 'Выкуп · реакция на взятие';
+    }
+    if (_game.isAwaitingCustomsPath) {
+      return 'Таможенный досмотр · выберите маршрут коня';
+    }
+    if (_game.isAwaitingTangledKeep) {
+      return 'Запутанный след · выберите коня, которого оставить';
+    }
+    if (_game.isAwaitingRps ||
+        (_game.rpsPairs.isNotEmpty &&
+            _game.rpsPairIndex == null &&
+            _game.pendingTargetAbility == GameAbility.pawnRockPaperScissors)) {
+      return 'Цу-е-фа · выберите пару пешек';
+    }
     if (_game.isAwaitingAbilityTarget) {
       final prompt = _game.pendingAbilityPrompt;
       return prompt.isEmpty ? 'Выбор цели способности' : prompt;
@@ -1151,61 +1294,85 @@ class _GameScreenState extends State<GameScreen> {
     return null;
   }
 
-  String get _endOverlayTitle {
-    final s = AppStrings.of(context);
-    final winner = _game.winnerColor;
-    if (winner == null) return s.draw;
-    if (widget.isOnline) {
-      return winner == widget.localColor ? s.victory : s.defeat;
-    }
-    return s.victory;
+  Widget _buildGameEndFooter() {
+    return GameEndSidePanel(
+      winner: _game.winnerColor,
+      reason: _game.endReason,
+      detail: _game.endDetail,
+      localColor: widget.localColor,
+      online: widget.isOnline,
+      rematchPending: _rematchPending,
+      rematchIncoming: _rematchIncoming,
+      onRematch: _onRematchPressed,
+      onFindAnother: _onFindAnotherPressed,
+    );
   }
 
-  String get _endOverlaySubtitle {
-    switch (_game.endReason) {
-      case GameEndReason.checkmate:
-        return 'мат';
-      case GameEndReason.stalemate:
-        return 'пат';
-      case GameEndReason.draw:
-      case GameEndReason.drawAgreed:
-        return 'ничья';
-      case GameEndReason.resign:
-        if (widget.isOnline && widget.localColor != null) {
-          final s = AppStrings.of(context);
-          return _game.winnerColor == widget.localColor
-              ? s.opponentResigned
-              : s.youResigned;
-        }
-        return 'сдача';
-      case GameEndReason.timeout:
-        return 'время вышло';
-      case GameEndReason.kingDestroyed:
-        return 'король уничтожен';
-      case GameEndReason.baskerville:
-        return 'Баскервиль';
-      case GameEndReason.exterminatus:
-        return 'Экстерминатус';
-      case GameEndReason.alternativeVictory:
-        if (_game.kingOfHillActive) {
-          return 'альтернативная победа · территория';
-        }
-        if (_game.winnerColor != null &&
-            _game.secretRouteFor(_game.winnerColor!) != null) {
-          return 'альтернативная победа · маршрут';
-        }
-        if (_game.royalPilgrimageActive) {
-          return 'альтернативная победа · паломничество';
-        }
-        if (_game.passiveAggressionActive) {
-          return 'альтернативная победа · пассивная агрессия';
-        }
-        return 'альтернативная победа';
-      case null:
-        if (_game.status == GameStatus.checkmate) return 'мат';
-        if (_game.status == GameStatus.stalemate) return 'пат';
-        return '';
+  void _onRematchPressed() {
+    if (widget.vsComputer) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(
+          builder: (_) => GameScreen(
+            localColor: widget.localColor ?? PieceColor.white,
+            vsComputer: true,
+            opponentName: widget.opponentName,
+            auth: widget.auth,
+          ),
+        ),
+      );
+      return;
     }
+    if (!widget.isOnline || widget.onlineService == null) {
+      Navigator.of(context).pop();
+      return;
+    }
+    if (_rematchIncoming) {
+      widget.onlineService!.sendRematchAccept();
+      setState(() {
+        _rematchPending = true;
+        _rematchIncoming = false;
+      });
+      return;
+    }
+    widget.onlineService!.sendRematchOffer();
+    setState(() => _rematchPending = true);
+  }
+
+  void _onFindAnotherPressed() {
+    if (widget.vsComputer || !widget.isOnline) {
+      Navigator.of(context).pop();
+      return;
+    }
+    final auth = widget.auth;
+    final name = auth?.username ?? AppStrings.of(context).anonymous;
+    widget.onlineService?.dispose();
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute<void>(
+        builder: (_) => MatchmakingScreen(
+          playerName: name,
+          auth: auth,
+        ),
+      ),
+    );
+  }
+
+  void _openRematchGame(OnlineMatch match) {
+    final service = widget.onlineService;
+    if (service == null) return;
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute<void>(
+        builder: (_) => GameScreen(
+          localColor: match.localColor,
+          onlineService: service,
+          opponentName: match.opponentName,
+          gameId: match.gameId,
+          auth: widget.auth,
+          rated: match.rated,
+          yourRating: match.yourRating,
+          opponentRating: match.opponentRating,
+        ),
+      ),
+    );
   }
 
   void _onSquareTap(Square square) {
@@ -1216,6 +1383,30 @@ class _GameScreenState extends State<GameScreen> {
     if (_isBrowsingHistory) {
       setState(_exitHistoryView);
       // Continue on the live board with this tap.
+    }
+
+    if (_game.duckChessActive &&
+        _game.duckNeedsPlacement &&
+        _isMyTurn) {
+      if (_game.tryPlaceDuck(square)) {
+        setState(() {});
+      }
+      return;
+    }
+
+    if (_pendingCrazyDrop != null &&
+        widget.localColor != null &&
+        _isMyTurn) {
+      final type = _pendingCrazyDrop!;
+      if (_game.tryCrazyhouseDrop(widget.localColor!, type, square)) {
+        setState(() {
+          _pendingCrazyDrop = null;
+          _selectedSquare = null;
+          _availableMoves = [];
+        });
+        unawaited(_tryExecutePremove());
+      }
+      return;
     }
 
     if (_game.isAwaitingReaction) return;
@@ -2335,18 +2526,31 @@ class _GameScreenState extends State<GameScreen> {
     flight.completer.complete();
   }
 
-  /// Переворот UI для локальной hot-seat игры, когда ход чёрных.
-  bool get _uiFlipped =>
+  /// Board/piece rotation for local hot-seat when it is black's turn to move.
+  bool get _boardUiFlipped =>
       !widget.hasFixedSeat &&
       _rotateForBlack &&
       _game.turn == PieceColor.black;
+
+  /// Overlay sheets flip for the player currently choosing (may differ from turn).
+  bool get _overlayUiFlipped {
+    if (widget.hasFixedSeat || !_rotateForBlack) return false;
+    final chooser = _game.pendingSkillColor ??
+        _game.pendingTargetColor ??
+        _game.pendingRansomColor;
+    if (chooser != null) return chooser == PieceColor.black;
+    return _game.turn == PieceColor.black;
+  }
+
+  /// Legacy alias used for layout that follows the active chooser/turn.
+  bool get _uiFlipped => _overlayUiFlipped;
 
   /// Онлайн за чёрных: 8-я горизонталь снизу (как на Lichess).
   bool get _boardPerspectiveFlipped =>
       widget.isOnline && widget.localColor == PieceColor.black;
 
   Widget _flipOverlay(Widget child) {
-    if (!_uiFlipped) return child;
+    if (!_overlayUiFlipped) return child;
     return Transform.rotate(angle: math.pi, child: child);
   }
 
@@ -2442,16 +2646,23 @@ class _GameScreenState extends State<GameScreen> {
   bool _webModsBesideBoard(double width) =>
       kIsWeb && width >= _webModsSideBreakpoint;
 
-  Widget _buildActiveModsSidePanel() {
+  Widget _buildActiveModsSidePanel({bool onLeft = false}) {
     return SizedBox(
       width: 300,
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: BalatroTheme.felt.withValues(alpha: 0.97),
           border: Border(
-            left: BorderSide(
-              color: BalatroTheme.cream.withValues(alpha: 0.12),
-            ),
+            left: onLeft
+                ? BorderSide.none
+                : BorderSide(
+                    color: BalatroTheme.cream.withValues(alpha: 0.12),
+                  ),
+            right: onLeft
+                ? BorderSide(
+                    color: BalatroTheme.cream.withValues(alpha: 0.12),
+                  )
+                : BorderSide.none,
           ),
         ),
         child: Column(
@@ -2559,35 +2770,27 @@ class _GameScreenState extends State<GameScreen> {
                     onDraw: () => unawaited(_offerDraw()),
                     onResign: () => unawaited(_resignLocal()),
                     moveHistory: _buildMoveHistoryPanel(),
+                    gameOver: _showEndOverlay,
+                    endFooter:
+                        _showEndOverlay ? _buildGameEndFooter() : null,
                   ),
                 ],
               )
             : Row(
                 children: [
+                  if (webModsBeside)
+                    _buildActiveModsSidePanel(onLeft: true),
                   Expanded(
-                    child: webModsBeside
-                        ? Row(
-                            children: [
-                              Expanded(
-                                child: _buildGameStack(
-                                  bottomPad: bottomPad,
-                                  modsOnTop: modsOnTop,
-                                  showMobileChrome: false,
-                                  showModsButton: false,
-                                ),
-                              ),
-                              _buildActiveModsSidePanel(),
-                            ],
-                          )
-                        : _buildGameStack(
-                            bottomPad: bottomPad,
-                            modsOnTop: modsOnTop,
-                            showMobileChrome: widget.isOnline,
-                            showModsButton: true,
-                          ),
+                    child: _buildGameStack(
+                      bottomPad: bottomPad,
+                      modsOnTop: modsOnTop,
+                      showMobileChrome: widget.isOnline,
+                      showModsButton: !webModsBeside,
+                    ),
                   ),
                   if (historyBeside)
                     MoveHistorySideChrome(
+                      footer: _showEndOverlay ? _buildGameEndFooter() : null,
                       child: _buildMoveHistoryPanel(),
                     ),
                 ],
@@ -2612,7 +2815,7 @@ class _GameScreenState extends State<GameScreen> {
       maxHeight: maxHeight,
       pieceFlight: _isBrowsingHistory ? null : _pieceFlight,
       onPieceFlightFinished: _onPieceFlightFinished,
-      rotatePieces: _uiFlipped,
+      rotatePieces: _boardUiFlipped,
       flipBoard: _boardPerspectiveFlipped,
     );
   }
@@ -2729,6 +2932,52 @@ class _GameScreenState extends State<GameScreen> {
                                     ),
                                   ),
                                 ),
+                              if (_selectedSquare != null && _isMyTurn) ...[
+                                if (_canActivateDoubleLife)
+                                  TextButton(
+                                    onPressed: () {
+                                      final id = _game
+                                          .pieceAt(
+                                            _selectedSquare!,
+                                            index: _selectedPieceIndex,
+                                          )
+                                          ?.pieceId;
+                                      if (id == null) return;
+                                      setState(() {
+                                        _game.activateDoubleLife(id);
+                                      });
+                                    },
+                                    child: Text(
+                                      'Двойная жизнь',
+                                      style: BalatroTheme.statusStyle.copyWith(
+                                        fontSize: 11,
+                                        color: BalatroTheme.gold,
+                                      ),
+                                    ),
+                                  ),
+                                if (_canActivateArchivist)
+                                  TextButton(
+                                    onPressed: () {
+                                      final id = _game
+                                          .pieceAt(
+                                            _selectedSquare!,
+                                            index: _selectedPieceIndex,
+                                          )
+                                          ?.pieceId;
+                                      if (id == null) return;
+                                      setState(() {
+                                        _game.activateArchivistRecall(id);
+                                      });
+                                    },
+                                    child: Text(
+                                      'Архивариус',
+                                      style: BalatroTheme.statusStyle.copyWith(
+                                        fontSize: 11,
+                                        color: BalatroTheme.gold,
+                                      ),
+                                    ),
+                                  ),
+                              ],
                               if (showModsButton) _modsButton(),
                             ],
                           ),
@@ -2977,10 +3226,218 @@ class _GameScreenState extends State<GameScreen> {
               ),
             ),
           ),
-        if (_showSkillChoiceOverlay)
+        if (_game.isAwaitingSpotlightPromo &&
+            (!widget.hasFixedSeat || _isMyTurn))
           Positioned.fill(
             child: ColoredBox(
               color: BalatroTheme.background.withValues(alpha: 0.72),
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: _flipOverlay(
+                    Material(
+                      color: BalatroTheme.felt,
+                      borderRadius: BorderRadius.circular(16),
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'ПОД ПРОЖЕКТОРАМИ',
+                              style: BalatroTheme.titleStyle.copyWith(
+                                fontSize: 20,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Выберите лёгкую фигуру для превращения',
+                              textAlign: TextAlign.center,
+                              style: BalatroTheme.statusStyle.copyWith(
+                                fontSize: 13,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                for (final type in [
+                                  PieceType.knight,
+                                  PieceType.bishop,
+                                ])
+                                  InkWell(
+                                onTap: () {
+                                  setState(() {
+                                    _game.completeSpotlightPromo(type);
+                                  });
+                                  _maybeScheduleComputerMove();
+                                },
+                                child: ChessPieceWidget(
+                                  piece: Piece(
+                                    type: type,
+                                    color: _game.turn,
+                                  ),
+                                  size: 56,
+                                ),
+                              ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        if (_game.isAwaitingCustomsPath &&
+            (!widget.hasFixedSeat || _isMyTurn))
+          Positioned.fill(
+            child: ColoredBox(
+              color: BalatroTheme.background.withValues(alpha: 0.72),
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: _flipOverlay(
+                    Material(
+                      color: BalatroTheme.felt,
+                      borderRadius: BorderRadius.circular(16),
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'ТАМОЖЕННЫЙ ДОСМОТР',
+                              style: BalatroTheme.titleStyle.copyWith(
+                                fontSize: 18,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Выберите маршрут прыжка коня',
+                              style: BalatroTheme.statusStyle.copyWith(
+                                fontSize: 13,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            for (var i = 0;
+                                i < _game.customsPathOptions.length;
+                                i++)
+                              ListTile(
+                                title: Text(
+                                  _formatCustomsPath(
+                                    _game.customsPathOptions[i],
+                                  ),
+                                  style: BalatroTheme.statusStyle.copyWith(
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                onTap: () {
+                                  setState(() {
+                                    _game.chooseCustomsPath(i);
+                                    _selectedSquare = null;
+                                    _availableMoves = [];
+                                  });
+                                  _maybeScheduleComputerMove();
+                                },
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        if (_game.pendingTargetAbility == GameAbility.pawnRockPaperScissors &&
+            _game.rpsPairIndex == null &&
+            _game.rpsPairs.length > 1 &&
+            _canPickAbilityTarget)
+          Positioned.fill(
+            child: ColoredBox(
+              color: BalatroTheme.background.withValues(alpha: 0.72),
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: _flipOverlay(
+                    Material(
+                      color: BalatroTheme.felt,
+                      borderRadius: BorderRadius.circular(16),
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'ЦУ-Е-ФА',
+                              style: BalatroTheme.titleStyle.copyWith(
+                                fontSize: 20,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Выберите пару блокирующих пешек',
+                              style: BalatroTheme.statusStyle.copyWith(
+                                fontSize: 13,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            for (var i = 0; i < _game.rpsPairs.length; i++)
+                              ListTile(
+                                title: Text(
+                                  '${_squareLabel(_game.rpsPairs[i].$1)} vs ${_squareLabel(_game.rpsPairs[i].$2)}',
+                                  style: BalatroTheme.statusStyle.copyWith(
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                onTap: () {
+                                  setState(() {
+                                    _game.chooseRpsPair(i);
+                                  });
+                                  _maybeScheduleComputerMove();
+                                },
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        if (_game.rpsLastA != null &&
+            _game.rpsLastB != null &&
+            _game.rpsRound > 0 &&
+            _game.pendingTargetAbility == GameAbility.pawnRockPaperScissors)
+          Positioned(
+            left: 16,
+            right: 16,
+            bottom: 120,
+            child: _flipOverlay(
+              Material(
+                color: BalatroTheme.felt.withValues(alpha: 0.95),
+                borderRadius: BorderRadius.circular(12),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Text(
+                    'Раунд ${_game.rpsRound}: ${_rpsLabel(_game.rpsLastA!)} vs ${_rpsLabel(_game.rpsLastB!)}',
+                    textAlign: TextAlign.center,
+                    style: BalatroTheme.statusStyle.copyWith(fontSize: 14),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        if (_showSkillChoiceOverlay)
+          Positioned.fill(
+            child: ColoredBox(
+              color: BalatroTheme.background.withValues(
+                alpha: _previewingMod ? 0.12 : 0.72,
+              ),
               child: Center(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -3007,10 +3464,15 @@ class _GameScreenState extends State<GameScreen> {
                       }(),
                       offers: _game.pendingCaptureOffers,
                       secondsLeft: _skillChoiceSecondsLeft,
-                      onSelected: _completeSkillChoice,
+                      onSelected: (ability) {
+                        _setModPreview(null);
+                        _completeSkillChoice(ability);
+                      },
                       canReroll: _canRerollSkill,
                       permanentReroll: _game.hasPermanentRerollForPending,
                       onReroll: _localRerollOffers,
+                      previewing: _previewingMod,
+                      onPreviewOffer: _setModPreview,
                     ),
                   ),
                 ),
@@ -3081,81 +3543,147 @@ class _GameScreenState extends State<GameScreen> {
               ),
             ),
           ),
-        if (_showEndOverlay)
-          Positioned.fill(
-            child: ColoredBox(
-              color: BalatroTheme.background.withValues(alpha: 0.82),
-              child: Center(
+        if (_game.bloodFeudBanner != null && !_showEndOverlay)
+          Positioned(
+            left: 16,
+            right: 16,
+            bottom: math.max(72, bottomPad + 64),
+            child: _flipOverlay(
+              Material(
+                color: const Color(0xEE5D1A1A),
+                borderRadius: BorderRadius.circular(10),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: _flipOverlay(
-                    Material(
-                      color: BalatroTheme.felt,
-                      borderRadius: BorderRadius.circular(16),
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(24, 28, 24, 22),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              _endOverlayTitle,
-                              textAlign: TextAlign.center,
-                              style: BalatroTheme.titleStyle.copyWith(
-                                fontSize: 28,
-                              ),
-                            ),
-                            if (_endOverlaySubtitle.isNotEmpty) ...[
-                              const SizedBox(height: 10),
-                              Text(
-                                _endOverlaySubtitle,
-                                textAlign: TextAlign.center,
-                                style: BalatroTheme.statusStyle.copyWith(
-                                  fontSize: 14,
-                                  color: BalatroTheme.cream.withValues(
-                                    alpha: 0.8,
-                                  ),
-                                ),
-                              ),
-                            ],
-                            if (!widget.isOnline &&
-                                _game.winnerColor != null) ...[
-                              const SizedBox(height: 6),
-                              Text(
-                                _game.winnerColor == PieceColor.white
-                                    ? 'Белые'
-                                    : 'Чёрные',
-                                style: BalatroTheme.statusStyle.copyWith(
-                                  fontSize: 13,
-                                  color: BalatroTheme.gold,
-                                ),
-                              ),
-                            ],
-                            const SizedBox(height: 22),
-                            ElevatedButton(
-                              onPressed: () => Navigator.pop(context),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: BalatroTheme.gold,
-                                foregroundColor: BalatroTheme.felt,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 28,
-                                  vertical: 14,
-                                ),
-                              ),
-                              child: Text(
-                                AppStrings.of(context).back,
-                                style: BalatroTheme.statusStyle.copyWith(
-                                  fontSize: 14,
-                                  color: BalatroTheme.felt,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                  padding: const EdgeInsets.all(12),
+                  child: Text(
+                    _game.bloodFeudBanner!,
+                    textAlign: TextAlign.center,
+                    style: BalatroTheme.statusStyle.copyWith(fontSize: 12),
                   ),
                 ),
               ),
+            ),
+          ),
+        if (_game.debtPitActive)
+          Positioned(
+            right: 8,
+            top: modsOnTop ? 120 : 72,
+            child: _flipOverlay(
+              Material(
+                color: BalatroTheme.felt.withValues(alpha: 0.92),
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Text(
+                    'Долг\nБ ${_game.debtFor(PieceColor.white)}\nЧ ${_game.debtFor(PieceColor.black)}',
+                    textAlign: TextAlign.center,
+                    style: BalatroTheme.statusStyle.copyWith(fontSize: 11),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        if (_game.shopTokenActive && widget.localColor != null)
+          Positioned(
+            left: 8,
+            bottom: math.max(16, bottomPad + 16),
+            child: _flipOverlay(
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_game.shopAvailableFor(widget.localColor!))
+                    TextButton(
+                      onPressed: () {
+                        final sel = _selectedSquare;
+                        if (sel == null) return;
+                        final piece = _game.pieceAt(sel);
+                        if (piece == null) return;
+                        if (_game.trySellToShop(
+                          widget.localColor!,
+                          piece.pieceId,
+                        )) {
+                          setState(() {
+                            _selectedSquare = null;
+                            _availableMoves = [];
+                          });
+                        }
+                      },
+                      child: Text(
+                        'МАГАЗИН',
+                        style: BalatroTheme.statusStyle.copyWith(
+                          fontSize: 11,
+                          color: BalatroTheme.gold,
+                        ),
+                      ),
+                    ),
+                  if (_game.shopTokenHeldBy(widget.localColor!))
+                    TextButton(
+                      onPressed: () {
+                        if (_game.trySpendShopToken(widget.localColor!)) {
+                          setState(_popHistoryAfterTakeback);
+                        }
+                      },
+                      child: Text(
+                        'ЖЕТОН',
+                        style: BalatroTheme.statusStyle.copyWith(
+                          fontSize: 11,
+                          color: BalatroTheme.gold,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        if (_game.crazyhouseActive && widget.localColor != null)
+          Positioned(
+            left: 8,
+            top: modsOnTop ? 120 : 72,
+            child: _flipOverlay(
+              Material(
+                color: BalatroTheme.felt.withValues(alpha: 0.92),
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.all(6),
+                  child: Wrap(
+                    spacing: 4,
+                    children: [
+                      for (final type
+                          in _game.crazyhouseHandFor(widget.localColor!))
+                        ActionChip(
+                          label: Text(
+                            type.name[0].toUpperCase(),
+                            style: const TextStyle(fontSize: 11),
+                          ),
+                          onPressed: !_isMyTurn
+                              ? null
+                              : () async {
+                                  // Drop on next empty-square tap via premove-like select.
+                                  _showMessage(
+                                    'Выберите клетку для дропа (${type.name})',
+                                  );
+                                  // Store as pending drop using selected type in availableMoves hack:
+                                  // use a 1-step flow: tap square to drop.
+                                  _pendingCrazyDrop = type;
+                                },
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        if (_showEndOverlay &&
+            MediaQuery.sizeOf(context).width < _onlineWideBreakpoint)
+          Positioned(
+            left: 12,
+            right: 12,
+            bottom: math.max(12, bottomPad + 8),
+            child: Material(
+              color: BalatroTheme.felt,
+              elevation: 8,
+              borderRadius: BorderRadius.circular(12),
+              clipBehavior: Clip.antiAlias,
+              child: _buildGameEndFooter(),
             ),
           ),
       ],
@@ -3854,7 +4382,7 @@ class _ChessBoard extends StatelessWidget {
     final rankCount = game.rankCount;
     final fileCount = game.fileCount;
     final extraFile = game.extraFilePlacement;
-    final visible = game.fogOfWarActive
+    final visible = (game.fogOfWarActive || game.kriegspielActive)
         ? game.visibleSquaresFor(viewerColor)
         : null;
 
@@ -3958,9 +4486,131 @@ class _ChessBoard extends StatelessWidget {
               rotatePiece: rotatePieces,
               onFinished: onPieceFlightFinished ?? () {},
             ),
+          if (game.architectWallEdges.isNotEmpty)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: CustomPaint(
+                  painter: _ArchitectWallsPainter(
+                    walls: game.architectWallEdges,
+                    cellSize: cellSize,
+                    fileCount: fileCount,
+                    rankCount: rankCount,
+                    flipBoard: flipBoard,
+                    visible: visible,
+                  ),
+                ),
+              ),
+            ),
+          if (game.duckSquare != null)
+            Positioned(
+              left: (flipBoard
+                      ? fileCount - 1 - game.duckSquare!.file
+                      : game.duckSquare!.file) *
+                  cellSize,
+              top: (flipBoard
+                      ? game.duckSquare!.rank
+                      : rankCount - 1 - game.duckSquare!.rank) *
+                  cellSize,
+              width: cellSize,
+              height: cellSize,
+              child: IgnorePointer(
+                child: Center(
+                  child: Container(
+                    width: cellSize * 0.62,
+                    height: cellSize * 0.62,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFB300),
+                      borderRadius: BorderRadius.circular(cellSize * 0.2),
+                      border: Border.all(
+                        color: const Color(0xFF5D4037),
+                        width: 2,
+                      ),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      'D',
+                      style: TextStyle(
+                        fontSize: cellSize * 0.32,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF3E2723),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
+  }
+}
+
+class _ArchitectWallsPainter extends CustomPainter {
+  _ArchitectWallsPainter({
+    required this.walls,
+    required this.cellSize,
+    required this.fileCount,
+    required this.rankCount,
+    required this.flipBoard,
+    required this.visible,
+  });
+
+  final List<(Square, Square)> walls;
+  final double cellSize;
+  final int fileCount;
+  final int rankCount;
+  final bool flipBoard;
+  final Set<Square>? visible;
+
+  Offset _center(Square s) {
+    final col = flipBoard ? fileCount - 1 - s.file : s.file;
+    final row = flipBoard ? s.rank : rankCount - 1 - s.rank;
+    return Offset((col + 0.5) * cellSize, (row + 0.5) * cellSize);
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xE0B0BEC5)
+      ..strokeWidth = math.max(3.0, cellSize * 0.12)
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+    final glow = Paint()
+      ..color = const Color(0x66ECEFF1)
+      ..strokeWidth = math.max(5.0, cellSize * 0.18)
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+
+    for (final (a, b) in walls) {
+      if (visible != null &&
+          !visible!.contains(a) &&
+          !visible!.contains(b)) {
+        continue;
+      }
+      final ca = _center(a);
+      final cb = _center(b);
+      // Draw on the shared edge between cell centers.
+      final mid = Offset((ca.dx + cb.dx) / 2, (ca.dy + cb.dy) / 2);
+      final dx = cb.dx - ca.dx;
+      final dy = cb.dy - ca.dy;
+      final len = math.sqrt(dx * dx + dy * dy);
+      if (len < 1) continue;
+      // Perpendicular segment across the shared border.
+      final px = -dy / len * cellSize * 0.42;
+      final py = dx / len * cellSize * 0.42;
+      final p1 = Offset(mid.dx - px, mid.dy - py);
+      final p2 = Offset(mid.dx + px, mid.dy + py);
+      canvas.drawLine(p1, p2, glow);
+      canvas.drawLine(p1, p2, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ArchitectWallsPainter oldDelegate) {
+    return oldDelegate.walls != walls ||
+        oldDelegate.cellSize != cellSize ||
+        oldDelegate.flipBoard != flipBoard ||
+        oldDelegate.visible != visible;
   }
 }
 

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:postgres/postgres.dart';
@@ -39,6 +40,8 @@ class HistoryEntry {
     required this.ratingAfter,
     required this.createdAt,
     this.reason,
+    this.reasonDetail,
+    this.hasReplay = false,
   });
 
   final String gameId;
@@ -50,6 +53,26 @@ class HistoryEntry {
   final int? ratingAfter;
   final DateTime createdAt;
   final String? reason;
+  final String? reasonDetail;
+  final bool hasReplay;
+}
+
+class RivalryEntry {
+  RivalryEntry({
+    required this.opponentId,
+    required this.opponentName,
+    required this.wins,
+    required this.losses,
+    required this.draws,
+    required this.lastPlayed,
+  });
+
+  final String opponentId;
+  final String opponentName;
+  final int wins;
+  final int losses;
+  final int draws;
+  final DateTime lastPlayed;
 }
 
 class AuthDatabase {
@@ -141,6 +164,38 @@ class AuthDatabase {
         PRIMARY KEY (user_id, achievement_id)
       );
     ''');
+    await _conn.execute('''
+      CREATE TABLE IF NOT EXISTS rivalries (
+        user_low UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        user_high UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        low_wins INT NOT NULL DEFAULT 0,
+        high_wins INT NOT NULL DEFAULT 0,
+        draws INT NOT NULL DEFAULT 0,
+        last_played TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (user_low, user_high),
+        CHECK (user_low < user_high)
+      );
+    ''');
+    await _conn.execute('''
+      CREATE TABLE IF NOT EXISTS match_replays (
+        game_id TEXT PRIMARY KEY,
+        white_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+        black_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+        winner TEXT,
+        reason TEXT,
+        reason_detail TEXT,
+        white_mods JSONB NOT NULL DEFAULT '[]'::jsonb,
+        black_mods JSONB NOT NULL DEFAULT '[]'::jsonb,
+        plies JSONB NOT NULL DEFAULT '[]'::jsonb,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    ''');
+    await _conn.execute(
+      'ALTER TABLE games ADD COLUMN IF NOT EXISTS reason_detail TEXT;',
+    );
+    await _conn.execute(
+      'ALTER TABLE games ADD COLUMN IF NOT EXISTS rivalry_applied BOOLEAN NOT NULL DEFAULT FALSE;',
+    );
   }
 
   UserRecord _userFromRow(ResultRow row) {
@@ -282,9 +337,12 @@ class AuthDatabase {
     required String color, // white | black
     required String? winner, // white | black | null
     required String? reason,
+    String? reasonDetail,
     required String? opponentUserId,
     required String opponentName,
     required List<String> abilities,
+    List<String>? opponentAbilities,
+    List<Map<String, dynamic>>? plies,
   }) async {
     final rated = opponentUserId != null;
     final isWhite = color == 'white';
@@ -293,12 +351,12 @@ class AuthDatabase {
 
     await _conn.execute(
       Sql.named(
-        'INSERT INTO games (id, white_user_id, black_user_id, winner, reason, rated) '
+        'INSERT INTO games (id, white_user_id, black_user_id, winner, reason, reason_detail, rated) '
         'VALUES ('
         '@id, '
         'CAST(@white AS uuid), '
         'CAST(@black AS uuid), '
-        '@winner, @reason, @rated'
+        '@winner, @reason, @detail, @rated'
         ') ON CONFLICT (id) DO NOTHING',
       ),
       parameters: {
@@ -307,6 +365,7 @@ class AuthDatabase {
         'black': blackId,
         'winner': winner ?? 'draw',
         'reason': reason,
+        'detail': reasonDetail,
         'rated': rated,
       },
     );
@@ -318,6 +377,7 @@ class AuthDatabase {
         'black_user_id = COALESCE(black_user_id, CAST(@black AS uuid)), '
         'winner = COALESCE(winner, @winner), '
         'reason = COALESCE(reason, @reason), '
+        'reason_detail = COALESCE(reason_detail, @detail), '
         'rated = (rated OR @rated) '
         'WHERE id = @id',
       ),
@@ -327,6 +387,7 @@ class AuthDatabase {
         'black': blackId,
         'winner': winner ?? 'draw',
         'reason': reason,
+        'detail': reasonDetail,
         'rated': rated,
       },
     );
@@ -346,12 +407,156 @@ class AuthDatabase {
     // Elo once both sides are known accounts and not yet applied.
     await _maybeApplyElo(gameId);
 
+    if (opponentUserId != null) {
+      await _recordRivalry(
+        gameId: gameId,
+        userId: userId,
+        opponentUserId: opponentUserId,
+      );
+    }
+
+    await _saveMatchReplay(
+      gameId: gameId,
+      whiteUserId: whiteId,
+      blackUserId: blackId,
+      winner: winner ?? 'draw',
+      reason: reason,
+      reasonDetail: reasonDetail,
+      whiteMods: isWhite ? abilities : (opponentAbilities ?? const []),
+      blackMods: isWhite ? (opponentAbilities ?? const []) : abilities,
+      plies: plies,
+    );
+
     // Bump games_played once per user per game (using reported flag path).
     await _bumpGamesPlayedOnce(gameId: gameId, userId: userId, isWhite: isWhite);
 
     final user = await findById(userId);
     if (user == null) return {};
     return profileJson(user);
+  }
+
+  Future<void> _recordRivalry({
+    required String gameId,
+    required String userId,
+    required String opponentUserId,
+  }) async {
+    final low = userId.compareTo(opponentUserId) < 0 ? userId : opponentUserId;
+    final high = low == userId ? opponentUserId : userId;
+    await _conn.execute(
+      Sql.named(
+        'INSERT INTO rivalries (user_low, user_high) '
+        'VALUES (@low::uuid, @high::uuid) ON CONFLICT DO NOTHING',
+      ),
+      parameters: {'low': low, 'high': high},
+    );
+
+    final applied = await _conn.execute(
+      Sql.named(
+        'UPDATE games SET rivalry_applied = TRUE '
+        'WHERE id = @id AND rivalry_applied = FALSE '
+        'AND white_user_id IS NOT NULL AND black_user_id IS NOT NULL '
+        'RETURNING white_user_id::text, black_user_id::text, winner',
+      ),
+      parameters: {'id': gameId},
+    );
+    if (applied.isEmpty) return;
+
+    final row = applied.first;
+    final wId = row[0] as String?;
+    final bId = row[1] as String?;
+    final w = row[2] as String? ?? 'draw';
+
+    if (w == 'draw') {
+      await _conn.execute(
+        Sql.named(
+          'UPDATE rivalries SET draws = draws + 1, last_played = NOW() '
+          'WHERE user_low = @low::uuid AND user_high = @high::uuid',
+        ),
+        parameters: {'low': low, 'high': high},
+      );
+      return;
+    }
+
+    final winnerId = w == 'white' ? wId : bId;
+    if (winnerId == low) {
+      await _conn.execute(
+        Sql.named(
+          'UPDATE rivalries SET low_wins = low_wins + 1, last_played = NOW() '
+          'WHERE user_low = @low::uuid AND user_high = @high::uuid',
+        ),
+        parameters: {'low': low, 'high': high},
+      );
+    } else if (winnerId == high) {
+      await _conn.execute(
+        Sql.named(
+          'UPDATE rivalries SET high_wins = high_wins + 1, last_played = NOW() '
+          'WHERE user_low = @low::uuid AND user_high = @high::uuid',
+        ),
+        parameters: {'low': low, 'high': high},
+      );
+    }
+  }
+
+  Future<void> _saveMatchReplay({
+    required String gameId,
+    required String? whiteUserId,
+    required String? blackUserId,
+    required String winner,
+    required String? reason,
+    required String? reasonDetail,
+    required List<String> whiteMods,
+    required List<String> blackMods,
+    required List<Map<String, dynamic>>? plies,
+  }) async {
+    if (whiteUserId == null && blackUserId == null) return;
+    if (plies == null) return;
+
+    await _conn.execute(
+      Sql.named(
+        'INSERT INTO match_replays ('
+        'game_id, white_user_id, black_user_id, winner, reason, reason_detail, '
+        'white_mods, black_mods, plies'
+        ') VALUES ('
+        '@id, CAST(@white AS uuid), CAST(@black AS uuid), '
+        '@winner, @reason, @detail, '
+        '@wm::jsonb, @bm::jsonb, @plies::jsonb'
+        ') ON CONFLICT (game_id) DO UPDATE SET '
+        'plies = CASE WHEN jsonb_array_length(EXCLUDED.plies) > jsonb_array_length(match_replays.plies) '
+        'THEN EXCLUDED.plies ELSE match_replays.plies END, '
+        'white_mods = CASE WHEN jsonb_array_length(EXCLUDED.white_mods) > jsonb_array_length(match_replays.white_mods) '
+        'THEN EXCLUDED.white_mods ELSE match_replays.white_mods END, '
+        'black_mods = CASE WHEN jsonb_array_length(EXCLUDED.black_mods) > jsonb_array_length(match_replays.black_mods) '
+        'THEN EXCLUDED.black_mods ELSE match_replays.black_mods END, '
+        'reason_detail = COALESCE(match_replays.reason_detail, EXCLUDED.reason_detail)',
+      ),
+      parameters: {
+        'id': gameId,
+        'white': whiteUserId,
+        'black': blackUserId,
+        'winner': winner,
+        'reason': reason,
+        'detail': reasonDetail,
+        'wm': jsonEncode(whiteMods),
+        'bm': jsonEncode(blackMods),
+        'plies': jsonEncode(plies),
+      },
+    );
+
+    for (final uid in [whiteUserId, blackUserId]) {
+      if (uid == null) continue;
+      await _conn.execute(
+        Sql.named('''
+          DELETE FROM match_replays
+          WHERE game_id IN (
+            SELECT game_id FROM match_replays
+            WHERE white_user_id = @id::uuid OR black_user_id = @id::uuid
+            ORDER BY created_at DESC
+            OFFSET 20
+          )
+        '''),
+        parameters: {'id': uid},
+      );
+    }
   }
 
   Future<void> _bumpGamesPlayedOnce({
@@ -464,10 +669,12 @@ class AuthDatabase {
           CASE WHEN g.white_user_id = @id::uuid THEN g.white_rating_after ELSE g.black_rating_after END,
           g.created_at,
           g.reason,
+          g.reason_detail,
           CASE
             WHEN g.white_user_id = @id::uuid THEN COALESCE(bu.username, 'Anonymous')
             ELSE COALESCE(wu.username, 'Anonymous')
-          END AS opponent
+          END AS opponent,
+          EXISTS(SELECT 1 FROM match_replays mr WHERE mr.game_id = g.id) AS has_replay
         FROM games g
         LEFT JOIN users wu ON wu.id = g.white_user_id
         LEFT JOIN users bu ON bu.id = g.black_user_id
@@ -489,8 +696,79 @@ class AuthDatabase {
           ratingAfter: row[5] as int?,
           createdAt: row[6]! as DateTime,
           reason: row[7] as String?,
-          opponentName: row[8]! as String,
+          reasonDetail: row[8] as String?,
+          opponentName: row[9]! as String,
+          hasReplay: row[10] as bool? ?? false,
         ),
     ];
+  }
+
+  Future<List<RivalryEntry>> rivalriesFor(String userId, {int limit = 50}) async {
+    final result = await _conn.execute(
+      Sql.named('''
+        SELECT
+          CASE WHEN r.user_low = @id::uuid THEN r.user_high ELSE r.user_low END AS opp_id,
+          u.username,
+          CASE WHEN r.user_low = @id::uuid THEN r.low_wins ELSE r.high_wins END AS wins,
+          CASE WHEN r.user_low = @id::uuid THEN r.high_wins ELSE r.low_wins END AS losses,
+          r.draws,
+          r.last_played
+        FROM rivalries r
+        JOIN users u ON u.id = CASE
+          WHEN r.user_low = @id::uuid THEN r.user_high ELSE r.user_low END
+        WHERE r.user_low = @id::uuid OR r.user_high = @id::uuid
+        ORDER BY r.last_played DESC
+        LIMIT @limit
+      '''),
+      parameters: {'id': userId, 'limit': limit},
+    );
+    return [
+      for (final row in result)
+        RivalryEntry(
+          opponentId: row[0]! as String,
+          opponentName: row[1]! as String,
+          wins: row[2] as int? ?? 0,
+          losses: row[3] as int? ?? 0,
+          draws: row[4] as int? ?? 0,
+          lastPlayed: row[5]! as DateTime,
+        ),
+    ];
+  }
+
+  Future<Map<String, dynamic>?> matchReplayFor({
+    required String userId,
+    required String gameId,
+  }) async {
+    final result = await _conn.execute(
+      Sql.named('''
+        SELECT mr.game_id, mr.winner, mr.reason, mr.reason_detail,
+          mr.white_mods, mr.black_mods, mr.plies, mr.created_at,
+          wu.username, bu.username,
+          mr.white_user_id::text, mr.black_user_id::text
+        FROM match_replays mr
+        LEFT JOIN users wu ON wu.id = mr.white_user_id
+        LEFT JOIN users bu ON bu.id = mr.black_user_id
+        WHERE mr.game_id = @gid
+          AND (mr.white_user_id = @id::uuid OR mr.black_user_id = @id::uuid)
+        LIMIT 1
+      '''),
+      parameters: {'gid': gameId, 'id': userId},
+    );
+    if (result.isEmpty) return null;
+    final row = result.first;
+    return {
+      'gameId': row[0],
+      'winner': row[1],
+      'reason': row[2],
+      'reasonDetail': row[3],
+      'whiteMods': row[4],
+      'blackMods': row[5],
+      'plies': row[6],
+      'createdAt': (row[7] as DateTime).toUtc().toIso8601String(),
+      'whiteName': row[8] ?? 'Anonymous',
+      'blackName': row[9] ?? 'Anonymous',
+      'whiteUserId': row[10],
+      'blackUserId': row[11],
+    };
   }
 }

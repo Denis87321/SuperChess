@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:super_chess/chess/chess_game.dart';
 import 'package:super_chess/chess/move.dart';
+import 'package:super_chess/chess/board_labels.dart';
 import 'package:super_chess/l10n/models/ability_catalog.dart';
 import 'package:super_chess/l10n/models/ability_group.dart';
 import 'package:super_chess/l10n/models/game_ability.dart';
@@ -81,20 +82,25 @@ ChessGame _readyGameWithKingSwap() {
 }
 
 void main() {
-  test('start offers contain three board abilities', () {
+  test('start offers contain three board or mode abilities', () {
     final game = ChessGame(catalog: AbilityCatalog(random: Random(1)));
     expect(game.startOffersFor(PieceColor.white), hasLength(3));
     expect(
-      game
-          .startOffersFor(PieceColor.white)
-          .every((offer) => offer.ability.group == AbilityGroup.board),
+      game.startOffersFor(PieceColor.white).every(
+            (offer) =>
+                offer.ability.group == AbilityGroup.board ||
+                offer.ability.group == AbilityGroup.mode,
+          ),
       isTrue,
     );
   });
 
   test('remote start ability applies even if not in local offer list', () {
     final game = ChessGame(catalog: AbilityCatalog(random: Random(42)));
-    const remote = GameAbility.boardTroopFatigue;
+    final blackOffers = game.startOffersFor(PieceColor.black).map((o) => o.ability).toSet();
+    final remote = AbilityCatalog.boardAbilities.firstWhere(
+      (a) => !blackOffers.contains(a) && a != GameAbility.boardSkipTurn,
+    );
     expect(
       game.startOffersFor(PieceColor.black).map((o) => o.ability),
       isNot(contains(remote)),
@@ -112,7 +118,7 @@ void main() {
     game.applyRemoteStartAbility(
       PieceColor.black,
       remote,
-      offer: const AbilityOffer(
+      offer: AbilityOffer(
         ability: remote,
         applyMode: AbilityApplyMode.boardWide,
         forColor: PieceColor.black,
@@ -781,7 +787,7 @@ void main() {
       GameAbility.boardZebras,
     },
   }) {
-    for (var seed = 0; seed < 300; seed++) {
+    for (var seed = 0; seed < 8000; seed++) {
       final game = ChessGame(catalog: AbilityCatalog(random: Random(seed)));
       if (!game
           .startOffersFor(PieceColor.white)
@@ -2710,5 +2716,146 @@ void main() {
     expect(game.piecesAt(game.teleportA!).isEmpty, isTrue);
     expect(game.piecesAt(game.teleportB!).isEmpty, isTrue);
     expect(game.teleportA == game.teleportB, isFalse);
+  });
+
+  test('cavalry pawns stay knights for 3 plies even after moving', () {
+    final game = ChessGame(catalog: AbilityCatalog(random: Random(7)));
+    game.applyStartAbility(
+      PieceColor.white,
+      GameAbility.boardCavalry,
+      remoteOffer: const AbilityOffer(
+        ability: GameAbility.boardCavalry,
+        applyMode: AbilityApplyMode.boardWide,
+        forColor: PieceColor.white,
+      ),
+    );
+    game.applyStartAbility(
+      PieceColor.black,
+      GameAbility.boardSkipTurn,
+      remoteOffer: const AbilityOffer(
+        ability: GameAbility.boardSkipTurn,
+        applyMode: AbilityApplyMode.boardWide,
+        forColor: PieceColor.black,
+      ),
+    );
+
+    expect(game.pieceAt(const Square(0, 1))?.type, PieceType.knight);
+    expect(game.whiteCavalryMovesLeft, 3);
+
+    final moved = game.makeMove(
+      const Move(from: Square(0, 1), to: Square(1, 3)),
+    );
+    expect(moved, isNotNull);
+    expect(game.pieceAt(const Square(1, 3))?.type, PieceType.knight);
+    expect(game.whiteCavalryMovesLeft, 2);
+
+    game.makeMove(const Move(from: Square(4, 6), to: Square(4, 5)));
+    expect(game.whiteCavalryMovesLeft, 1);
+    expect(game.pieceAt(const Square(1, 3))?.type, PieceType.knight);
+
+    game.makeMove(const Move(from: Square(1, 0), to: Square(0, 2)));
+    expect(game.whiteCavalryMovesLeft, 0);
+    expect(game.pieceAt(const Square(1, 3))?.type, PieceType.pawn);
+  });
+
+  test('kingExtraStep allows orthogonal two-square move through empty mid', () {
+    final game = _emptyReadyGame();
+    game.debugSetPiece(
+      const Square(4, 0),
+      const Piece(
+        pieceId: 'white-king',
+        type: PieceType.king,
+        color: PieceColor.white,
+        hasMoved: true,
+      ).withAbility(GameAbility.kingExtraStep),
+    );
+    game.debugSetPiece(const Square(7, 0), null);
+    // Friendly "attack" on e2 must not block e1→e3 (old bug used own color).
+    game.debugSetPiece(
+      const Square(3, 1),
+      const Piece(
+        pieceId: 'white-queen',
+        type: PieceType.queen,
+        color: PieceColor.white,
+      ),
+    );
+
+    final legal = game.getLegalMoves(from: const Square(4, 0));
+    expect(
+      legal.any((m) => m.to == const Square(4, 2)),
+      isTrue,
+      reason: 'king with Длинный шаг should reach e3 from e1',
+    );
+  });
+
+  test('big assortment four choices only for the player who picked it', () {
+    final catalog = AbilityCatalog(random: Random(1));
+    final board = List.generate(
+      8,
+      (r) => List<Piece?>.generate(8, (f) => null),
+    );
+    board[0][4] = const Piece(
+      pieceId: 'wk',
+      type: PieceType.king,
+      color: PieceColor.white,
+    );
+    board[7][4] = const Piece(
+      pieceId: 'bk',
+      type: PieceType.king,
+      color: PieceColor.black,
+    );
+    board[1][0] = const Piece(
+      pieceId: 'wp',
+      type: PieceType.pawn,
+      color: PieceColor.white,
+    );
+    board[6][0] = const Piece(
+      pieceId: 'bp',
+      type: PieceType.pawn,
+      color: PieceColor.black,
+    );
+
+    final whiteOffers = catalog.pickPeriodicOffers(
+      forColor: PieceColor.white,
+      board: board,
+      rankCount: 8,
+      extraFilePlacement: ExtraFilePlacement.none,
+      offerFourChoices: true,
+    );
+    final blackOffers = catalog.pickPeriodicOffers(
+      forColor: PieceColor.black,
+      board: board,
+      rankCount: 8,
+      extraFilePlacement: ExtraFilePlacement.none,
+      offerFourChoices: false,
+    );
+    expect(whiteOffers, hasLength(4));
+    expect(blackOffers, hasLength(3));
+  });
+
+  test('pawn farsight only allows two-step forward and diagonal capture', () {
+    final game = _emptyReadyGame();
+    game.debugSetPiece(
+      const Square(4, 3),
+      const Piece(
+        pieceId: 'wp',
+        type: PieceType.pawn,
+        color: PieceColor.white,
+        hasMoved: true,
+      ).withAbility(GameAbility.pawnFarsight),
+    );
+    game.debugSetPiece(
+      const Square(5, 5),
+      const Piece(
+        pieceId: 'bp',
+        type: PieceType.pawn,
+        color: PieceColor.black,
+      ),
+    );
+
+    final legal = game.getLegalMoves(from: const Square(4, 3));
+    expect(legal.any((m) => m.to == const Square(4, 4)), isFalse);
+    expect(legal.any((m) => m.to == const Square(4, 5)), isTrue);
+    expect(legal.any((m) => m.to == const Square(5, 5)), isTrue);
   });
 }

@@ -29,4 +29,14 @@ const stockfishExcludedAbilities = <GameAbility>{
   // Double-move / chaos that desyncs UCI turn model.
   GameAbility.boardMarseillesChess,
   GameAbility.boardFisherMadness,
+
+  // Incomplete-info / drop / duck / atomic variants — not UCI-classical.
+  GameAbility.modeKriegspiel,
+  GameAbility.modeCrazyhouse,
+  GameAbility.modeDuckChess,
+  GameAbility.modeAtomic,
+  GameAbility.modeCallOf22,
+  GameAbility.modeShopToken,
+  GameAbility.randomTwentyOne,
+  GameAbility.randomMoveSteal,
 };

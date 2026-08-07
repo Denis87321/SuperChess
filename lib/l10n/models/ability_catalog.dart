@@ -17,6 +17,28 @@ class AbilityCatalog {
     GameAbility.boardMarseillesChess,
     GameAbility.boardTurncoats,
     GameAbility.boardFrostMap,
+    GameAbility.boardFogOfWar,
+    GameAbility.modeTimeZone,
+    GameAbility.modeMateVeto,
+    GameAbility.modeDebtPit,
+    GameAbility.modeWasteland,
+    GameAbility.modeBus,
+    GameAbility.modeShopToken,
+    GameAbility.modeSeasons,
+    GameAbility.modeBloodFeud,
+    GameAbility.modePrioritySetup,
+    GameAbility.modeBrokenPerspective,
+    GameAbility.modeCallOf22,
+    GameAbility.modeKriegspiel,
+    GameAbility.modeKingCenter,
+    GameAbility.modeAtomic,
+    GameAbility.modeCrazyhouse,
+    GameAbility.modeHolyRandom,
+    GameAbility.modeZooShuffle,
+    GameAbility.modeInsatiableHunger,
+    GameAbility.modeComeOn,
+    GameAbility.modeVolcano,
+    GameAbility.modeDuckChess,
   ];
 
   static const boardAbilities = [
@@ -27,7 +49,6 @@ class AbilityCatalog {
     GameAbility.boardLavaRank,
     GameAbility.boardExtraRank,
     GameAbility.boardExtraFile,
-    GameAbility.boardFogOfWar,
     GameAbility.boardDoubleStart,
     GameAbility.boardSprint,
     GameAbility.boardZebras,
@@ -76,6 +97,17 @@ class AbilityCatalog {
     GameAbility.boardCollectiveMyopia,
     GameAbility.boardTerritoryExpand,
     GameAbility.boardScorchingSun,
+    GameAbility.boardInkBlot,
+    GameAbility.boardGravityWell,
+    GameAbility.boardIdealSymmetry,
+    GameAbility.boardShadowRight,
+    GameAbility.boardCenterTax,
+    GameAbility.boardWalkingCastle,
+    GameAbility.boardInvisibleHand,
+    GameAbility.boardRiver,
+    GameAbility.boardForbiddenLetter,
+    GameAbility.boardRestlessKings,
+    GameAbility.boardEarnedRest,
   ];
 
   static const randomAbilities = [
@@ -110,6 +142,18 @@ class AbilityCatalog {
     GameAbility.randomSuicideCapture,
     GameAbility.randomMeatGrinder,
     GameAbility.randomQuicksand,
+    GameAbility.randomMoveSteal,
+    GameAbility.randomSerialManiac,
+    GameAbility.randomSnailTrail,
+    GameAbility.randomDisinfo,
+    GameAbility.randomFamilyContract,
+    GameAbility.randomKansasHurricanes,
+    GameAbility.randomLoneWarrior,
+    GameAbility.randomWarehouse,
+    GameAbility.randomTwilightEclipse,
+    GameAbility.randomGestureMirror,
+    GameAbility.randomBlackMark,
+    GameAbility.randomTwentyOne,
   ];
 
   static const pawnAbilities = [
@@ -131,6 +175,20 @@ class AbilityCatalog {
     GameAbility.pawnSignalFire,
     GameAbility.pawnAvengeMe,
     GameAbility.pawnCaravan,
+    GameAbility.pawnArchivist,
+    GameAbility.pawnPairStep,
+    GameAbility.pawnFarsight,
+    GameAbility.pawnMortar,
+    GameAbility.pawnSapper,
+    GameAbility.pawnHereditaryEdict,
+    GameAbility.pawnInfantryShadow,
+    GameAbility.pawnStarvation,
+    GameAbility.pawnSeed,
+    GameAbility.pawnRockPaperScissors,
+    GameAbility.pawnDoubleLife,
+    GameAbility.pawnLittleBrother,
+    GameAbility.pawnSpotlight,
+    GameAbility.pawnFuse,
     GameAbility.pawnFaceControl,
   ];
 
@@ -155,6 +213,16 @@ class AbilityCatalog {
     GameAbility.knightCornerQuest,
     GameAbility.knightRideMe,
     GameAbility.knightMagicHooves,
+    GameAbility.knightMaskSwap,
+    GameAbility.knightNonAggression,
+    GameAbility.knightKingGuard,
+    GameAbility.knightNightWatch,
+    GameAbility.knightGallopContract,
+    GameAbility.knightTangledTrail,
+    GameAbility.knightCustomsPath,
+    GameAbility.knightBucephalus,
+    GameAbility.knightHoofSmoke,
+    GameAbility.knightDonkey,
     GameAbility.knightSignalFire,
   ];
 
@@ -175,6 +243,19 @@ class AbilityCatalog {
     GameAbility.bishopAlcove,
     GameAbility.bishopGlassCeiling,
     GameAbility.bishopElusive,
+    GameAbility.bishopMaskSwap,
+    GameAbility.bishopNonAggression,
+    GameAbility.bishopKingGuard,
+    GameAbility.bishopInkTrail,
+    GameAbility.bishopGanesha,
+    GameAbility.bishopHeretic,
+    GameAbility.bishopRelicPower,
+    GameAbility.bishopBlindingSacristy,
+    GameAbility.bishopLayman,
+    GameAbility.bishopProcession,
+    GameAbility.bishopSchism,
+    GameAbility.bishopLambs,
+    GameAbility.bishopCartographer,
     GameAbility.bishopSignalFire,
   ];
 
@@ -190,6 +271,9 @@ class AbilityCatalog {
     GameAbility.rookSiegeCalculation,
     GameAbility.rookFerry,
     GameAbility.rookSignalTower,
+    GameAbility.rookSeal,
+    GameAbility.rookIllDrive,
+    GameAbility.rookCannotHide,
     GameAbility.rookSignalFire,
   ];
 
@@ -202,6 +286,8 @@ class AbilityCatalog {
     GameAbility.queenEscape,
     GameAbility.queenDelayedSentence,
     GameAbility.queenTrophyEmbargo,
+    GameAbility.queenCourtIntrigue,
+    GameAbility.queenFatherDream,
     GameAbility.queenYouShallNotPass,
   ];
 
@@ -215,6 +301,7 @@ class AbilityCatalog {
     GameAbility.kingFamilyUnion,
     GameAbility.kingPrisonerExchange,
     GameAbility.kingRemoveEnemyMod,
+    GameAbility.kingOwnHands,
     GameAbility.kingAssemblyHall,
   ];
 
@@ -313,6 +400,7 @@ class AbilityCatalog {
 
     if (!minesActive) {
       pool.remove(GameAbility.pawnForTheKing);
+      pool.remove(GameAbility.pawnSapper);
     }
     if (!fogOfWarActive) {
       pool
@@ -320,7 +408,9 @@ class AbilityCatalog {
         ..remove(GameAbility.knightSignalFire)
         ..remove(GameAbility.bishopSignalFire)
         ..remove(GameAbility.rookSignalFire)
-        ..remove(GameAbility.rookSignalTower);
+        ..remove(GameAbility.rookSignalTower)
+        ..remove(GameAbility.knightNightWatch)
+        ..remove(GameAbility.bishopCartographer);
     }
     if (mirrorActive) {
       pool.remove(GameAbility.rookFerry);
@@ -351,6 +441,21 @@ class AbilityCatalog {
     pool
       ..remove(GameAbility.boardFisher)
       ..remove(GameAbility.boardFisherMadness);
+
+    // Цу-е-фа only if opposing pawns block each other on a file.
+    if (!_hasBlockingPawnPairs(board, rankCount, fileCount)) {
+      pool.remove(GameAbility.pawnRockPaperScissors);
+    }
+    // Еретик: fewer pieces than opponent
+    if (_countNonKings(board, rankCount, fileCount, forColor) >=
+        _countNonKings(
+          board,
+          rankCount,
+          fileCount,
+          forColor == PieceColor.white ? PieceColor.black : PieceColor.white,
+        )) {
+      pool.remove(GameAbility.bishopHeretic);
+    }
 
     final count = offerFourChoices ? 4 : 3;
     final picked = _pickUnique(pool, count);
@@ -469,6 +574,13 @@ class AbilityCatalog {
             ? (_random.nextBool() ? AbilityAxis.rank : AbilityAxis.file)
             : null,
         targetSelection: _targetSelectionFor(ability),
+      );
+    }
+    if (ability == GameAbility.pawnRockPaperScissors) {
+      return AbilityOffer(
+        ability: ability,
+        applyMode: AbilityApplyMode.boardWide,
+        targetSelection: AbilityTargetSelection.none,
       );
     }
     return AbilityOffer(
@@ -868,6 +980,50 @@ class AbilityCatalog {
         durationMoves: 3 + _random.nextInt(6), // 3..8 walls
       );
     }
+    if (ability == GameAbility.modePrioritySetup) {
+      final left = <Square>[];
+      final right = <Square>[];
+      for (var r = 0; r < 8; r++) {
+        for (var f = 0; f < 8; f++) {
+          final s = Square(f, r);
+          if (f <= 3) {
+            left.add(s);
+          } else {
+            right.add(s);
+          }
+        }
+      }
+      left.shuffle(_random);
+      right.shuffle(_random);
+      return AbilityOffer(
+        ability: ability,
+        applyMode: AbilityApplyMode.boardWide,
+        route: [...left.take(2), ...right.take(2)],
+      );
+    }
+    if (ability == GameAbility.boardForbiddenLetter) {
+      return AbilityOffer(
+        ability: ability,
+        applyMode: AbilityApplyMode.boardWide,
+        silentFile: _random.nextInt(8),
+        durationMoves: 6,
+      );
+    }
+    if (ability == GameAbility.boardRiver) {
+      return AbilityOffer(
+        ability: ability,
+        applyMode: AbilityApplyMode.boardWide,
+        quakeRank: 2 + _random.nextInt(4),
+      );
+    }
+    if (ability == GameAbility.boardGravityWell ||
+        ability == GameAbility.boardEarnedRest) {
+      return AbilityOffer(
+        ability: ability,
+        applyMode: AbilityApplyMode.boardWide,
+        targetCell: Square(_random.nextInt(8), 2 + _random.nextInt(4)),
+      );
+    }
     if (ability.isBoardWide ||
         ability == GameAbility.boardExtraRank ||
         ability == GameAbility.boardFogOfWar ||
@@ -974,6 +1130,7 @@ class AbilityCatalog {
 
     if (!minesActive) {
       pool.remove(GameAbility.pawnForTheKing);
+      pool.remove(GameAbility.pawnSapper);
     }
     if (!fogOfWarActive) {
       pool
@@ -981,7 +1138,9 @@ class AbilityCatalog {
         ..remove(GameAbility.knightSignalFire)
         ..remove(GameAbility.bishopSignalFire)
         ..remove(GameAbility.rookSignalFire)
-        ..remove(GameAbility.rookSignalTower);
+        ..remove(GameAbility.rookSignalTower)
+        ..remove(GameAbility.knightNightWatch)
+        ..remove(GameAbility.bishopCartographer);
     }
     if (mirrorActive) {
       pool.remove(GameAbility.rookFerry);
@@ -1462,6 +1621,20 @@ class AbilityCatalog {
         return AbilityTargetSelection.capturedFriendlyPiece;
       case GameAbility.kingRemoveEnemyMod:
         return AbilityTargetSelection.enemyAbility;
+
+      case GameAbility.pawnStarvation:
+      case GameAbility.knightNonAggression:
+      case GameAbility.bishopNonAggression:
+      case GameAbility.queenCourtIntrigue:
+      case GameAbility.rookSeal:
+        return AbilityTargetSelection.enemyPiece;
+      case GameAbility.pawnPairStep:
+      case GameAbility.bishopProcession:
+        return AbilityTargetSelection.friendlyPiece;
+      case GameAbility.knightGallopContract:
+      case GameAbility.bishopCartographer:
+      case GameAbility.bishopHeretic:
+        return AbilityTargetSelection.cell;
       default:
         return AbilityTargetSelection.none;
     }
@@ -1553,6 +1726,30 @@ class AbilityCatalog {
         if (piece == null) continue;
         if (piece.color == capturingColor) continue;
         if (piece.abilities.isNotEmpty) return true;
+      }
+    }
+    return false;
+  }
+
+  static bool _hasBlockingPawnPairs(
+    List<List<Piece?>> board,
+    int rankCount,
+    int fileCount,
+  ) {
+    for (var file = 0; file < fileCount; file++) {
+      for (var rank = 0; rank < rankCount - 1; rank++) {
+        final a = board[rank][file];
+        final b = board[rank + 1][file];
+        if (a == null || b == null) continue;
+        if (a.type != PieceType.pawn || b.type != PieceType.pawn) continue;
+        if (a.color == b.color) continue;
+        // White below black on same file = mutually blocking forward progress.
+        if (a.color == PieceColor.white && b.color == PieceColor.black) {
+          return true;
+        }
+        if (a.color == PieceColor.black && b.color == PieceColor.white) {
+          return true;
+        }
       }
     }
     return false;

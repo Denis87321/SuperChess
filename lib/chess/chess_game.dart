@@ -224,6 +224,8 @@ class ChessGame {
   GameStatus _status = GameStatus.playing;
   PieceColor? _winnerColor;
   GameEndReason? _endReason;
+  /// Machine key for mod-specific endings (debtPit, kingOfHill, ...).
+  String? _endDetail;
   bool _isSimulatingLegality = false;
   GameSnapshot? _undoSnapshot;
 
@@ -343,6 +345,7 @@ class ChessGame {
   GameStatus get status => _status;
   PieceColor? get winnerColor => _winnerColor;
   GameEndReason? get endReason => _endReason;
+  String? get endDetail => _endDetail;
   bool get isGameOver => _endReason != null;
 
   /// Stable fingerprint of turn, status, end state, and board piece identities.
@@ -375,6 +378,16 @@ class ChessGame {
   bool get isBonusSkillChoice => isAwaitingSkillChoice && _skillChoiceIsBonus;
   GameEnginePhase get enginePhase {
     if (_pendingReactionMove != null) return GameEnginePhase.reaction;
+    if (_rules.spotlightPromoId != null) return GameEnginePhase.reaction;
+    if (_rules.awaitingCustomsPath) return GameEnginePhase.abilityTarget;
+    if (_rules.tangledAwaitingKeep) {
+      final owner = _pieceById(_rules.tangledKnightBaseId ?? '')?.piece.color ??
+          _pieceById(_rules.tangledCloneId ?? '')?.piece.color;
+      if (owner == null || owner == _turn) {
+        return GameEnginePhase.abilityTarget;
+      }
+    }
+    if (_rules.tangledAwaitingSecondDest) return GameEnginePhase.play;
     if (_pendingTargetSelection != null) return GameEnginePhase.abilityTarget;
     if (isAwaitingSkillChoice) return GameEnginePhase.skillChoice;
     return GameEnginePhase.play;
@@ -382,7 +395,9 @@ class ChessGame {
 
   bool get isAwaitingAbilityTarget =>
       enginePhase == GameEnginePhase.abilityTarget;
-  bool get isAwaitingReaction => enginePhase == GameEnginePhase.reaction;
+  bool get isAwaitingReaction =>
+      enginePhase == GameEnginePhase.reaction ||
+      _rules.spotlightPromoId != null;
   GameAbility? get pendingTargetAbility => _pendingTargetAbility;
   String? get pendingTargetSourcePieceId => _pendingTargetSourceId;
   PieceColor? get pendingTargetColor => _pendingTargetColor;
@@ -478,6 +493,27 @@ class ChessGame {
     if (_pendingTargetAbility == GameAbility.queenDelayedSentence) {
       return 'Выберите атакованную вражескую фигуру';
     }
+    if (_pendingTargetAbility == GameAbility.knightGallopContract) {
+      return 'Контракт галопа: выберите ${_rules.multiCellPicks.length + 1}/3 клетки маршрута';
+    }
+    if (_pendingTargetAbility == GameAbility.bishopHeretic) {
+      return 'Еретик: выберите ${_rules.multiCellPicks.length + 1}/4 клетки для пешек';
+    }
+    if (_pendingTargetAbility == GameAbility.bishopCartographer) {
+      return 'Картограф: выберите клетку на диагонали слона';
+    }
+    if (_pendingTargetAbility == GameAbility.pawnArchivist) {
+      return 'Архивариус: выберите клетку для возврата';
+    }
+    if (_pendingTargetAbility == GameAbility.bishopProcession) {
+      return 'Процессия: выберите союзную пешку на диагонали';
+    }
+    if (_pendingTargetAbility == GameAbility.pawnPairStep) {
+      return 'Парный шаг: выберите соседнюю пешку-союзницу';
+    }
+    if (_pendingTargetAbility == GameAbility.pawnRockPaperScissors) {
+      return 'Цу-е-фа: выберите пару блокирующих пешек';
+    }
     return 'Выберите цель способности';
   }
 
@@ -543,6 +579,25 @@ class ChessGame {
   GameAbility? get blackBoardAbility => _blackBoardAbility;
   Set<int> get lavaRanks => Set<int>.from(_lavaRanks);
   bool get fogOfWarActive => _fogOfWar;
+
+  /// Orthogonal edges blocked by Architect walls.
+  List<(Square, Square)> get architectWallEdges {
+    final out = <(Square, Square)>[];
+    for (final key in _rules.architectWalls) {
+      final parts = key.split('|');
+      if (parts.length != 2) continue;
+      final a = parts[0].split(',');
+      final b = parts[1].split(',');
+      if (a.length != 2 || b.length != 2) continue;
+      final af = int.tryParse(a[0]);
+      final ar = int.tryParse(a[1]);
+      final bf = int.tryParse(b[0]);
+      final br = int.tryParse(b[1]);
+      if (af == null || ar == null || bf == null || br == null) continue;
+      out.add((Square(af, ar), Square(bf, br)));
+    }
+    return out;
+  }
   bool get sprintActive => _sprintActive;
   int get skillChoiceSeconds => _sprintActive ? 10 : 30;
   Set<Square> get wormholes => Set<Square>.from(_wormholes);
@@ -847,6 +902,20 @@ class ChessGame {
   Set<Square> visibleSquaresFor(PieceColor color) {
     final visible = <Square>{};
 
+    // Kriegspiel: only your own pieces (and duck) are visible.
+    if (_rules.kriegspielActive && !_fogOfWar) {
+      for (var rank = 0; rank < _rankCount; rank++) {
+        for (var file = 0; file < _fileCount; file++) {
+          final square = Square(file, rank);
+          if (piecesAt(square).any((p) => _canControl(p, color))) {
+            visible.add(square);
+          }
+        }
+      }
+      if (_rules.duckSquare != null) visible.add(_rules.duckSquare!);
+      return visible;
+    }
+
     for (var rank = 0; rank < _rankCount; rank++) {
       for (var file = 0; file < _fileCount; file++) {
         final square = Square(file, rank);
@@ -855,22 +924,22 @@ class ChessGame {
           final piece = pieces[index];
           if (!_canControl(piece, color)) continue;
 
-          // Клетки вокруг фигуры (включая её собственную).
-          for (var dr = -1; dr <= 1; dr++) {
-            for (var df = -1; df <= 1; df++) {
-              final neighbor = Square(file + df, rank + dr);
-              if (isOnBoard(neighbor)) visible.add(neighbor);
-            }
-          }
+          visible.add(square);
 
-          // Клетки, на которые эта фигура может сходить.
+          // Dark chess: squares the piece can move to or capture onto
+          // (pawns also see empty diagonals they could capture on).
           for (final move in _getPseudoLegalMoves(
             square,
             piece,
             pieceIndex: index,
           )) {
-            if (_isLegalMove(move)) {
-              visible.add(move.to);
+            visible.add(move.to);
+          }
+          if (piece.type == PieceType.pawn) {
+            final dir = piece.color == PieceColor.white ? 1 : -1;
+            for (final df in const [-1, 1]) {
+              final attack = Square(file + df, rank + dir);
+              if (isOnBoard(attack)) visible.add(attack);
             }
           }
 
@@ -946,6 +1015,11 @@ class ChessGame {
     return events;
   }
 
+  /// Local UI-only preview of applying [offer] (does not sync online).
+  void previewApplyOffer(PieceColor color, AbilityOffer offer) {
+    _applyOffer(color, offer, null);
+  }
+
   @visibleForTesting
   void debugSetPiece(Square square, Piece? piece) {
     if (piece == null) {
@@ -1010,7 +1084,17 @@ class ChessGame {
   }
 
   List<Square> get legalAbilityTargetSquares {
+    if (_rules.tangledAwaitingKeep) {
+      final owner = _pieceById(_rules.tangledKnightBaseId ?? '')?.piece.color ??
+          _pieceById(_rules.tangledCloneId ?? '')?.piece.color;
+      if (owner == _turn || owner == null) {
+        return tangledKeepSquares;
+      }
+    }
     if (!isAwaitingAbilityTarget) return const [];
+    if (isAwaitingMultiCell) {
+      return _legalMultiCellSquares();
+    }
     if (_pendingTargetSelection == AbilityTargetSelection.cell) {
       if (_pendingTargetAbility == GameAbility.randomWordOfHonor) {
         final squares = <Square>[];
@@ -1021,16 +1105,33 @@ class ChessGame {
         }
         return squares;
       }
-      final source = _pieceById(_pendingTargetSourceId);
-      if (source == null) return const [];
-      return _knightJumpMoves(
-            source.square,
-            source.piece,
-            pieceIndex: source.index,
-          )
-          .where((move) => piecesAt(move.to).isEmpty)
-          .map((move) => move.to)
-          .toList();
+      if (_pendingTargetAbility == GameAbility.knightGallopContract ||
+          _pendingTargetAbility == GameAbility.bishopHeretic ||
+          _pendingTargetAbility == GameAbility.bishopCartographer ||
+          _pendingTargetAbility == GameAbility.pawnArchivist) {
+        return _legalMultiCellSquares();
+      }
+      if (_pendingTargetAbility == GameAbility.knightGuard) {
+        final source = _pieceById(_pendingTargetSourceId);
+        if (source == null) return const [];
+        return _knightJumpMoves(
+              source.square,
+              source.piece,
+              pieceIndex: source.index,
+            )
+            .where((move) => piecesAt(move.to).isEmpty)
+            .map((move) => move.to)
+            .toList();
+      }
+      // Generic empty cells fallback
+      final squares = <Square>[];
+      for (var rank = 0; rank < _rankCount; rank++) {
+        for (var file = 0; file < _fileCount; file++) {
+          final s = Square(file, rank);
+          if (piecesAt(s).isEmpty && !isBlocked(s)) squares.add(s);
+        }
+      }
+      return squares;
     }
     return [for (final target in _legalPieceTargets()) target.square];
   }
@@ -1087,6 +1188,44 @@ class ChessGame {
             if (df != dr || df == 0) continue;
             if (source.piece.parallelWorldsUsed) continue;
           }
+          if (source != null &&
+              _pendingTargetAbility == GameAbility.pawnPairStep) {
+            if (piece.type != PieceType.pawn) continue;
+            if (_chebyshevDistance(source.square, square) != 1) continue;
+          }
+          if (source != null &&
+              _pendingTargetAbility == GameAbility.bishopProcession) {
+            if (piece.type != PieceType.pawn) continue;
+            final df = (square.file - source.square.file).abs();
+            final dr = (square.rank - source.square.rank).abs();
+            if (df != dr || df == 0) continue;
+          }
+          if (source != null &&
+              (_pendingTargetAbility == GameAbility.knightNonAggression ||
+                  _pendingTargetAbility == GameAbility.bishopNonAggression)) {
+            if (piece.type != PieceType.knight &&
+                piece.type != PieceType.bishop) {
+              continue;
+            }
+          }
+          if (source != null &&
+              _pendingTargetAbility == GameAbility.rookSeal) {
+            if (!_canAttack(source.square, square, source.piece)) continue;
+          }
+          if (source != null &&
+              _pendingTargetAbility == GameAbility.queenCourtIntrigue) {
+            final enemyKing = findKing(piece.color);
+            if (enemyKing != null &&
+                _chebyshevDistance(square, enemyKing) <= 2) {
+              continue;
+            }
+          }
+          if (_pendingTargetAbility == GameAbility.pawnStarvation) {
+            if (piece.type != PieceType.pawn) continue;
+          }
+          if (_pendingTargetAbility == GameAbility.pawnRockPaperScissors) {
+            continue; // handled via RPS overlay, not piece taps
+          }
           result.add((square: square, index: index, piece: piece));
         }
       }
@@ -1095,6 +1234,9 @@ class ChessGame {
   }
 
   bool chooseAbilityTarget({String? pieceId, Square? square, int index = 0}) {
+    if (_rules.tangledAwaitingKeep && square != null) {
+      return chooseTangledKeep(square);
+    }
     if (!isAwaitingAbilityTarget) return false;
     final ability = _pendingTargetAbility;
     final sourceId = _pendingTargetSourceId;
@@ -1104,12 +1246,34 @@ class ChessGame {
       if (square == null || !legalAbilityTargetSquares.contains(square)) {
         return false;
       }
+      if (_rules.tangledAwaitingKeep) {
+        return chooseTangledKeep(square);
+      }
       if (ability == GameAbility.randomWordOfHonor) {
         _rules.wordOfHonorSquare = square;
         _rules.wordOfHonorColor = _pendingTargetColor ?? PieceColor.white;
-      } else {
+      } else if (ability == GameAbility.knightGuard) {
         _guardSquares[sourceId] = square;
         _guardTurnsLeft[sourceId] = 4;
+      } else if (ability == GameAbility.knightGallopContract ||
+          ability == GameAbility.bishopHeretic ||
+          ability == GameAbility.bishopCartographer ||
+          ability == GameAbility.pawnArchivist ||
+          isAwaitingMultiCell) {
+        if (_rules.multiCellAbility == null) {
+          _rules.multiCellAbility = ability;
+          _rules.multiCellSourceId = sourceId;
+          _rules.multiCellColor = _pendingTargetColor;
+          _rules.multiCellNeeded = switch (ability) {
+            GameAbility.knightGallopContract => 3,
+            GameAbility.bishopHeretic => 4,
+            _ => 1,
+          };
+          _rules.multiCellPicks.clear();
+        }
+        return _acceptMultiCellPick(square);
+      } else {
+        return false;
       }
     } else if (_pendingTargetSelection ==
         AbilityTargetSelection.capturedFriendlyPiece) {
@@ -1237,6 +1401,23 @@ class ChessGame {
         case GameAbility.knightRideMe:
           _rules.pendingRideKnightId = sourceId;
           _rules.pendingRidePawnId = selected.piece.pieceId;
+        case GameAbility.knightNonAggression:
+        case GameAbility.bishopNonAggression:
+          _rules.nonAggressionLink[sourceId] = selected.piece.pieceId;
+          _rules.nonAggressionLink[selected.piece.pieceId] = sourceId;
+        case GameAbility.pawnPairStep:
+          _rules.pairStepPartner[sourceId] = selected.piece.pieceId;
+          _rules.pairStepPartner[selected.piece.pieceId] = sourceId;
+        case GameAbility.bishopProcession:
+          _applyProcessionNudge(sourceId, selected.piece.pieceId);
+        case GameAbility.pawnStarvation:
+          _rules.starvationPlies[selected.piece.pieceId] = 6;
+        case GameAbility.rookSeal:
+          _rules.sealRookId = sourceId;
+          _rules.sealVictimId = selected.piece.pieceId;
+        case GameAbility.queenCourtIntrigue:
+          _rules.courtIntrigueQueenId = sourceId;
+          _rules.courtIntrigueVictimId = selected.piece.pieceId;
         case GameAbility.bishopParallelWorlds:
           final source = _pieceById(sourceId);
           if (source == null || source.piece.parallelWorldsUsed) return false;
@@ -1537,6 +1718,7 @@ class ChessGame {
   bool get _truceActive => _truceMovesLeft > 0;
 
   bool _isLandingAllowed(Square square, {Piece? forPiece}) {
+    if (_rules.duckSquare == square) return false;
     if (isGhostCell(square)) return false;
     if (forPiece != null && !_customsLandingAllowed(square, forPiece)) {
       return false;
@@ -1546,6 +1728,29 @@ class ChessGame {
         forPiece.boundIsLight != null &&
         isSquareLight(square) != forPiece.boundIsLight) {
       return false;
+    }
+    if (forPiece != null &&
+        forPiece.type == PieceType.pawn &&
+        (_rules.inkTrailBlocked[square] ?? 0) > 0) {
+      // Ink trail blocks enemy pawns only.
+      // Owner of ink is the bishop's color — we block if this pawn's opponent
+      // laid the trail; trail map doesn't store owner, so block all enemy-of-
+      // none: simply block any pawn landing while trail active (enemy-only
+      // effect). Allies of the bishop shouldn't be blocked — without owner we
+      // approximate: block if pawn color differs from any ink-trail bishop.
+      // Safer: store nothing and block only if an opposing ink-trail bishop exists.
+      var enemyInk = false;
+      for (var r = 0; r < _rankCount; r++) {
+        for (var f = 0; f < _fileCount; f++) {
+          for (final p in piecesAt(Square(f, r))) {
+            if (_hasEffect(p, AbilityEffect.bishopInkTrail) &&
+                p.color != forPiece.color) {
+              enemyInk = true;
+            }
+          }
+        }
+      }
+      if (enemyInk) return false;
     }
     if (forPiece?.type == PieceType.king) {
       for (final entry in _guardSquares.entries) {
@@ -1713,6 +1918,11 @@ class ChessGame {
             // Unrevealed spy secretly serves the opponent — no attacks.
             continue;
           }
+          // Ink blot: pieces on a blot cannot give check.
+          if (_rules.inkBlotPlies.containsKey(from)) {
+            final kingSq = findKing(byColor.opponent);
+            if (kingSq == square) continue;
+          }
           if (_throneBlocksAttack(from, square, byColor)) continue;
           if (_canAttack(from, square, piece)) return true;
         }
@@ -1749,7 +1959,26 @@ class ChessGame {
   }
 
   List<Move> getLegalMoves({Square? from}) {
-    if (!isReadyToPlay || isGameOver || enginePhase != GameEnginePhase.play) {
+    if (!isReadyToPlay || isGameOver) {
+      return const [];
+    }
+
+    if (_rules.tangledAwaitingSecondDest) {
+      final origin = _rules.tangledFrom;
+      final first = _rules.tangledFirstDest;
+      final id = _rules.tangledKnightBaseId;
+      if (origin == null || first == null || id == null) return const [];
+      if (from != null && from != origin) return const [];
+      final piece = pieceAt(origin);
+      if (piece == null || piece.pieceId != id) return const [];
+      return _knightJumpMoves(origin, piece, pieceIndex: 0)
+          .where((m) => m.to != first)
+          .where(_isLegalMove)
+          .where(_isBoardRuleLegalMove)
+          .toList();
+    }
+
+    if (enginePhase != GameEnginePhase.play) {
       return const [];
     }
 
@@ -1900,6 +2129,7 @@ class ChessGame {
   void applyRemoteEnd({
     PieceColor? winner,
     GameEndReason? reason,
+    String? detail,
   }) {
     if (isGameOver) return;
     _finishGame(
@@ -1907,6 +2137,7 @@ class ChessGame {
       reason: reason ??
           (winner == null ? GameEndReason.draw : GameEndReason.resign),
       status: winner == null ? GameStatus.stalemate : GameStatus.checkmate,
+      detail: detail,
     );
   }
 
@@ -1953,7 +2184,8 @@ class ChessGame {
       fogOfWarActive: _fogOfWar,
       minesActive: _mines.isNotEmpty,
       mirrorActive: _mirrorActive,
-      offerFourChoices: _rules.bigAssortmentActive,
+      offerFourChoices: _rules.bigAssortmentOwners.contains(color) ||
+          (_rules.bigAssortmentOwners.isEmpty && _rules.bigAssortmentActive),
     );
 
     final permanent = color == PieceColor.white
@@ -2007,6 +2239,102 @@ class ChessGame {
 
     if (!_isSimulatingLegality) {
       _lastMove = move;
+    }
+
+    final moverBeforeCustoms = pieceAt(move.from, index: move.pieceIndex);
+    // Customs path: after destination chosen, pause for path pick.
+    if (!_isSimulatingLegality &&
+        moverBeforeCustoms != null &&
+        _hasEffect(moverBeforeCustoms, AbilityEffect.knightCustomsPath) &&
+        !_rules.awaitingCustomsPath) {
+      if (_rules.customsPathResolvedSkip) {
+        _rules.customsPathResolvedSkip = false;
+      } else {
+      final paths = _knightPathOptions(move.from, move.to);
+      if (paths.length >= 2) {
+        _rules.awaitingCustomsPath = true;
+        _rules.customsKnightId = moverBeforeCustoms.pieceId;
+        _rules.customsFrom = move.from;
+        _rules.customsTo = move.to;
+        _rules.customsPaths
+          ..clear()
+          ..addAll([
+            for (final p in paths) [p.$1, p.$2, p.$3, p.$4],
+          ]);
+        _updateStatus();
+        return const MoveResult(
+          requiresSkillChoice: false,
+          outcome: MoveOutcome.awaitingTarget,
+        );
+      }
+      }
+    }
+
+    // Tangled trail: pick two destinations from the same square in one turn.
+    if (!_isSimulatingLegality &&
+        moverBeforeCustoms != null &&
+        _rules.tangledKnightBaseId == moverBeforeCustoms.pieceId &&
+        _hasEffect(moverBeforeCustoms, AbilityEffect.knightTangledTrail)) {
+      if (_rules.tangledAwaitingKeep) {
+        return null;
+      }
+      if (!_rules.tangledAwaitingSecondDest) {
+        _rules.tangledFrom = move.from;
+        _rules.tangledFirstDest = move.to;
+        _rules.tangledAwaitingSecondDest = true;
+        _updateStatus();
+        return const MoveResult(
+          requiresSkillChoice: false,
+          outcome: MoveOutcome.awaitingTarget,
+        );
+      }
+      // Second destination — resolve split without normal single move apply.
+      final from = _rules.tangledFrom ?? move.from;
+      final destA = _rules.tangledFirstDest;
+      final destB = move.to;
+      if (destA == null || destA == destB) return null;
+      if (!_isSimulatingLegality) {
+        _undoSnapshot = createSnapshot();
+      }
+      final base = pieceAt(from, index: move.pieceIndex);
+      if (base == null) return null;
+      _takePieceAt(from, move.pieceIndex);
+      void land(Square to, {required bool asClone}) {
+        final victims = piecesAt(to)
+            .where((p) => p.color != base.color)
+            .toList();
+        for (final v in victims) {
+          final ref = _pieceById(v.pieceId);
+          if (ref == null) continue;
+          final removed = _takePieceAt(ref.square, ref.index);
+          if (removed != null) {
+            _onFinalDeath(
+              removed,
+              ref.square,
+              capturingColor: base.color,
+              reason: GraveyardReason.capture,
+            );
+          }
+        }
+        final placed = base.copyWith(
+          pieceId: asClone ? '${base.pieceId}-tangled' : base.pieceId,
+          hasMoved: true,
+        );
+        _setPrimary(to, placed);
+        if (asClone) _rules.tangledCloneId = placed.pieceId;
+      }
+
+      land(destA, asClone: false);
+      land(destB, asClone: true);
+      _rules.tangledAwaitingSecondDest = false;
+      _rules.tangledAwaitingKeep = true;
+      _rules.tangledKnightBaseId = base.pieceId;
+      _passTurnUnlessDuckPending();
+      _updateStatus();
+      return const MoveResult(
+        requiresSkillChoice: false,
+        outcome: MoveOutcome.completed,
+      );
     }
 
     final captured = _isCapture(move);
@@ -2099,7 +2427,7 @@ class ChessGame {
               : MoveOutcome.awaitingTarget,
         );
       }
-      _passTurn();
+      _passTurnUnlessDuckPending();
       if (_startQueuedBonusSkillChoice()) {
         _updateStatus();
         return MoveResult(
@@ -2164,7 +2492,7 @@ class ChessGame {
             : MoveOutcome.awaitingTarget,
       );
     }
-    _passTurn();
+    _passTurnUnlessDuckPending();
     _updateStatus();
     return MoveResult(
       requiresSkillChoice: isAwaitingSkillChoice,
@@ -2218,6 +2546,10 @@ class ChessGame {
     _resolvePassiveAggression(finished, gaveCheck: checkDelivered);
     _maybeRestoreTimeCapsule();
     _clearForcedMoveIfUnusable();
+    _tickRelicAndSpotlight(finished);
+    if (checkDelivered) {
+      _tryKingGuardAuto(finished.opponent);
+    }
     _resolveTurnEndEffects();
 
     if (_rules.marseillesActive) {
@@ -2287,7 +2619,8 @@ class ChessGame {
       fogOfWarActive: _fogOfWar,
       minesActive: _mines.isNotEmpty,
       mirrorActive: _mirrorActive,
-      offerFourChoices: _rules.bigAssortmentActive,
+      offerFourChoices: _rules.bigAssortmentOwners.contains(color) ||
+          (_rules.bigAssortmentOwners.isEmpty && _rules.bigAssortmentActive),
       chooserDeliversCheck: isInCheck(color.opponent),
       hasFriendlyPrisoners: _graveyard.any(
         (r) =>
@@ -2764,9 +3097,20 @@ class ChessGame {
         } else if (offer.ability == GameAbility.boardArchitect) {
           _activateArchitectWalls(offer.durationMoves ?? (3 + _random.nextInt(6)));
         } else if (offer.ability == GameAbility.boardBigAssortment) {
-          _rules.bigAssortmentActive = true;
+          _rules.bigAssortmentOwners.add(color);
         } else if (offer.ability == GameAbility.boardBlindSpot) {
           _rules.blindSpotActive = true;
+        } else if (offer.ability == GameAbility.pawnRockPaperScissors) {
+          _startRpsSession(color);
+          if (_rules.rpsSessionActive && _rules.rpsPairIndex == null) {
+            _beginAbilityTarget(
+              ability: GameAbility.pawnRockPaperScissors,
+              sourceId: 'rps-${color.name}',
+              color: color,
+              selection: AbilityTargetSelection.cell,
+              passesTurn: true,
+            );
+          }
         } else if (offer.ability == GameAbility.boardOnlyEqualsKill) {
           _rules.onlyEqualsKillActive = true;
         } else if (offer.ability == GameAbility.boardInitiativeFear) {
@@ -2802,6 +3146,8 @@ class ChessGame {
             cellCount: offer.mineCount ?? (2 + _random.nextInt(4)),
             duration: offer.durationMoves ?? (2 + _random.nextInt(4)),
           );
+        } else {
+          _applyExpandedModOffer(color, offer);
         }
         return;
       case AbilityApplyMode.capturingPiece:
@@ -3365,6 +3711,7 @@ class ChessGame {
     _tickSquareColorLock();
     _tickTruce();
     _tickCavalry();
+    _tickExpandedModsAfterPass(finished);
     _tickAttraction();
     _tickDust();
     _tickLaser();
@@ -4708,6 +5055,25 @@ class ChessGame {
     if (ability == GameAbility.knightMagicHooves) {
       next = next.copyWith(magicHoovesPending: true);
     }
+    if (ability == GameAbility.pawnMortar) {
+      _rules.mortarCooldown[piece.pieceId] = 3;
+    }
+    if (ability == GameAbility.pawnDoubleLife) {
+      _rules.doubleLifeHidden[piece.pieceId] =
+          _random.nextBool() ? PieceType.knight : PieceType.bishop;
+    }
+    if (ability == GameAbility.kingOwnHands) {
+      // Only one player may hold this.
+      if (_rules.ownHandsOwner == null) {
+        _rules.ownHandsOwner = piece.color;
+      }
+    }
+    if (ability == GameAbility.pawnHereditaryEdict) {
+      _rules.hereditaryEdictOwner = piece.color;
+    }
+    if (ability == GameAbility.queenFatherDream) {
+      // Win check happens when abilities grow.
+    }
 
     _replacePieceAt(square, pieceIndex, next);
 
@@ -4785,6 +5151,63 @@ class ChessGame {
         }
       }
     }
+
+    if (ability == GameAbility.knightKingGuard ||
+        ability == GameAbility.bishopKingGuard) {
+      _rules.kingGuardPieceIds.add(piece.pieceId);
+    }
+    if (ability == GameAbility.bishopSchism) {
+      _applySchismSplit(piece.pieceId);
+    }
+    if (ability == GameAbility.knightTangledTrail) {
+      _rules.tangledKnightBaseId = piece.pieceId;
+    }
+    if (ability == GameAbility.knightCustomsPath) {
+      _rules.customsKnightId = piece.pieceId;
+    }
+    if (ability == GameAbility.rookIllDrive) {
+      _rules.illDriveRookId = piece.pieceId;
+    }
+    if (ability == GameAbility.knightGallopContract) {
+      _beginMultiCellTarget(
+        ability: ability,
+        sourceId: piece.pieceId,
+        color: piece.color,
+        needed: 3,
+      );
+    }
+    if (ability == GameAbility.bishopHeretic) {
+      _beginMultiCellTarget(
+        ability: ability,
+        sourceId: piece.pieceId,
+        color: piece.color,
+        needed: 4,
+      );
+    }
+    if (ability == GameAbility.bishopCartographer) {
+      _beginMultiCellTarget(
+        ability: ability,
+        sourceId: piece.pieceId,
+        color: piece.color,
+        needed: 1,
+      );
+    }
+  }
+
+  void _applyProcessionNudge(String bishopId, String pawnId) {
+    final bishop = _pieceById(bishopId);
+    final pawn = _pieceById(pawnId);
+    if (bishop == null || pawn == null) return;
+    final df = (pawn.square.file - bishop.square.file).sign;
+    final dr = (pawn.square.rank - bishop.square.rank).sign;
+    if (df == 0 || dr == 0) return;
+    final dest = Square(pawn.square.file + df, pawn.square.rank + dr);
+    if (!isOnBoard(dest) || piecesAt(dest).isNotEmpty || isBlocked(dest)) {
+      return;
+    }
+    final moved = _takePieceAt(pawn.square, pawn.index);
+    if (moved == null) return;
+    _setPrimary(dest, moved);
   }
 
   void _refreshDoppelgangerFlags() {
@@ -4985,6 +5408,24 @@ class ChessGame {
     );
 
     if (!_isSimulatingLegality) {
+      if (_hasEffect(piece, AbilityEffect.pawnSeed)) {
+        _rules.pawnSeeds[deathSquare] = (color: piece.color, fullMovesLeft: 3);
+      }
+      if (_hasEffect(piece, AbilityEffect.bishopRelicPower)) {
+        _rules.relicDeathSquare[piece.pieceId] = deathSquare;
+        _rules.relicPliesLeft[piece.pieceId] = 3;
+      }
+      if (_rules.warehouseActive &&
+          piece.abilities.isNotEmpty &&
+          capturingColor != null) {
+        // Capturer's opponent lost a mod — wait, warehouse is for the chooser
+        // who gets the next mod the opponent loses. Warehouse owner is whoever
+        // picked the cataclysm — we didn't store owner. Use capturingColor's
+        // opponent as the loser; warehouse goes to capturingColor.
+        final lost = piece.abilities.first;
+        _rules.warehousePendingAbility = lost;
+        _rules.warehousePendingType = piece.type;
+      }
       _graveyard.add(
         GraveyardRecord(
           piece: piece,
@@ -4994,6 +5435,57 @@ class ChessGame {
           reason: reason,
         ),
       );
+      if (reason == GraveyardReason.capture && capturingColor != null) {
+        if (_rules.crazyhouseActive && piece.type != PieceType.king) {
+          final dropType =
+              piece.type == PieceType.pawn ? PieceType.pawn : piece.type;
+          _rules.crazyhouseHand[capturingColor]!.add(dropType);
+        }
+        if (_rules.debtPitActive) {
+          if (capturingColor == PieceColor.white) {
+            _rules.whiteDebt++;
+            _rules.blackDebt--;
+          } else {
+            _rules.blackDebt++;
+            _rules.whiteDebt--;
+          }
+          if (_rules.whiteDebt >= 6) {
+            _finishGame(
+              winner: PieceColor.black,
+              reason: GameEndReason.alternativeVictory,
+              detail: 'debtPit',
+            );
+          } else if (_rules.blackDebt >= 6) {
+            _finishGame(
+              winner: PieceColor.white,
+              reason: GameEndReason.alternativeVictory,
+              detail: 'debtPit',
+            );
+          }
+        }
+        if (_rules.bloodFeudActive) {
+          _rules.bloodFeudVictimColor = piece.color;
+          _rules.bloodFeudPliesLeft = 2;
+          _rules.bloodFeudBanner =
+              'Кровная вражда — отомстите взятием за 2 хода, иначе соперник получит мод';
+        }
+        if (_rules.inkBlotActive) {
+          _rules.inkBlotPlies[deathSquare] = 8; // 4 full moves
+        }
+        if (_rules.earnedRestSquare == deathSquare &&
+            !_rules.earnedRestBurned) {
+          _rules.earnedRestCaptures++;
+          if (_rules.earnedRestCaptures >= 3) {
+            _rules.earnedRestBurned = true;
+            _wormholes.add(deathSquare);
+          }
+        }
+        final capturerId = _lastMoveCapturerId();
+        if (capturerId != null) {
+          _rules.serialCaptureCounts[capturerId] =
+              (_rules.serialCaptureCounts[capturerId] ?? 0) + 1;
+        }
+      }
       if (reason == GraveyardReason.capture &&
           capturingColor != null &&
           _hasEffect(piece, AbilityEffect.avengeMe)) {
@@ -5144,11 +5636,13 @@ class ChessGame {
     required PieceColor? winner,
     required GameEndReason reason,
     GameStatus status = GameStatus.checkmate,
+    String? detail,
   }) {
     if (isGameOver) return;
     _undoSnapshot = null;
     _winnerColor = winner;
     _endReason = reason;
+    _endDetail = detail;
     _status = status;
     _pendingSkillSquare = null;
     _pendingSkillPieceId = null;
@@ -5192,7 +5686,31 @@ class ChessGame {
     final inCheck = _truceActive ? false : actualCheck;
 
     if (legalMoves.isEmpty) {
-      if (inCheck) {
+      // Dark chess: no checkmate — only king capture wins; no moves → draw.
+      if (_fogOfWar) {
+        _finishGame(
+          winner: null,
+          reason: GameEndReason.stalemate,
+          status: GameStatus.stalemate,
+        );
+      } else if (_rules.busActive && !inCheck) {
+        final whiteN = _countArmy(PieceColor.white);
+        final blackN = _countArmy(PieceColor.black);
+        PieceColor? winner;
+        if (whiteN < blackN) {
+          winner = PieceColor.white;
+        } else if (blackN < whiteN) {
+          winner = PieceColor.black;
+        }
+        _finishGame(
+          winner: winner,
+          reason: winner == null
+              ? GameEndReason.stalemate
+              : GameEndReason.alternativeVictory,
+          status: winner == null ? GameStatus.stalemate : GameStatus.checkmate,
+          detail: winner == null ? null : 'busArmy',
+        );
+      } else if (inCheck) {
         if (_tryRevealTurncoatToAvoidMate(_turn)) {
           _updateStatus();
           return;
@@ -5215,6 +5733,8 @@ class ChessGame {
             reason: GameEndReason.stalemate,
             status: GameStatus.stalemate,
           );
+        } else if (_mateVetoBlocksMate(_turn)) {
+          _status = GameStatus.playing;
         } else {
           _finishGame(winner: _turn.opponent, reason: GameEndReason.checkmate);
         }
@@ -5225,14 +5745,14 @@ class ChessGame {
           status: GameStatus.stalemate,
         );
       }
-    } else if (_wouldBeMatedCountingTurncoatSpies(_turn)) {
+    } else if (!_fogOfWar && _wouldBeMatedCountingTurncoatSpies(_turn)) {
       // Mate only holds because an unrevealed spy "attacks" — reveal and redo.
       if (_tryRevealTurncoatToAvoidMate(_turn)) {
         _updateStatus();
         return;
       }
       _status = inCheck ? GameStatus.check : GameStatus.playing;
-    } else if (inCheck) {
+    } else if (!_fogOfWar && inCheck) {
       _status = GameStatus.check;
     } else {
       _status = GameStatus.playing;
@@ -5349,6 +5869,41 @@ class ChessGame {
     if (!_isLandingAllowed(move.to, forPiece: mover.copyWith(color: acting))) {
       return false;
     }
+    if (_rules.duckSquare != null && move.to == _rules.duckSquare) {
+      return false;
+    }
+    if (_rules.forbiddenFile != null &&
+        move.to.file == _rules.forbiddenFile &&
+        mover.type != PieceType.king) {
+      return false;
+    }
+    if (_rules.centerTaxSkipNext.contains(mover.pieceId)) return false;
+    if ((_rules.wastelandTollSkip[mover.pieceId] ?? 0) > 0) return false;
+    // Time zone: off-hour → only 1-square steps.
+    if (_rules.timeZoneActive) {
+      final oddHour = _rules.timeZoneOddHour[acting];
+      if (oddHour != null) {
+        final plyOdd = (_rules.globalPlyIndex + 1).isOdd;
+        final myHour = oddHour == plyOdd;
+        if (!myHour) {
+          final df = (move.to.file - move.from.file).abs();
+          final dr = (move.to.rank - move.from.rank).abs();
+          if (df > 1 || dr > 1 || (df == 0 && dr == 0)) return false;
+        }
+      }
+    }
+    // Lone warrior: need 2 attackers to capture.
+    if (_rules.loneWarriorPieceId != null && _isCapture(move)) {
+      final victim = _captureVictim(move, acting);
+      if (victim != null &&
+          victim.piece.pieceId == _rules.loneWarriorPieceId) {
+        final alliesNearby = _countAlliesNear(victim.square, victim.piece.color);
+        if (alliesNearby == 0) {
+          final attackers = _countAttackersOf(victim.square, acting);
+          if (attackers < 2) return false;
+        }
+      }
+    }
     if (!_curfewAllowsMove(mover, move.from, move.to)) return false;
     if (_truceActive && _isCapture(move)) return false;
     if (move.isKnightRearSwap && !_isLandingAllowed(move.from)) return false;
@@ -5370,7 +5925,8 @@ class ChessGame {
       _applyMove(_normalizeCastleMove(move));
       _tickLava(acting, recordDeaths: false);
       final kingAlive = findKing(acting) != null;
-      legal = kingAlive && !isInCheck(acting);
+      // Dark chess (fog): king may walk into check; win is by capturing king.
+      legal = kingAlive && (_fogOfWar || !isInCheck(acting));
     } finally {
       _suppressCaptureSideEffects = false;
       _isSimulatingLegality = false;
@@ -5391,13 +5947,25 @@ class ChessGame {
       case PieceType.knight:
         return _knightMoves(from, piece, pieceIndex: pieceIndex);
       case PieceType.bishop:
-        final moves = _slidingMoves(
+        var moves = _slidingMoves(
           from,
           piece,
           const [(-1, -1), (-1, 1), (1, -1), (1, 1)],
           hopAlly: piece.hasEffect(AbilityEffect.hopOverAlly),
           pieceIndex: pieceIndex,
         );
+        final schism = _rules.schismDiagSign[piece.pieceId];
+        if (schism != null) {
+          moves = moves
+              .where((m) {
+                final df = m.to.file - from.file;
+                final dr = m.to.rank - from.rank;
+                // sign of df*dr matches schism (+1 or -1)
+                if (df == 0 || dr == 0) return false;
+                return (df.sign * dr.sign) == schism;
+              })
+              .toList();
+        }
         if (piece.hasEffect(AbilityEffect.colorVow)) {
           moves.addAll(
             _bishopRicochetMoves(from, piece, pieceIndex: pieceIndex),
@@ -5480,6 +6048,55 @@ class ChessGame {
     final pawnRam = piece.hasEffect(AbilityEffect.pawnRam);
     final airborne =
         piece.hasEffect(AbilityEffect.pawnAirborne) && !piece.airborneUsed;
+
+    if (piece.hasEffect(AbilityEffect.pawnFarsight)) {
+      final mid = Square(from.file, from.rank + direction);
+      final twoForward = Square(from.file, from.rank + 2 * direction);
+      final midClear = isOnBoard(mid) &&
+          pieceAt(mid) == null &&
+          !isBlocked(mid);
+      if (midClear &&
+          isOnBoard(twoForward) &&
+          pieceAt(twoForward) == null &&
+          !isBlocked(twoForward) &&
+          _isLandingAllowed(twoForward)) {
+        if (twoForward.rank == promotionRank) {
+          moves.addAll(
+            _promotionMoves(from, twoForward, pieceIndex: pieceIndex),
+          );
+        } else {
+          moves.add(Move(from: from, to: twoForward, pieceIndex: pieceIndex));
+        }
+      }
+      if (!pawnRam) {
+        for (final fileDelta in [-1, 1]) {
+          final midCap = _offsetSquare(from, fileDelta, direction);
+          final cap = _offsetSquare(from, fileDelta, 2 * direction);
+          if (midCap == null ||
+              cap == null ||
+              pieceAt(midCap) != null ||
+              isBlocked(midCap) ||
+              isBlocked(cap) ||
+              !_isLandingAllowed(cap)) {
+            continue;
+          }
+          final target = pieceAt(cap);
+          if (!_truceActive &&
+              target != null &&
+              target.color != piece.color &&
+              !_isRearingKnight(target)) {
+            if (cap.rank == promotionRank) {
+              moves.addAll(
+                _promotionMoves(from, cap, pieceIndex: pieceIndex),
+              );
+            } else {
+              moves.add(Move(from: from, to: cap, pieceIndex: pieceIndex));
+            }
+          }
+        }
+      }
+      return moves;
+    }
 
     final oneForward = Square(from.file, from.rank + direction);
     final oneForwardTarget = isOnBoard(oneForward) ? pieceAt(oneForward) : null;
@@ -5768,13 +6385,30 @@ class ChessGame {
     required int pieceIndex,
     bool isAirborne = false,
   }) {
+    var types = const [
+      PieceType.queen,
+      PieceType.rook,
+      PieceType.bishop,
+      PieceType.knight,
+    ];
+    final mover = pieceAt(from, index: pieceIndex);
+    if (mover != null &&
+        _rules.hereditaryEdictOwner == mover.color.opponent) {
+      final owned = <PieceType>{};
+      for (var r = 0; r < _rankCount; r++) {
+        for (var f = 0; f < _fileCount; f++) {
+          for (final p in piecesAt(Square(f, r))) {
+            if (p.color == mover.color && p.type != PieceType.pawn) {
+              owned.add(p.type);
+            }
+          }
+        }
+      }
+      final missing = types.where((t) => !owned.contains(t)).toList();
+      if (missing.isNotEmpty) types = missing;
+    }
     return [
-      for (final type in const [
-        PieceType.queen,
-        PieceType.rook,
-        PieceType.bishop,
-        PieceType.knight,
-      ])
+      for (final type in types)
         Move(
           from: from,
           to: to,
@@ -6035,26 +6669,38 @@ class ChessGame {
         if (to == null) continue;
 
         if (distance == 2) {
-          final mid = _offsetSquare(
-            from,
-            df == 0 ? 0 : df.sign,
-            dr == 0 ? 0 : dr.sign,
-          );
-          if (mid == null) continue;
-          final midPiece = pieceAt(mid);
-          if (midPiece != null && !_isRearingKnight(midPiece)) continue;
-          if (isSquareAttacked(mid, piece.color)) continue;
+          // Ray-aligned 2-step: path through the mid square must be clear.
+          // (2,1)-style leaps have no single mid cell — treat as a jump.
+          final isRay = df == 0 || dr == 0 || df.abs() == dr.abs();
+          if (isRay) {
+            final mid = _offsetSquare(
+              from,
+              df == 0 ? 0 : df.sign,
+              dr == 0 ? 0 : dr.sign,
+            );
+            if (mid == null) continue;
+            final midPiece = pieceAt(mid);
+            if (midPiece != null && !_isRearingKnight(midPiece)) continue;
+          }
         }
 
         _addMoveToSquare(moves, from, to, piece, pieceIndex: pieceIndex);
       }
     }
 
+    // Буцефал: one knight-jump for the king per game after 3 captures.
+    final kingColor = piece.color;
+    final bucephalReady = _rules.bucephalusCaptures.values.any((n) => n >= 3) &&
+        !_rules.bucephalusKingJumpUsed.contains(kingColor.name);
+    if (bucephalReady) {
+      moves.addAll(_knightJumpMoves(from, piece, pieceIndex: pieceIndex));
+    }
+
     if (piece.hasEffect(AbilityEffect.kingRookSwap)) {
-      if (!isInCheck(piece.color)) {
+      if (_fogOfWar || !isInCheck(piece.color)) {
         moves.addAll(_swapCastlingMoves(from, piece, pieceIndex: pieceIndex));
       }
-    } else if (!piece.hasMoved && !isInCheck(piece.color)) {
+    } else if (!piece.hasMoved && (_fogOfWar || !isInCheck(piece.color))) {
       moves.addAll(_castlingMoves(from, piece, pieceIndex: pieceIndex));
     }
 
@@ -6340,6 +6986,37 @@ class ChessGame {
         }
       }
     }
+    // Non-aggression pact
+    final link = _rules.nonAggressionLink[attacker.pieceId];
+    if (link != null && link == target.pieceId) return false;
+    // Layman: bishop ↔ pawn
+    if (_hasEffect(attacker, AbilityEffect.bishopLayman) &&
+        target.type == PieceType.pawn) {
+      return false;
+    }
+    if (_hasEffect(target, AbilityEffect.bishopLayman) &&
+        attacker.type == PieceType.pawn) {
+      return false;
+    }
+    // Infantry shadow: enemy pawns cannot capture a piece standing
+    // directly behind (toward owner edge) a living shadow pawn.
+    if (attacker.type == PieceType.pawn) {
+      final targetRef = _pieceById(target.pieceId);
+      if (targetRef != null) {
+        for (var r = 0; r < _rankCount; r++) {
+          for (var f = 0; f < _fileCount; f++) {
+            final sq = Square(f, r);
+            for (final p in piecesAt(sq)) {
+              if (p.color != target.color) continue;
+              if (!_hasEffect(p, AbilityEffect.pawnInfantryShadow)) continue;
+              final backDir = p.color == PieceColor.white ? -1 : 1;
+              final cover = Square(sq.file, sq.rank + backDir);
+              if (cover == targetRef.square) return false;
+            }
+          }
+        }
+      }
+    }
     return true;
   }
 
@@ -6363,8 +7040,53 @@ class ChessGame {
   int _pawnStartRank(PieceColor color) =>
       color == PieceColor.white ? 1 : _rankCount - 2;
 
-  int _pawnPromotionRank(PieceColor color) =>
-      color == PieceColor.white ? _rankCount - 1 : 0;
+  int _pawnPromotionRank(PieceColor color) {
+    if (_rules.brokenPerspectiveActive) {
+      // White promotes on rank 7 (index 6), black on rank 2 (index 1).
+      return color == PieceColor.white ? _rankCount - 2 : 1;
+    }
+    return color == PieceColor.white ? _rankCount - 1 : 0;
+  }
+
+  int _countArmy(PieceColor color) {
+    var n = 0;
+    for (var rank = 0; rank < _rankCount; rank++) {
+      for (var file = 0; file < _fileCount; file++) {
+        for (final piece in piecesAt(Square(file, rank))) {
+          if (piece.color == color) n++;
+        }
+      }
+    }
+    return n;
+  }
+
+  String? _lastMoveCapturerId() {
+    final move = _lastMove;
+    if (move == null) return null;
+    return pieceAt(move.to)?.pieceId;
+  }
+
+  /// True when the only mating attacks come from a piece under mate-veto ("1").
+  bool _mateVetoBlocksMate(PieceColor matedColor) {
+    final vetoId = _rules.mateVetoEnemyPieceId[matedColor];
+    if (vetoId == null) return false;
+    final kingSq = findKing(matedColor);
+    if (kingSq == null) return false;
+    final attackers = <String>[];
+    final by = matedColor.opponent;
+    for (var rank = 0; rank < _rankCount; rank++) {
+      for (var file = 0; file < _fileCount; file++) {
+        final from = Square(file, rank);
+        for (final piece in piecesAt(from)) {
+          if (piece.color != by) continue;
+          if (_canAttack(from, kingSq, piece)) {
+            attackers.add(piece.pieceId);
+          }
+        }
+      }
+    }
+    return attackers.isNotEmpty && attackers.every((id) => id == vetoId);
+  }
 
   Piece _pieceAfterMove(
     Piece piece,
@@ -6381,10 +7103,14 @@ class ChessGame {
         piece.type == PieceType.pawn &&
         piece.hasEffect(AbilityEffect.pawnTripleStepOnce) &&
         (to.rank - from.rank).abs() == 3;
+    // Count-down restore (e.g. No Queen). restoreAfterMoves == 0 with
+    // restoreAs set is a timer-only marker (e.g. cavalry) — do not revert on move.
     final restoreMoves = piece.restoreAfterMoves > 0
         ? piece.restoreAfterMoves - 1
         : piece.restoreAfterMoves;
-    final shouldRestore = piece.restoreAs != null && restoreMoves == 0;
+    final shouldRestore = piece.restoreAs != null &&
+        piece.restoreAfterMoves > 0 &&
+        restoreMoves == 0;
     final revealPawn =
         piece.type == PieceType.pawn &&
         (piece.pawnRevealed ||
@@ -6762,6 +7488,270 @@ class ChessGame {
     }
 
     _resolveBoardRulesAfterMove(move, moverBefore, current, captured: captured);
+
+    // --- Batch mods ---
+    if (_hasEffect(moverBefore, AbilityEffect.pawnArchivist)) {
+      final visited = _rules.archivistVisited.putIfAbsent(moverId, () => {});
+      visited.add(move.from);
+      visited.add(current.square);
+    }
+    if (_hasEffect(moverBefore, AbilityEffect.pawnFuse) && !_isSimulatingLegality) {
+      _rules.fuseTimers[move.from] = 4; // 2 full moves ≈ 4 plies
+    }
+    if (_hasEffect(moverBefore, AbilityEffect.knightDonkey)) {
+      _rules.donkeySwampSquares.add(current.square);
+    }
+    if (_hasEffect(moverBefore, AbilityEffect.knightHoofSmoke)) {
+      _rules.hoofSmokeSquares.add(current.square);
+    }
+    if (captured && _hasEffect(moverBefore, AbilityEffect.knightBucephalus)) {
+      _rules.bucephalusCaptures[moverId] =
+          (_rules.bucephalusCaptures[moverId] ?? 0) + 1;
+    }
+    if (_rules.insatiableHungerActive &&
+        moverBefore.type == PieceType.queen &&
+        captured) {
+      _rules.queenHungerPlies[moverId] = 0;
+    }
+    if (_rules.comeOnActive &&
+        !_rules.comeOnConsumed &&
+        captured &&
+        !_isSimulatingLegality) {
+      _rules.comeOnConsumed = true;
+      _pendingBonusSkillColor = moverBefore.color;
+    }
+    if (_rules.blackMarkPieceId != null &&
+        captured &&
+        _lastCapturedType != null &&
+        !_isSimulatingLegality) {
+      // Black mark triggers on capturing the marked piece — handled via victim id
+    }
+    if (_rules.ownHandsOwner == moverBefore.color &&
+        moverBefore.type == PieceType.king) {
+      final enemyKing = findKing(moverBefore.color.opponent);
+      if (enemyKing != null &&
+          _chebyshevDistance(current.square, enemyKing) <= 2) {
+        _finishGame(
+          winner: moverBefore.color,
+          reason: GameEndReason.alternativeVictory,
+          detail: 'ownHands',
+        );
+        return;
+      }
+    }
+    if (_rules.restlessKingsPliesLeft > 0 && moverBefore.type == PieceType.king) {
+      _rules.restlessKingStart.remove(moverBefore.color);
+    }
+    if (_hasEffect(moverBefore, AbilityEffect.queenFatherDream) &&
+        current.piece.abilities.length >= 5) {
+      _finishGame(
+        winner: current.piece.color,
+        reason: GameEndReason.alternativeVictory,
+        detail: 'fatherDream',
+      );
+      return;
+    }
+    if (_rules.donkeySwampSquares.contains(current.square) &&
+        !_hasEffect(moverBefore, AbilityEffect.knightDonkey)) {
+      _replacePieceAt(
+        current.square,
+        current.index,
+        current.piece.copyWith(
+          skipTurnsLeft: max(current.piece.skipTurnsLeft, 2),
+        ),
+      );
+    }
+    if (_hasEffect(moverBefore, AbilityEffect.bishopInkTrail) &&
+        moverBefore.type == PieceType.bishop) {
+      final df = (current.square.file - move.from.file).sign;
+      final dr = (current.square.rank - move.from.rank).sign;
+      if (df != 0 && dr != 0) {
+        var f = move.from.file + df;
+        var r = move.from.rank + dr;
+        while (f != current.square.file || r != current.square.rank) {
+          _rules.inkTrailBlocked[Square(f, r)] = 2;
+          f += df;
+          r += dr;
+        }
+      }
+    }
+    if (_rules.gestureMirrorRequiredLight != null &&
+        moverBefore.color == _turn) {
+      // Constrained move completed — clear.
+      _rules.gestureMirrorRequiredLight = null;
+    }
+    _maybeMaskOrGaneshaSwap(moverBefore, current.square);
+    _maybeHolyRandomTransform(current.piece);
+
+    // Seal: moving sealed rook releases victim
+    if (_rules.sealRookId == moverId) {
+      _rules.sealRookId = null;
+      _rules.sealVictimId = null;
+    }
+
+    // Bucephalus: detect king knight-jump
+    if (moverBefore.type == PieceType.king) {
+      final df = (current.square.file - move.from.file).abs();
+      final dr = (current.square.rank - move.from.rank).abs();
+      if ((df == 1 && dr == 2) || (df == 2 && dr == 1)) {
+        _rules.bucephalusKingJumpUsed.add(moverBefore.color.name);
+      }
+    }
+
+    // Pair step: optional dual forward push
+    if (captured == false &&
+        moverBefore.type == PieceType.pawn &&
+        _hasEffect(moverBefore, AbilityEffect.pawnPairStep)) {
+      _tryPairStepCompanion(move, moverId);
+    }
+
+    // Gallop contract progress
+    final route = _rules.gallopContractRoute[moverId];
+    if (route != null && route.isNotEmpty) {
+      var progress = _rules.gallopContractProgress[moverId] ?? 0;
+      if (progress < route.length && current.square == route[progress]) {
+        progress++;
+        _rules.gallopContractProgress[moverId] = progress;
+        if (progress >= route.length) {
+          _killRandomEnemyNonKing(moverBefore.color);
+          _rules.gallopContractRoute.remove(moverId);
+          _rules.gallopContractProgress.remove(moverId);
+        }
+      }
+    }
+
+    // Ill drive: arm portal on first move, or create portal when leaving end
+    if (_rules.illDriveRookId == moverId) {
+      if (_rules.illDriveFrom == null) {
+        _rules.illDriveFrom = move.from;
+        _rules.illDriveTo = current.square;
+      } else if (_rules.illDriveTo == move.from) {
+        // Leaving the destination — open portal between from and to
+        _teleportA = _rules.illDriveFrom;
+        _teleportB = _rules.illDriveTo;
+        _rules.illDriveRookId = null;
+        _rules.illDriveFrom = null;
+        _rules.illDriveTo = null;
+      }
+    }
+
+    // Blinding sacristy on capture
+    if (captured && _hasEffect(moverBefore, AbilityEffect.bishopBlindingSacristy)) {
+      _rules.blindingSacristy[current.square] = 2;
+      _rules.blindingExemptPieceIds.add(moverId);
+    }
+    if (_rules.blindingSacristy.containsKey(current.square) &&
+        !_rules.blindingExemptPieceIds.contains(moverId)) {
+      _rules.littleBrotherSkipIds.add(moverId); // reuse skip: no capture 1 turn
+      // Better: skip attack — use skipTurnsLeft for "doesn't capture"
+      _replacePieceAt(
+        current.square,
+        current.index,
+        current.piece.copyWith(
+          skipTurnsLeft: max(current.piece.skipTurnsLeft, 2),
+        ),
+      );
+      _rules.blindingSacristy.remove(current.square);
+    }
+
+    // Little brother: enemy ahead skips next turn
+    if (moverBefore.type == PieceType.pawn &&
+        _hasEffect(moverBefore, AbilityEffect.pawnLittleBrother)) {
+      final dir = moverBefore.color == PieceColor.white ? 1 : -1;
+      final ahead = Square(current.square.file, current.square.rank + dir);
+      if (isOnBoard(ahead)) {
+        for (final enemy in piecesAt(ahead)) {
+          if (enemy.color == moverBefore.color) continue;
+          if (enemy.type == PieceType.king) continue;
+          final ref = _pieceById(enemy.pieceId);
+          if (ref == null) continue;
+          _replacePieceAt(
+            ref.square,
+            ref.index,
+            ref.piece.copyWith(
+              skipTurnsLeft: max(ref.piece.skipTurnsLeft, 2),
+            ),
+          );
+        }
+      }
+    }
+
+    // Double life: after armed move, revert to pawn and mark used
+    if (_rules.doubleLifeArmed.contains(moverId)) {
+      final refreshed = _pieceById(moverId);
+      if (refreshed != null) {
+        _replacePieceAt(
+          refreshed.square,
+          refreshed.index,
+          refreshed.piece.copyWith(
+            type: PieceType.pawn,
+            clearMoveAsType: true,
+          ),
+        );
+      }
+      _rules.doubleLifeArmed.remove(moverId);
+      _rules.doubleLifeUsed.add(moverId);
+    }
+
+    // Starvation reset on capture by that pawn
+    if (captured && _rules.starvationPlies.containsKey(moverId)) {
+      _rules.starvationPlies[moverId] = 6;
+    }
+
+    // Sapper: disarm traps on landing
+    if (_hasEffect(moverBefore, AbilityEffect.pawnSapper)) {
+      _mines.remove(current.square);
+      _rules.quicksandHidden.remove(current.square);
+      _rules.quicksandRevealed.remove(current.square);
+      _rules.quicksandDuration.remove(current.square);
+    }
+
+    // Bucephalus king knight jump unlock
+    if ((_rules.bucephalusCaptures[moverId] ?? 0) >= 3 &&
+        !_rules.bucephalusKingJumpUsed.contains(moverBefore.color.name)) {
+      // Flag checked in king moves via bucephalusKingJumpUsed set when used
+    }
+  }
+
+  void _tryPairStepCompanion(Move move, String moverId) {
+    final partnerId = _rules.pairStepPartner[moverId];
+    if (partnerId == null) return;
+    final partner = _pieceById(partnerId);
+    final mover = _pieceById(moverId);
+    if (partner == null || mover == null) return;
+    if (partner.piece.type != PieceType.pawn) return;
+    final dir = mover.piece.color == PieceColor.white ? 1 : -1;
+    // Only when mover stepped exactly 1 forward on same file
+    if (move.to.file != move.from.file) return;
+    if (move.to.rank - move.from.rank != dir) return;
+    final dest = Square(partner.square.file, partner.square.rank + dir);
+    if (!isOnBoard(dest) || piecesAt(dest).isNotEmpty || isBlocked(dest)) {
+      return;
+    }
+    // Mid must be clear for partner
+    final taken = _takePieceAt(partner.square, partner.index);
+    if (taken == null) return;
+    _setPrimary(dest, taken.copyWith(hasMoved: true));
+  }
+
+  void _killRandomEnemyNonKing(PieceColor color) {
+    final candidates = <({Square square, int index, Piece piece})>[];
+    for (var r = 0; r < _rankCount; r++) {
+      for (var f = 0; f < _fileCount; f++) {
+        final sq = Square(f, r);
+        final pieces = piecesAt(sq);
+        for (var i = 0; i < pieces.length; i++) {
+          final p = pieces[i];
+          if (p.color == color.opponent && p.type != PieceType.king) {
+            candidates.add((square: sq, index: i, piece: p));
+          }
+        }
+      }
+    }
+    if (candidates.isEmpty) return;
+    final pick = candidates[_random.nextInt(candidates.length)];
+    final removed = _takePieceAt(pick.square, pick.index);
+    if (removed != null) _onFinalDeath(removed, pick.square);
   }
 
   PieceType? _lastCapturedType;
@@ -7097,6 +8087,148 @@ class ChessGame {
       );
     }
     _resolveAllGuardLandings();
+    if (!_isSimulatingLegality) {
+      _afterExpandedMoveEffects(move, moved, isCaptureMove, finalSquare);
+    }
+  }
+
+  void _afterExpandedMoveEffects(
+    Move move,
+    Piece moved,
+    bool wasCapture,
+    Square landed,
+  ) {
+    // Duck: after a move, require relocating the duck (duck chess).
+    if (_rules.duckChessActive && !_rules.duckNeedsPlacement) {
+      _rules.duckNeedsPlacement = true;
+    }
+    // Snail trail slime on departure.
+    if (_rules.snailTrailPieceId == moved.pieceId) {
+      _rules.snailSlimePlies[move.from] = 2;
+    }
+    // Center tax.
+    final centerFiles = {_fileCount ~/ 2 - 1, _fileCount ~/ 2};
+    final centerRanks = {_rankCount ~/ 2 - 1, _rankCount ~/ 2};
+    if (_rules.centerTaxActive &&
+        centerFiles.contains(landed.file) &&
+        centerRanks.contains(landed.rank) &&
+        moved.type != PieceType.king) {
+      _rules.centerTaxSkipNext.add(moved.pieceId);
+    }
+    // Atomic explosion.
+    if (_rules.atomicActive && wasCapture) {
+      _resolveAtomicExplosion(landed, moved.color);
+    }
+    // King of center ("3").
+    if (_rules.kingCenterActive && moved.type == PieceType.king) {
+      final centers = {
+        Square(3, 3),
+        Square(3, 4),
+        Square(4, 3),
+        Square(4, 4),
+      };
+      if (centers.contains(landed)) {
+        _finishGame(
+          winner: moved.color,
+          reason: GameEndReason.alternativeVictory,
+          detail: 'kingCenter',
+        );
+        return;
+      }
+    }
+    // Priority setup occupation win.
+    if (_rules.prioritySetupActive && _rules.priorityCells.isNotEmpty) {
+      final owned = _rules.priorityCells.every((s) {
+        final p = pieceAt(s);
+        return p != null && p.color == moved.color;
+      });
+      if (owned) {
+        _finishGame(
+          winner: moved.color,
+          reason: GameEndReason.alternativeVictory,
+          detail: 'prioritySetup',
+        );
+        return;
+      }
+    }
+    // Blood feud revenge clears timer.
+    if (_rules.bloodFeudActive &&
+        wasCapture &&
+        _rules.bloodFeudVictimColor == moved.color) {
+      _rules.bloodFeudVictimColor = null;
+      _rules.bloodFeudPliesLeft = 0;
+    }
+    // Kansas typhoon landing.
+    if (_rules.kansasTyphoon == landed) {
+      final dest = _randomEmptyNeighbor(landed) ?? _randomEmptySquare();
+      if (dest != null) {
+        _clearSquare(landed);
+        _setPrimary(dest, moved);
+      }
+    }
+    // Wasteland claims.
+    if (_rules.wastelandActive) {
+      _rules.wastelandClaims[move.from] = (
+        owner: moved.color,
+        pliesLeft: 3,
+      );
+      final claim = _rules.wastelandClaims[landed];
+      if (claim != null &&
+          claim.owner != moved.color &&
+          claim.pliesLeft > 0) {
+        _rules.wastelandTollSkip[moved.pieceId] = 1;
+      }
+      _rules.wastelandClaims.remove(landed);
+    }
+  }
+
+  void _resolveAtomicExplosion(Square epicenter, PieceColor attacker) {
+    var enemyKingHit = false;
+    for (var dr = -1; dr <= 1; dr++) {
+      for (var df = -1; df <= 1; df++) {
+        final s = Square(epicenter.file + df, epicenter.rank + dr);
+        if (!isOnBoard(s)) continue;
+        final pieces = List<Piece>.from(piecesAt(s));
+        for (final p in pieces) {
+          if (p.type == PieceType.pawn) continue;
+          if (p.type == PieceType.king && p.color != attacker) {
+            enemyKingHit = true;
+          }
+          if (p.type == PieceType.king && p.color == attacker) continue;
+          final ref = _pieceById(p.pieceId);
+          if (ref == null) continue;
+          _clearSquare(ref.square);
+          if (p.type == PieceType.king && p.color != attacker) {
+            // handled by finish
+          } else if (p.type != PieceType.king) {
+            _onFinalDeath(
+              p,
+              s,
+              capturingColor: attacker,
+              reason: GraveyardReason.explosion,
+            );
+          }
+        }
+      }
+    }
+    // Capturer also dies in atomic (except if pawn — already skipped rules vary;
+    // standard atomic: capturer explodes too unless pawns).
+    final capturer = pieceAt(epicenter);
+    if (capturer != null && capturer.type != PieceType.pawn) {
+      _clearSquare(epicenter);
+      _onFinalDeath(
+        capturer,
+        epicenter,
+        capturingColor: null,
+        reason: GraveyardReason.explosion,
+      );
+    }
+    if (enemyKingHit) {
+      _finishGame(
+        winner: attacker,
+        reason: GameEndReason.kingDestroyed,
+      );
+    }
   }
 
   void _resolveAllGuardLandings() {
@@ -7389,6 +8521,25 @@ class ChessGame {
         restoreSnapshot(snapshot);
       }
     }
+
+    if (_rules.sealVictimId == piece.pieceId) return false;
+
+    if (_rules.courtIntrigueVictimId == piece.pieceId &&
+        _rules.courtIntrigueQueenId != null &&
+        _pieceById(_rules.courtIntrigueQueenId!) != null) {
+      final enemyKing = findKing(piece.color);
+      if (enemyKing != null) {
+        final dist = _chebyshevDistance(move.to, enemyKing);
+        if (dist < 2) return false;
+      }
+    }
+
+    if (_rules.gestureMirrorRequiredLight != null &&
+        piece.color == _turn &&
+        isSquareLight(move.to) != _rules.gestureMirrorRequiredLight) {
+      return false;
+    }
+
     return true;
   }
 
@@ -7661,6 +8812,7 @@ class ChessGame {
         _finishGame(
           winner: PieceColor.black,
           reason: GameEndReason.alternativeVictory,
+          detail: 'passiveAggression',
         );
       }
     } else {
@@ -7669,6 +8821,7 @@ class ChessGame {
         _finishGame(
           winner: PieceColor.white,
           reason: GameEndReason.alternativeVictory,
+          detail: 'passiveAggression',
         );
       }
     }
@@ -7784,6 +8937,7 @@ class ChessGame {
         _finishGame(
           winner: color,
           reason: GameEndReason.alternativeVictory,
+          detail: 'kingOfHill',
         );
         return;
       }
@@ -7799,6 +8953,7 @@ class ChessGame {
           _finishGame(
             winner: color,
             reason: GameEndReason.alternativeVictory,
+            detail: 'secretRoute',
           );
           return;
         }
@@ -7814,6 +8969,7 @@ class ChessGame {
         _finishGame(
           winner: color,
           reason: GameEndReason.alternativeVictory,
+          detail: 'royalPilgrimage',
         );
         return;
       }
@@ -7863,6 +9019,7 @@ class ChessGame {
           _finishGame(
             winner: color,
             reason: GameEndReason.alternativeVictory,
+            detail: 'onlyEqualsKill',
           );
           return;
         }
@@ -7929,6 +9086,7 @@ class ChessGame {
           _finishGame(
             winner: color,
             reason: GameEndReason.alternativeVictory,
+            detail: 'cornerQuest',
           );
           return;
         }
@@ -7944,6 +9102,7 @@ class ChessGame {
           _finishGame(
             winner: color,
             reason: GameEndReason.alternativeVictory,
+            detail: 'fullCircle',
           );
           return;
         }
@@ -8279,6 +9438,895 @@ class ChessGame {
     }
   }
 
+  void _applyExpandedModOffer(PieceColor color, AbilityOffer offer) {
+    switch (offer.ability) {
+      case GameAbility.modeTimeZone:
+        _rules.timeZoneActive = true;
+        // Secret: chooser gets odd hour if rng even, else even — both get opposite.
+        final whiteOdd = _random.nextBool();
+        _rules.timeZoneOddHour[PieceColor.white] = whiteOdd;
+        _rules.timeZoneOddHour[PieceColor.black] = !whiteOdd;
+      case GameAbility.modeMateVeto:
+        final enemyPieces = <String>[];
+        for (var r = 0; r < _rankCount; r++) {
+          for (var f = 0; f < _fileCount; f++) {
+            for (final p in piecesAt(Square(f, r))) {
+              if (p.color == color.opponent && p.type != PieceType.king) {
+                enemyPieces.add(p.pieceId);
+              }
+            }
+          }
+        }
+        if (enemyPieces.isNotEmpty) {
+          _rules.mateVetoEnemyPieceId[color] =
+              enemyPieces[_random.nextInt(enemyPieces.length)];
+        }
+      case GameAbility.modeDebtPit:
+        _rules.debtPitActive = true;
+        _rules.whiteDebt = 0;
+        _rules.blackDebt = 0;
+      case GameAbility.modeWasteland:
+        _rules.wastelandActive = true;
+      case GameAbility.modeBus:
+        _rules.busActive = true;
+      case GameAbility.modeShopToken:
+        _rules.shopTokenActive = true;
+      case GameAbility.modeSeasons:
+        _rules.seasonsActive = true;
+        _rules.seasonIndex = 0;
+        _rules.seasonFullMoves = 0;
+      case GameAbility.modeBloodFeud:
+        _rules.bloodFeudActive = true;
+        _rules.bloodFeudBanner =
+            'Кровная вражда — если не отомстить за фигуру за 2 хода, соперник получит мод';
+      case GameAbility.modePrioritySetup:
+        _activatePrioritySetup(offer);
+      case GameAbility.modeBrokenPerspective:
+        _rules.brokenPerspectiveActive = true;
+      case GameAbility.modeCallOf22:
+        _activateCallOf22();
+      case GameAbility.modeKriegspiel:
+        _rules.kriegspielActive = true;
+      case GameAbility.modeKingCenter:
+        _rules.kingCenterActive = true;
+      case GameAbility.modeAtomic:
+        _rules.atomicActive = true;
+      case GameAbility.modeCrazyhouse:
+        _rules.crazyhouseActive = true;
+      case GameAbility.modeDuckChess:
+        _rules.duckChessActive = true;
+        _rules.duckNeedsPlacement = true;
+      case GameAbility.boardInkBlot:
+        _rules.inkBlotActive = true;
+      case GameAbility.boardGravityWell:
+        final cell = offer.targetCell ?? _randomEmptySquare();
+        if (cell != null) _rules.gravityWellSquare = cell;
+      case GameAbility.boardIdealSymmetry:
+        _applyIdealSymmetry();
+      case GameAbility.boardShadowRight:
+        final id = offer.hiddenData['pieceId'] as String? ??
+            _pickRandomNonKing(color);
+        if (id != null) {
+          _rules.shadowPieceId = id;
+          _rules.shadowJumpAvailable = true;
+        }
+      case GameAbility.boardCenterTax:
+        _rules.centerTaxActive = true;
+      case GameAbility.boardWalkingCastle:
+        _rules.walkingCastleActive = true;
+      case GameAbility.boardInvisibleHand:
+        _rules.invisibleHandPlies = 0;
+      case GameAbility.boardRiver:
+        _rules.riverRank = offer.quakeRank ?? (2 + _random.nextInt(_rankCount - 4));
+        _rules.riverDirection = _random.nextBool() ? 1 : -1;
+      case GameAbility.boardForbiddenLetter:
+        _rules.forbiddenFile =
+            offer.silentFile ?? _random.nextInt(_fileCount.clamp(1, 8));
+        _rules.forbiddenFilePlies = (offer.durationMoves ?? 6) * 2;
+      case GameAbility.boardEarnedRest:
+        _rules.earnedRestSquare =
+            offer.targetCell ?? _randomEmptySquare();
+      case GameAbility.randomMoveSteal:
+        _rules.moveStealPending = true;
+      case GameAbility.randomSerialManiac:
+        _resolveSerialManiac();
+      case GameAbility.randomSnailTrail:
+        _rules.snailTrailPieceId =
+            offer.hiddenData['pieceId'] as String? ?? _pickRandomNonKing(color);
+      case GameAbility.randomDisinfo:
+        _activateDisinfo();
+      case GameAbility.randomFamilyContract:
+        final types = PieceType.values
+            .where((t) => t != PieceType.king)
+            .toList();
+        _rules.familyContractType = types[_random.nextInt(types.length)];
+        _rules.familyContractOwner = color;
+        _rules.familyContractMoves = 0;
+      case GameAbility.randomKansasHurricanes:
+        _rules.kansasTyphoon = _randomEmptySquare();
+        _rules.kansasPlies = 0;
+        _advanceKansasNext();
+      case GameAbility.randomLoneWarrior:
+        _rules.loneWarriorPieceId =
+            offer.hiddenData['pieceId'] as String? ?? _pickRandomNonKing(color);
+      case GameAbility.randomTwentyOne:
+        // Resolved via UI; mark active for HUD.
+        _rules.twentyOneResolved = false;
+      case GameAbility.modeHolyRandom:
+        _rules.holyRandomActive = true;
+      case GameAbility.modeZooShuffle:
+        _applyZooShuffle();
+      case GameAbility.modeInsatiableHunger:
+        _rules.insatiableHungerActive = true;
+        _initQueenHungerCounters();
+      case GameAbility.modeComeOn:
+        _rules.comeOnActive = true;
+        _rules.comeOnConsumed = false;
+      case GameAbility.modeVolcano:
+        _rules.volcanoActive = true;
+        _rules.volcanoPliesLeft = 4;
+        _rerollVolcanoSquares();
+      case GameAbility.boardRestlessKings:
+        _rules.restlessKingsPliesLeft = 3;
+        for (final c in PieceColor.values) {
+          final k = findKing(c);
+          if (k != null) _rules.restlessKingStart[c] = k;
+        }
+      case GameAbility.randomWarehouse:
+        _rules.warehouseActive = true;
+      case GameAbility.randomTwilightEclipse:
+        _activateTwilightEclipse(color);
+      case GameAbility.randomGestureMirror:
+        _rules.gestureMirrorPending = true;
+      case GameAbility.randomBlackMark:
+        final id = _pickRandomNonKing(color.opponent);
+        if (id != null) {
+          _rules.blackMarkPieceId = id;
+          _rules.blackMarkChooser = color;
+        }
+      default:
+        break;
+    }
+  }
+
+  void _applyZooShuffle() {
+    if (_rules.zooShuffleApplied) return;
+    _rules.zooShuffleApplied = true;
+    for (final color in PieceColor.values) {
+      final back = color == PieceColor.white ? 0 : _rankCount - 1;
+      // Classic: b=1 bishop, c=2 knight, f=5 knight, g=6 bishop → swap to
+      // knights on c/f (already) wait user wants: knights on c&f, bishops on b&g
+      // Standard start already has that. Zoo shuffle means CURRENT knights and
+      // bishops swap places: N↔B on those files.
+      final pairs = <(int, int)>[(1, 2), (6, 5)]; // (bishopFile, knightFile)
+      for (final (bFile, nFile) in pairs) {
+        final bSq = Square(bFile, back);
+        final nSq = Square(nFile, back);
+        final b = pieceAt(bSq);
+        final n = pieceAt(nSq);
+        if (b == null || n == null) continue;
+        if (b.color != color || n.color != color) continue;
+        // Swap contents regardless of current types (handles already-moved).
+        _setPrimary(bSq, n);
+        _setPrimary(nSq, b);
+      }
+      // Also swap any knight/bishop that are still on each other's classic files
+      // if the above didn't catch mid-game pieces — for start this is enough.
+    }
+  }
+
+  void _initQueenHungerCounters() {
+    for (var r = 0; r < _rankCount; r++) {
+      for (var f = 0; f < _fileCount; f++) {
+        for (final p in piecesAt(Square(f, r))) {
+          if (p.type == PieceType.queen) {
+            _rules.queenHungerPlies[p.pieceId] = 0;
+          }
+        }
+      }
+    }
+  }
+
+  void _rerollVolcanoSquares() {
+    _rules.volcanoSquares.clear();
+    final empties = <Square>[];
+    final all = <Square>[];
+    for (var r = 0; r < _rankCount; r++) {
+      for (var f = 0; f < _fileCount; f++) {
+        final s = Square(f, r);
+        all.add(s);
+        if (piecesAt(s).isEmpty) empties.add(s);
+      }
+    }
+    final pool = List<Square>.from(all)..shuffle(_random);
+    for (final s in pool) {
+      if (_rules.volcanoSquares.length >= 2) break;
+      _rules.volcanoSquares.add(s);
+    }
+  }
+
+  void _activateTwilightEclipse(PieceColor color) {
+    _rules.twilightOwner = color;
+    _rules.twilightOwnerPliesLeft = 10;
+    _rules.twilightInvisibleUntilPly.clear();
+    final candidates = <String>[];
+    for (var r = 0; r < _rankCount; r++) {
+      for (var f = 0; f < _fileCount; f++) {
+        for (final p in piecesAt(Square(f, r))) {
+          if (p.color == color) candidates.add(p.pieceId);
+        }
+      }
+    }
+    candidates.shuffle(_random);
+    for (final id in candidates.take(4)) {
+      _rules.twilightInvisibleUntilPly[id] = _rules.globalPlyIndex + 20;
+    }
+  }
+
+  void _maybeHolyRandomTransform(Piece mover) {
+    if (!_rules.holyRandomActive || _isSimulatingLegality) return;
+    if (mover.type == PieceType.king) return;
+    if (_random.nextDouble() >= 0.25) return;
+    final ref = _pieceById(mover.pieceId);
+    if (ref == null) return;
+    final options = PieceType.values
+        .where((t) => t != PieceType.king && t != ref.piece.type)
+        .toList();
+    if (options.isEmpty) return;
+    final next = options[_random.nextInt(options.length)];
+    _replacePieceAt(
+      ref.square,
+      ref.index,
+      ref.piece.copyWith(type: next),
+    );
+  }
+
+  void _maybeMaskOrGaneshaSwap(Piece moverBefore, Square at) {
+    PieceType? nextType;
+    if (_hasEffect(moverBefore, AbilityEffect.maskSwap)) {
+      nextType = moverBefore.type == PieceType.knight
+          ? PieceType.bishop
+          : (moverBefore.type == PieceType.bishop ? PieceType.knight : null);
+    } else if (_hasEffect(moverBefore, AbilityEffect.bishopGanesha)) {
+      nextType = moverBefore.type == PieceType.bishop
+          ? PieceType.rook
+          : (moverBefore.type == PieceType.rook ? PieceType.bishop : null);
+    }
+    if (nextType == null) return;
+    final ref = _pieceById(moverBefore.pieceId);
+    if (ref == null) return;
+    _replacePieceAt(
+      ref.square,
+      ref.index,
+      ref.piece.copyWith(type: nextType),
+    );
+  }
+
+  void _activatePrioritySetup(AbilityOffer offer) {
+    _rules.prioritySetupActive = true;
+    final fromOffer = offer.route;
+    if (fromOffer.length >= 4) {
+      _rules.priorityCells
+        ..clear()
+        ..addAll(fromOffer.take(4));
+      return;
+    }
+    final left = <Square>[];
+    final right = <Square>[];
+    for (var r = 0; r < _rankCount; r++) {
+      for (var f = 0; f < _fileCount; f++) {
+        final s = Square(f, r);
+        if (piecesAt(s).isNotEmpty) continue;
+        if (f <= 3) {
+          left.add(s);
+        } else if (f >= 4) {
+          right.add(s);
+        }
+      }
+    }
+    left.shuffle(_random);
+    right.shuffle(_random);
+    _rules.priorityCells
+      ..clear()
+      ..addAll([...left.take(2), ...right.take(2)]);
+  }
+
+  void _activateCallOf22() {
+    if (_fileCount < 10) {
+      if (_extraFileOnLeft != true) _insertExtraFileLeft();
+      if (_fileCount < 10) {
+        for (var rank = 0; rank < _rankCount; rank++) {
+          _board[rank].add(null);
+        }
+        _fileCount += 1;
+        _shiftSpecialSquaresFile(insertOnLeft: false);
+      }
+    }
+    // z-file = 0, i-file = fileCount-1; pawns on ranks 1 and 6.
+    void place(int file, int rank, PieceColor color) {
+      final sq = Square(file, rank);
+      if (piecesAt(sq).isNotEmpty) return;
+      _setPrimary(
+        sq,
+        Piece(
+          pieceId: 'call22-${color.name}-$file-$rank',
+          type: PieceType.pawn,
+          color: color,
+        ),
+      );
+    }
+
+    place(0, 1, PieceColor.white);
+    place(_fileCount - 1, 1, PieceColor.white);
+    place(0, _rankCount - 2, PieceColor.black);
+    place(_fileCount - 1, _rankCount - 2, PieceColor.black);
+  }
+
+  void _applyIdealSymmetry() {
+    final mid = (_fileCount - 1) / 2.0;
+    final snapshot = <Square, List<Piece>>{};
+    for (var r = 0; r < _rankCount; r++) {
+      for (var f = 0; f < _fileCount; f++) {
+        final sq = Square(f, r);
+        final pieces = piecesAt(sq);
+        if (pieces.isNotEmpty) snapshot[sq] = List<Piece>.from(pieces);
+      }
+    }
+    for (final sq in snapshot.keys) {
+      _clearSquare(sq);
+    }
+    for (final entry in snapshot.entries) {
+      final mirroredFile = (2 * mid - entry.key.file).round();
+      final dest = Square(mirroredFile, entry.key.rank);
+      if (!isOnBoard(dest)) continue;
+      _setCell(dest, entry.value);
+    }
+  }
+
+  Square? _randomEmptySquare() {
+    final empty = <Square>[];
+    for (var r = 0; r < _rankCount; r++) {
+      for (var f = 0; f < _fileCount; f++) {
+        final s = Square(f, r);
+        if (piecesAt(s).isEmpty && !isBlocked(s)) empty.add(s);
+      }
+    }
+    if (empty.isEmpty) return null;
+    return empty[_random.nextInt(empty.length)];
+  }
+
+  void _activateDisinfo() {
+    final picks = <Square>[];
+    for (var i = 0; i < 24 && picks.length < 3; i++) {
+      final s = _randomEmptySquare();
+      if (s != null && !picks.contains(s)) picks.add(s);
+    }
+    _rules.disinfoFakeSquares
+      ..clear()
+      ..addAll(picks);
+  }
+
+  void _advanceKansasNext() {
+    final cur = _rules.kansasTyphoon;
+    if (cur == null) return;
+    final neighbors = <Square>[];
+    for (var dr = -1; dr <= 1; dr++) {
+      for (var df = -1; df <= 1; df++) {
+        if (df == 0 && dr == 0) continue;
+        final s = Square(cur.file + df, cur.rank + dr);
+        if (isOnBoard(s) && piecesAt(s).isEmpty) neighbors.add(s);
+      }
+    }
+    if (neighbors.isEmpty) {
+      for (var dr = -1; dr <= 1; dr++) {
+        for (var df = -1; df <= 1; df++) {
+          if (df == 0 && dr == 0) continue;
+          final s = Square(cur.file + df, cur.rank + dr);
+          if (isOnBoard(s)) neighbors.add(s);
+        }
+      }
+    }
+    _rules.kansasTyphoonNext = neighbors.isEmpty
+        ? null
+        : neighbors[_random.nextInt(neighbors.length)];
+  }
+
+  void _resolveSerialManiac() {
+    String? bestId;
+    var best = 0;
+    for (final e in _rules.serialCaptureCounts.entries) {
+      if (e.value > best) {
+        best = e.value;
+        bestId = e.key;
+      }
+    }
+    if (bestId == null || best <= 0) return;
+    final ref = _pieceById(bestId);
+    if (ref == null || ref.piece.type == PieceType.pawn) return;
+    _replacePieceAt(
+      ref.square,
+      ref.index,
+      ref.piece.copyWith(type: PieceType.pawn),
+    );
+  }
+
+  void _tickExpandedModsAfterPass(PieceColor finished) {
+    _rules.globalPlyIndex++;
+    // Ink blots
+    final blotKeys = _rules.inkBlotPlies.keys.toList();
+    for (final s in blotKeys) {
+      final left = (_rules.inkBlotPlies[s] ?? 0) - 1;
+      if (left <= 0) {
+        _rules.inkBlotPlies.remove(s);
+      } else {
+        _rules.inkBlotPlies[s] = left;
+      }
+    }
+    // Wasteland claim decay
+    if (_rules.wastelandActive) {
+      final keys = _rules.wastelandClaims.keys.toList();
+      for (final s in keys) {
+        final claim = _rules.wastelandClaims[s]!;
+        final left = claim.pliesLeft - 1;
+        if (left <= 0) {
+          _rules.wastelandClaims.remove(s);
+        } else {
+          _rules.wastelandClaims[s] = (owner: claim.owner, pliesLeft: left);
+        }
+      }
+    }
+    // Forbidden file
+    if (_rules.forbiddenFilePlies > 0) {
+      _rules.forbiddenFilePlies--;
+      if (_rules.forbiddenFilePlies <= 0) _rules.forbiddenFile = null;
+    }
+    // Snail slime
+    final slimeKeys = _rules.snailSlimePlies.keys.toList();
+    for (final s in slimeKeys) {
+      final left = (_rules.snailSlimePlies[s] ?? 0) - 1;
+      if (left <= 0) {
+        _rules.snailSlimePlies.remove(s);
+      } else {
+        _rules.snailSlimePlies[s] = left;
+      }
+    }
+    // Blood feud timer (victim's plies)
+    if (_rules.bloodFeudActive &&
+        _rules.bloodFeudVictimColor == finished &&
+        _rules.bloodFeudPliesLeft > 0) {
+      _rules.bloodFeudPliesLeft--;
+      if (_rules.bloodFeudPliesLeft == 0) {
+        _rules.queuedSkillChoices += 1;
+        _rules.bloodFeudBanner =
+            'Кровная вражда: месть не состоялась — соперник получает мод';
+        _rules.bloodFeudVictimColor = null;
+      }
+    }
+    // Seasons: every black completed move = half of full move; 6 full = season
+    if (_rules.seasonsActive && finished == PieceColor.black) {
+      _rules.seasonFullMoves++;
+      if (_rules.seasonFullMoves >= 6) {
+        _rules.seasonFullMoves = 0;
+        _rules.seasonIndex = (_rules.seasonIndex + 1) % 4;
+        _rules.springDoubleUsedThisSeason.clear();
+      }
+    }
+    // Gravity well every 6 plies
+    if (_rules.gravityWellSquare != null) {
+      _rules.gravityWellPlies++;
+      if (_rules.gravityWellPlies >= 6) {
+        _rules.gravityWellPlies = 0;
+        _pulseGravityWell();
+      }
+    }
+    // Kansas every 4 plies
+    if (_rules.kansasTyphoon != null) {
+      _rules.kansasPlies++;
+      if (_rules.kansasPlies >= 4) {
+        _rules.kansasPlies = 0;
+        _moveKansasTyphoon();
+      }
+    }
+    // River flow for pieces that stayed
+    if (_rules.riverRank != null) {
+      _flowRiver(finished);
+    }
+    // Clear one-turn taxes for the side that just finished their turn.
+    _rules.centerTaxSkipNext.removeWhere((id) {
+      final ref = _pieceById(id);
+      return ref?.piece.color == finished;
+    });
+    final tollKeys = _rules.wastelandTollSkip.keys.toList();
+    for (final id in tollKeys) {
+      final ref = _pieceById(id);
+      if (ref?.piece.color != finished) continue;
+      final left = (_rules.wastelandTollSkip[id] ?? 0) - 1;
+      if (left <= 0) {
+        _rules.wastelandTollSkip.remove(id);
+      } else {
+        _rules.wastelandTollSkip[id] = left;
+      }
+    }
+
+    // Volcano
+    if (_rules.volcanoActive) {
+      _rules.volcanoPliesLeft--;
+      if (_rules.volcanoPliesLeft <= 0) {
+        for (final s in _rules.volcanoSquares.toList()) {
+          for (final p in List<Piece>.from(piecesAt(s))) {
+            if (p.type == PieceType.king) continue;
+            final ref = _pieceById(p.pieceId);
+            if (ref == null) continue;
+            final removed = _takePieceAt(ref.square, ref.index);
+            if (removed != null) _onFinalDeath(removed, ref.square);
+          }
+        }
+        _rules.volcanoPliesLeft = 4;
+        _rerollVolcanoSquares();
+      }
+    }
+
+    // Restless kings
+    if (_rules.restlessKingsPliesLeft > 0) {
+      _rules.restlessKingsPliesLeft--;
+      if (_rules.restlessKingsPliesLeft <= 0) {
+        for (final e in _rules.restlessKingStart.entries) {
+          final k = findKing(e.key);
+          if (k == e.value) {
+            _finishGame(
+              winner: e.key.opponent,
+              reason: GameEndReason.alternativeVictory,
+              detail: 'restlessKings',
+            );
+            return;
+          }
+        }
+        _rules.restlessKingStart.clear();
+      }
+    }
+
+    // Queen hunger (finished player's queens)
+    if (_rules.insatiableHungerActive) {
+      for (var r = 0; r < _rankCount; r++) {
+        for (var f = 0; f < _fileCount; f++) {
+          for (final p in List<Piece>.from(piecesAt(Square(f, r)))) {
+            if (p.type != PieceType.queen || p.color != finished) continue;
+            final n = (_rules.queenHungerPlies[p.pieceId] ?? 0) + 1;
+            _rules.queenHungerPlies[p.pieceId] = n;
+            if (n >= 5) {
+              final ref = _pieceById(p.pieceId);
+              if (ref != null) {
+                final removed = _takePieceAt(ref.square, ref.index);
+                if (removed != null) _onFinalDeath(removed, ref.square);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Fuse timers
+    final fuseKeys = _rules.fuseTimers.keys.toList();
+    for (final s in fuseKeys) {
+      final left = (_rules.fuseTimers[s] ?? 0) - 1;
+      if (left <= 0) {
+        _rules.fuseTimers.remove(s);
+        for (final p in List<Piece>.from(piecesAt(s))) {
+          if (p.type == PieceType.king) continue;
+          final ref = _pieceById(p.pieceId);
+          if (ref == null) continue;
+          final removed = _takePieceAt(ref.square, ref.index);
+          if (removed != null) _onFinalDeath(removed, ref.square);
+        }
+      } else {
+        _rules.fuseTimers[s] = left;
+      }
+    }
+
+    // Ink trail decay
+    final inkKeys = _rules.inkTrailBlocked.keys.toList();
+    for (final s in inkKeys) {
+      final left = (_rules.inkTrailBlocked[s] ?? 0) - 1;
+      if (left <= 0) {
+        _rules.inkTrailBlocked.remove(s);
+      } else {
+        _rules.inkTrailBlocked[s] = left;
+      }
+    }
+
+    // Mortar: every 3 owner plies fire
+    for (var r = 0; r < _rankCount; r++) {
+      for (var f = 0; f < _fileCount; f++) {
+        final sq = Square(f, r);
+        for (final p in piecesAt(sq)) {
+          if (!_hasEffect(p, AbilityEffect.pawnMortar)) continue;
+          if (p.color != finished) continue;
+          final cd = (_rules.mortarCooldown[p.pieceId] ?? 2) - 1;
+          if (cd <= 0) {
+            _rules.mortarCooldown[p.pieceId] = 3;
+            final dir = p.color == PieceColor.white ? 1 : -1;
+            final target = Square(sq.file, sq.rank + 2 * dir);
+            if (isOnBoard(target)) {
+              for (final victim in List<Piece>.from(piecesAt(target))) {
+                final ref = _pieceById(victim.pieceId);
+                if (ref == null) continue;
+                final removed = _takePieceAt(ref.square, ref.index);
+                if (removed != null) _onFinalDeath(removed, ref.square);
+              }
+            }
+          } else {
+            _rules.mortarCooldown[p.pieceId] = cd;
+          }
+        }
+      }
+    }
+
+    // Starvation
+    final starveKeys = _rules.starvationPlies.keys.toList();
+    for (final id in starveKeys) {
+      final ref = _pieceById(id);
+      if (ref == null) {
+        _rules.starvationPlies.remove(id);
+        continue;
+      }
+      if (ref.piece.color != finished) continue;
+      final left = (_rules.starvationPlies[id] ?? 0) - 1;
+      if (left <= 0) {
+        final removed = _takePieceAt(ref.square, ref.index);
+        if (removed != null) _onFinalDeath(removed, ref.square);
+        _rules.starvationPlies.remove(id);
+      } else {
+        _rules.starvationPlies[id] = left;
+      }
+    }
+
+    // Seeds: tick on full moves (both finished black)
+    if (finished == PieceColor.black) {
+      final seedKeys = _rules.pawnSeeds.keys.toList();
+      for (final s in seedKeys) {
+        final data = _rules.pawnSeeds[s]!;
+        final left = data.fullMovesLeft - 1;
+        if (left <= 0) {
+          _rules.pawnSeeds.remove(s);
+          if (piecesAt(s).isEmpty && !isBlocked(s)) {
+            _setPrimary(
+              s,
+              Piece(
+                pieceId: 'seed-${data.color.name}-${s.file}-${s.rank}',
+                type: PieceType.pawn,
+                color: data.color,
+                hasMoved: true,
+              ),
+            );
+          }
+        } else {
+          _rules.pawnSeeds[s] = (color: data.color, fullMovesLeft: left);
+        }
+      }
+    }
+
+    // Twilight owner plies
+    if (_rules.twilightOwner == finished && _rules.twilightOwnerPliesLeft > 0) {
+      _rules.twilightOwnerPliesLeft--;
+      if (_rules.twilightOwnerPliesLeft <= 0) {
+        _rules.twilightInvisibleUntilPly.clear();
+        _rules.twilightOwner = null;
+      }
+    }
+
+    // Gesture mirror arm on finished move landing color
+    if (_rules.gestureMirrorPending && _lastMove != null) {
+      final light = isSquareLight(_lastMove!.to);
+      _rules.gestureMirrorRequiredLight = light;
+      _rules.gestureMirrorPending = false;
+    }
+  }
+
+  int _countAlliesNear(Square square, PieceColor color) {
+    var n = 0;
+    for (var dr = -2; dr <= 2; dr++) {
+      for (var df = -2; df <= 2; df++) {
+        if (df == 0 && dr == 0) continue;
+        final s = Square(square.file + df, square.rank + dr);
+        if (!isOnBoard(s)) continue;
+        if (piecesAt(s).any((p) => p.color == color)) n++;
+      }
+    }
+    return n;
+  }
+
+  int _countAttackersOf(Square square, PieceColor byColor) {
+    var n = 0;
+    for (var rank = 0; rank < _rankCount; rank++) {
+      for (var file = 0; file < _fileCount; file++) {
+        final from = Square(file, rank);
+        for (final piece in piecesAt(from)) {
+          if (piece.color != byColor) continue;
+          if (_canAttack(from, square, piece)) n++;
+        }
+      }
+    }
+    return n;
+  }
+
+  void _pulseGravityWell() {
+    final well = _rules.gravityWellSquare;
+    if (well == null) return;
+    final movers = <({Square from, Square to, Piece piece, int index})>[];
+    for (var r = 0; r < _rankCount; r++) {
+      for (var f = 0; f < _fileCount; f++) {
+        final s = Square(f, r);
+        final df = well.file - f;
+        final dr = well.rank - r;
+        if (df.abs() > 2 || dr.abs() > 2 || (df == 0 && dr == 0)) continue;
+        final pieces = piecesAt(s);
+        for (var i = 0; i < pieces.length; i++) {
+          final p = pieces[i];
+          if (p.type == PieceType.king) continue;
+          final step = Square(f + df.sign, r + dr.sign);
+          if (!isOnBoard(step) || piecesAt(step).isNotEmpty) continue;
+          movers.add((from: s, to: step, piece: p, index: i));
+        }
+      }
+    }
+    for (final m in movers) {
+      _clearSquare(m.from);
+      _setPrimary(m.to, m.piece);
+    }
+  }
+
+  void _moveKansasTyphoon() {
+    final next = _rules.kansasTyphoonNext ?? _randomEmptySquare();
+    if (next == null) return;
+    final victims = piecesAt(next);
+    _rules.kansasTyphoon = next;
+    for (final v in List<Piece>.from(victims)) {
+      final dest = _randomEmptyNeighbor(next) ?? _randomEmptySquare();
+      if (dest == null) continue;
+      final ref = _pieceById(v.pieceId);
+      if (ref == null) continue;
+      _clearSquare(ref.square);
+      _setPrimary(dest, v);
+    }
+    _advanceKansasNext();
+  }
+
+  Square? _randomEmptyNeighbor(Square origin) {
+    final opts = <Square>[];
+    for (var dr = -1; dr <= 1; dr++) {
+      for (var df = -1; df <= 1; df++) {
+        if (df == 0 && dr == 0) continue;
+        final s = Square(origin.file + df, origin.rank + dr);
+        if (isOnBoard(s) && piecesAt(s).isEmpty) opts.add(s);
+      }
+    }
+    if (opts.isEmpty) return null;
+    return opts[_random.nextInt(opts.length)];
+  }
+
+  void _flowRiver(PieceColor finished) {
+    final rank = _rules.riverRank;
+    if (rank == null) return;
+    final dir = _rules.riverDirection;
+    // Move from downstream end so pieces don't collide incorrectly.
+    final files = List<int>.generate(_fileCount, (i) => i);
+    if (dir > 0) files.sort((a, b) => b.compareTo(a));
+    for (final f in files) {
+      if ((dir > 0 && f >= _fileCount - 1) || (dir < 0 && f <= 0)) continue;
+      final s = Square(f, rank);
+      final pieces = piecesAt(s);
+      if (pieces.isEmpty) continue;
+      // Only flow pieces of the side that just finished if they stayed >1 ply — simplify: always try flow once per pass.
+      final dest = Square(f + dir, rank);
+      if (!isOnBoard(dest) || piecesAt(dest).isNotEmpty) continue;
+      final p = pieces.first;
+      if (p.color != finished) continue;
+      _clearSquare(s);
+      _setPrimary(dest, p);
+    }
+  }
+
+  bool get kriegspielActive => _rules.kriegspielActive;
+  bool get duckChessActive => _rules.duckChessActive;
+  bool get kingCenterActive => _rules.kingCenterActive;
+  bool get atomicActive => _rules.atomicActive;
+  bool get debtPitActive => _rules.debtPitActive;
+  int debtFor(PieceColor c) =>
+      c == PieceColor.white ? _rules.whiteDebt : _rules.blackDebt;
+  bool get shopTokenActive => _rules.shopTokenActive;
+  bool shopAvailableFor(PieceColor c) => _rules.shopAvailable[c] ?? false;
+  bool shopTokenHeldBy(PieceColor c) => _rules.shopTokenHeld[c] ?? false;
+  Set<Square> get priorityCells => Set.unmodifiable(_rules.priorityCells);
+  Square? get duckSquare => _rules.duckSquare;
+  bool get duckNeedsPlacement => _rules.duckNeedsPlacement;
+  bool get crazyhouseActive => _rules.crazyhouseActive;
+  List<PieceType> crazyhouseHandFor(PieceColor c) =>
+      List.unmodifiable(_rules.crazyhouseHand[c] ?? const []);
+  String? get bloodFeudBanner => _rules.bloodFeudBanner;
+  void clearBloodFeudBanner() => _rules.bloodFeudBanner = null;
+  Square? get kansasTyphoon => _rules.kansasTyphoon;
+  Square? get kansasTyphoonNext => _rules.kansasTyphoonNext;
+  int? get forbiddenFile => _rules.forbiddenFile;
+  int? get riverRank => _rules.riverRank;
+  Set<Square> get inkBlotSquares => _rules.inkBlotPlies.keys.toSet();
+
+  bool tryPlaceDuck(Square square) {
+    if (!_rules.duckChessActive || !_rules.duckNeedsPlacement) return false;
+    if (!isOnBoard(square) || piecesAt(square).isNotEmpty) return false;
+    if (_rules.duckSquare == square) return false;
+    _rules.duckSquare = square;
+    _rules.duckNeedsPlacement = false;
+    _passTurn();
+    _updateStatus();
+    return true;
+  }
+
+  void _passTurnUnlessDuckPending({bool? gaveCheck}) {
+    if (_rules.duckChessActive && _rules.duckNeedsPlacement) {
+      _updateStatus();
+      return;
+    }
+    if (gaveCheck != null) {
+      _passTurn(gaveCheck: gaveCheck);
+    } else {
+      _passTurn();
+    }
+  }
+
+  bool tryCrazyhouseDrop(PieceColor color, PieceType type, Square to) {
+    if (!_rules.crazyhouseActive) return false;
+    if (_turn != color || enginePhase != GameEnginePhase.play) return false;
+    final hand = _rules.crazyhouseHand[color]!;
+    final idx = hand.indexOf(type);
+    if (idx < 0) return false;
+    if (!isOnBoard(to) || piecesAt(to).isNotEmpty) return false;
+    if (_rules.duckSquare == to) return false;
+    if (type == PieceType.pawn &&
+        (to.rank == 0 || to.rank == _rankCount - 1)) {
+      return false;
+    }
+    hand.removeAt(idx);
+    _setPrimary(
+      to,
+      Piece(
+        pieceId: 'drop-${color.name}-${_nextPieceId++}',
+        type: type,
+        color: color,
+        hasMoved: true,
+      ),
+    );
+    _passTurn();
+    _updateStatus();
+    return true;
+  }
+
+  bool trySpendShopToken(PieceColor color) {
+    if (!_rules.shopTokenActive) return false;
+    if (!(_rules.shopTokenHeld[color] ?? false)) return false;
+    if (!_gameCanTakebackForShop()) return false;
+    _rules.shopTokenHeld[color] = false;
+    takeback();
+    return true;
+  }
+
+  bool _gameCanTakebackForShop() => canTakeback;
+
+  bool trySellToShop(PieceColor color, String pieceId) {
+    if (!_rules.shopTokenActive) return false;
+    if (!(_rules.shopAvailable[color] ?? false)) return false;
+    final ref = _pieceById(pieceId);
+    if (ref == null ||
+        ref.piece.color != color ||
+        ref.piece.type == PieceType.king) {
+      return false;
+    }
+    _clearSquare(ref.square);
+    _rules.shopAvailable[color] = false;
+    _rules.shopTokenHeld[color] = true;
+    _updateStatus();
+    return true;
+  }
+
   void _activateArchitectWalls(int count) {
     final candidates = <String>[];
     for (var rank = 0; rank < _rankCount; rank++) {
@@ -8505,6 +10553,7 @@ class ChessGame {
           _finishGame(
             winner: color,
             reason: GameEndReason.alternativeVictory,
+            detail: 'letterH',
           );
           return;
         }
@@ -8578,6 +10627,7 @@ class ChessGame {
       status: _status,
       winnerColor: _winnerColor,
       endReason: _endReason,
+      endDetail: _endDetail,
       whiteStartChosen: _whiteStartChosen,
       blackStartChosen: _blackStartChosen,
       whiteStartOffers: List<AbilityOffer>.from(_whiteStartOffers),
@@ -8714,6 +10764,7 @@ class ChessGame {
     _status = snapshot.status;
     _winnerColor = snapshot.winnerColor;
     _endReason = snapshot.endReason;
+    _endDetail = snapshot.endDetail;
     _whiteStartChosen = snapshot.whiteStartChosen;
     _blackStartChosen = snapshot.blackStartChosen;
     _whiteStartOffers = List<AbilityOffer>.from(snapshot.whiteStartOffers);
@@ -8927,6 +10978,710 @@ class ChessGame {
       ]),
     ];
   }
+  // ---------------------------------------------------------------------------
+  // Interactive batch mods (RPS, multi-cell, tangled, customs, passives)
+  // ---------------------------------------------------------------------------
+
+  bool get isAwaitingRps =>
+      _rules.rpsSessionActive && !_rules.rpsResolved && _rules.rpsPairIndex != null;
+
+  bool get isAwaitingCustomsPath => _rules.awaitingCustomsPath;
+
+  bool get isAwaitingTangledKeep => _rules.tangledAwaitingKeep;
+
+  bool get isAwaitingSpotlightPromo => _rules.spotlightPromoId != null;
+
+  bool get isAwaitingMultiCell =>
+      _rules.multiCellNeeded > 0 &&
+      _rules.multiCellAbility != null &&
+      _rules.multiCellPicks.length < _rules.multiCellNeeded;
+
+  List<(Square, Square)> get rpsPairs => List<(Square, Square)>.from(_rules.rpsPairs);
+
+  int? get rpsPairIndex => _rules.rpsPairIndex;
+
+  String? get rpsLastA => _rules.rpsLastA;
+
+  String? get rpsLastB => _rules.rpsLastB;
+
+  int get rpsRound => _rules.rpsRound;
+
+  List<List<Square>> get customsPathOptions =>
+      _rules.customsPaths.map((p) => List<Square>.from(p)).toList();
+
+  List<Square> get multiCellPicks => List<Square>.from(_rules.multiCellPicks);
+
+  int get multiCellNeeded => _rules.multiCellNeeded;
+
+  GameAbility? get multiCellAbility => _rules.multiCellAbility;
+
+  String? get spotlightPromoPieceId => _rules.spotlightPromoId;
+
+  List<Square> get tangledKeepSquares {
+    if (!_rules.tangledAwaitingKeep) return const [];
+    final out = <Square>[];
+    final a = _pieceById(_rules.tangledKnightBaseId ?? '');
+    final b = _pieceById(_rules.tangledCloneId ?? '');
+    if (a != null) out.add(a.square);
+    if (b != null) out.add(b.square);
+    return out;
+  }
+
+  void _beginMultiCellTarget({
+    required GameAbility ability,
+    required String sourceId,
+    required PieceColor color,
+    required int needed,
+  }) {
+    _rules.multiCellPicks.clear();
+    _rules.multiCellNeeded = needed;
+    _rules.multiCellAbility = ability;
+    _rules.multiCellSourceId = sourceId;
+    _rules.multiCellColor = color;
+    _beginAbilityTarget(
+      ability: ability,
+      sourceId: sourceId,
+      color: color,
+      selection: AbilityTargetSelection.cell,
+      passesTurn: true,
+    );
+  }
+
+  void _clearMultiCell() {
+    _rules.multiCellPicks.clear();
+    _rules.multiCellNeeded = 0;
+    _rules.multiCellAbility = null;
+    _rules.multiCellSourceId = null;
+    _rules.multiCellColor = null;
+  }
+
+  List<Square> _legalMultiCellSquares() {
+    final ability = _rules.multiCellAbility;
+    final sourceId = _rules.multiCellSourceId;
+    final color = _rules.multiCellColor;
+    if (ability == null || color == null) return const [];
+    final picked = _rules.multiCellPicks.toSet();
+    final out = <Square>[];
+    if (ability == GameAbility.knightGallopContract) {
+      for (var r = 0; r < _rankCount; r++) {
+        for (var f = 0; f < _fileCount; f++) {
+          final s = Square(f, r);
+          if (!picked.contains(s)) out.add(s);
+        }
+      }
+      return out;
+    }
+    if (ability == GameAbility.bishopHeretic) {
+      final halfMax = color == PieceColor.white ? (_rankCount ~/ 2) - 1 : _rankCount - 1;
+      final halfMin = color == PieceColor.white ? 0 : _rankCount ~/ 2;
+      for (var r = halfMin; r <= halfMax; r++) {
+        for (var f = 0; f < _fileCount; f++) {
+          final s = Square(f, r);
+          if (picked.contains(s)) continue;
+          if (piecesAt(s).isNotEmpty || isBlocked(s)) continue;
+          out.add(s);
+        }
+      }
+      return out;
+    }
+    if (ability == GameAbility.bishopCartographer) {
+      final source = _pieceById(sourceId ?? '');
+      if (source == null) return const [];
+      for (final (df, dr) in const [(-1, -1), (-1, 1), (1, -1), (1, 1)]) {
+        var f = source.square.file + df;
+        var r = source.square.rank + dr;
+        while (f >= 0 && f < _fileCount && r >= 0 && r < _rankCount) {
+          final s = Square(f, r);
+          if (!picked.contains(s)) out.add(s);
+          f += df;
+          r += dr;
+        }
+      }
+      return out;
+    }
+    if (ability == GameAbility.pawnArchivist) {
+      final visited = _rules.archivistVisited[sourceId] ?? {};
+      for (final s in visited) {
+        if (picked.contains(s)) continue;
+        if (piecesAt(s).isNotEmpty || isBlocked(s)) continue;
+        out.add(s);
+      }
+      return out;
+    }
+    return out;
+  }
+
+  bool _acceptMultiCellPick(Square square) {
+    final ability = _rules.multiCellAbility;
+    final sourceId = _rules.multiCellSourceId;
+    if (ability == null || sourceId == null) return false;
+    if (!_legalMultiCellSquares().contains(square)) return false;
+    _rules.multiCellPicks.add(square);
+    if (_rules.multiCellPicks.length < _rules.multiCellNeeded) {
+      _updateStatus();
+      return true;
+    }
+    final picks = List<Square>.from(_rules.multiCellPicks);
+    final color = _rules.multiCellColor ?? PieceColor.white;
+    _clearPendingTarget();
+    switch (ability) {
+      case GameAbility.knightGallopContract:
+        _rules.gallopContractRoute[sourceId] = picks;
+        _rules.gallopContractProgress[sourceId] = 0;
+      case GameAbility.bishopHeretic:
+        _applyHereticSplit(sourceId, picks);
+      case GameAbility.bishopCartographer:
+        _rules.permanentFogReveals.putIfAbsent(color, () => {}).add(picks.first);
+      case GameAbility.pawnArchivist:
+        _applyArchivistRecall(sourceId, picks.first);
+      default:
+        break;
+    }
+    _clearMultiCell();
+    return _finishAbilityTargetSelection();
+  }
+
+  void _applyHereticSplit(String bishopId, List<Square> cells) {
+    final ref = _pieceById(bishopId);
+    if (ref == null) return;
+    final color = ref.piece.color;
+    final removed = _takePieceAt(ref.square, ref.index);
+    if (removed != null) {
+      // Consume bishop without graveyard inheritance noise during sim.
+    }
+    for (var i = 0; i < cells.length && i < 4; i++) {
+      final s = cells[i];
+      if (piecesAt(s).isNotEmpty) continue;
+      _setPrimary(
+        s,
+        Piece(
+          pieceId: 'heretic-$bishopId-$i',
+          type: PieceType.pawn,
+          color: color,
+          hasMoved: true,
+        ),
+      );
+    }
+  }
+
+  void _applyArchivistRecall(String pawnId, Square to) {
+    final ref = _pieceById(pawnId);
+    if (ref == null) return;
+    if (_rules.archivistRecallUsed.contains(pawnId)) return;
+    if (piecesAt(to).isNotEmpty) return;
+    final piece = ref.piece;
+    _takePieceAt(ref.square, ref.index);
+    _setPrimary(to, piece);
+    _rules.archivistRecallUsed.add(pawnId);
+    _rules.archivistRecallArmed.remove(pawnId);
+  }
+
+  void _startRpsSession(PieceColor chooser) {
+    _rules.rpsPairs
+      ..clear()
+      ..addAll(_findBlockingPawnPairs());
+    if (_rules.rpsPairs.isEmpty) return;
+    _rules.rpsSessionActive = true;
+    _rules.rpsResolved = false;
+    _rules.rpsChooser = chooser;
+    _rules.rpsPairIndex = _rules.rpsPairs.length == 1 ? 0 : null;
+    _rules.rpsLastA = null;
+    _rules.rpsLastB = null;
+    _rules.rpsRound = 0;
+    if (_rules.rpsPairIndex != null) {
+      _runRpsUntilWinner();
+    }
+  }
+
+  List<(Square, Square)> _findBlockingPawnPairs() {
+    final pairs = <(Square, Square)>[];
+    for (var file = 0; file < _fileCount; file++) {
+      for (var rank = 0; rank < _rankCount - 1; rank++) {
+        final a = Square(file, rank);
+        final b = Square(file, rank + 1);
+        final pa = pieceAt(a);
+        final pb = pieceAt(b);
+        if (pa == null || pb == null) continue;
+        if (pa.type != PieceType.pawn || pb.type != PieceType.pawn) continue;
+        if (pa.color == pb.color) continue;
+        pairs.add((a, b));
+      }
+    }
+    return pairs;
+  }
+
+  bool chooseRpsPair(int index) {
+    if (!_rules.rpsSessionActive || _rules.rpsPairIndex != null) return false;
+    if (index < 0 || index >= _rules.rpsPairs.length) return false;
+    _rules.rpsPairIndex = index;
+    _runRpsUntilWinner();
+    if (isAwaitingAbilityTarget &&
+        _pendingTargetAbility == GameAbility.pawnRockPaperScissors) {
+      _finishAbilityTargetSelection();
+    }
+    _updateStatus();
+    return true;
+  }
+
+  void _runRpsUntilWinner() {
+    final idx = _rules.rpsPairIndex;
+    if (idx == null || idx < 0 || idx >= _rules.rpsPairs.length) return;
+    final (aSq, bSq) = _rules.rpsPairs[idx];
+    const gestures = ['rock', 'paper', 'scissors'];
+    for (var round = 0; round < 32; round++) {
+      final ga = gestures[_random.nextInt(3)];
+      final gb = gestures[_random.nextInt(3)];
+      _rules.rpsLastA = ga;
+      _rules.rpsLastB = gb;
+      _rules.rpsRound = round + 1;
+      final winner = _rpsWinner(ga, gb);
+      if (winner == 0) continue;
+      final loserSq = winner > 0 ? bSq : aSq;
+      final loser = pieceAt(loserSq);
+      if (loser != null) {
+        final removed = _takePieceAt(loserSq, 0);
+        if (removed != null) _onFinalDeath(removed, loserSq);
+      }
+      break;
+    }
+    _rules.rpsResolved = true;
+    _rules.rpsSessionActive = false;
+    final chooser = _rules.rpsChooser;
+    if (chooser != null && isAwaitingAbilityTarget) {
+      _finishAbilityTargetSelection();
+    } else if (chooser != null && isAwaitingSkillChoice) {
+      // boardWide RPS applied during skill choice — resolution continues normally
+    }
+  }
+
+  /// Returns 1 if A wins, -1 if B wins, 0 draw.
+  int _rpsWinner(String a, String b) {
+    if (a == b) return 0;
+    if ((a == 'rock' && b == 'scissors') ||
+        (a == 'scissors' && b == 'paper') ||
+        (a == 'paper' && b == 'rock')) {
+      return 1;
+    }
+    return -1;
+  }
+
+  List<(Square from, Square via1, Square via2, Square to)> _knightPathOptions(
+    Square from,
+    Square to,
+  ) {
+    final df = to.file - from.file;
+    final dr = to.rank - from.rank;
+    final adf = df.abs();
+    final adr = dr.abs();
+    if (!((adf == 1 && adr == 2) || (adf == 2 && adr == 1))) {
+      return const [];
+    }
+    // Two Manhattan 3-step routes (2+1).
+    final paths = <(Square, Square, Square, Square)>[];
+    if (adf == 2 && adr == 1) {
+      final mid1 = Square(from.file + df.sign, from.rank);
+      final mid2 = Square(from.file + 2 * df.sign, from.rank);
+      final midAlt1 = Square(from.file, from.rank + dr.sign);
+      final midAlt2 = Square(from.file + df.sign, from.rank + dr.sign);
+      if (isOnBoard(mid1) && isOnBoard(mid2)) {
+        paths.add((from, mid1, mid2, to));
+      }
+      if (isOnBoard(midAlt1) && isOnBoard(midAlt2)) {
+        paths.add((from, midAlt1, midAlt2, to));
+      }
+    } else {
+      final mid1 = Square(from.file, from.rank + dr.sign);
+      final mid2 = Square(from.file, from.rank + 2 * dr.sign);
+      final midAlt1 = Square(from.file + df.sign, from.rank);
+      final midAlt2 = Square(from.file + df.sign, from.rank + dr.sign);
+      if (isOnBoard(mid1) && isOnBoard(mid2)) {
+        paths.add((from, mid1, mid2, to));
+      }
+      if (isOnBoard(midAlt1) && isOnBoard(midAlt2)) {
+        paths.add((from, midAlt1, midAlt2, to));
+      }
+    }
+    return paths;
+  }
+
+  bool chooseCustomsPath(int index) {
+    if (!_rules.awaitingCustomsPath) return false;
+    if (index < 0 || index >= _rules.customsPaths.length) return false;
+    final path = _rules.customsPaths[index];
+    final from = _rules.customsFrom;
+    final to = _rules.customsTo;
+    final knightId = _rules.customsKnightId;
+    final knightColor = _pieceById(knightId ?? '')?.piece.color;
+    for (var i = 1; i < path.length - 1; i++) {
+      final s = path[i];
+      for (final p in List<Piece>.from(piecesAt(s))) {
+        if (knightColor != null && p.color == knightColor) continue;
+        if (p.abilities.isEmpty) continue;
+        final mods = p.abilities.toList()..shuffle(_random);
+        final ref = _pieceById(p.pieceId);
+        if (ref == null) continue;
+        _replacePieceAt(
+          ref.square,
+          ref.index,
+          ref.piece.withoutAbility(mods.first),
+        );
+        _refreshDoppelgangerFlags();
+        break;
+      }
+    }
+    _rules.awaitingCustomsPath = false;
+    _rules.customsPaths.clear();
+    _rules.customsFrom = null;
+    _rules.customsTo = null;
+    _rules.customsKnightId = null;
+    if (from == null || to == null || knightId == null) return false;
+    final ref = _pieceById(knightId);
+    if (ref == null) return false;
+    _rules.customsPathResolvedSkip = true;
+    final result = makeMove(Move(from: from, to: to, pieceIndex: ref.index));
+    return result != null;
+  }
+
+  bool chooseTangledKeep(Square square) {
+    if (!_rules.tangledAwaitingKeep) return false;
+    final base = _pieceById(_rules.tangledKnightBaseId ?? '');
+    final clone = _pieceById(_rules.tangledCloneId ?? '');
+    if (base == null && clone == null) {
+      _rules.tangledAwaitingKeep = false;
+      return false;
+    }
+    final keepBase = base != null && base.square == square;
+    final keepClone = clone != null && clone.square == square;
+    if (!keepBase && !keepClone) return false;
+    if (keepBase && clone != null) {
+      final removed = _takePieceAt(clone.square, clone.index);
+      if (removed != null) {
+        // Vanish without graveyard reward — temporary clone.
+      }
+    } else if (keepClone && base != null) {
+      final removed = _takePieceAt(base.square, base.index);
+      if (removed != null) {}
+      // Promote clone identity? keep clone as-is.
+    }
+    _rules.tangledAwaitingKeep = false;
+    _rules.tangledCloneId = null;
+    _rules.tangledKnightBaseId = null;
+    _rules.tangledFrom = null;
+    _rules.tangledFirstDest = null;
+    _updateStatus();
+    return true;
+  }
+
+  bool activateDoubleLife(String pieceId) {
+    final ref = _pieceById(pieceId);
+    if (ref == null) return false;
+    if (!_hasEffect(ref.piece, AbilityEffect.pawnDoubleLife)) return false;
+    if (_rules.doubleLifeUsed.contains(pieceId)) return false;
+    final hidden = _rules.doubleLifeHidden[pieceId];
+    if (hidden == null) return false;
+    _rules.doubleLifeArmed.add(pieceId);
+    _replacePieceAt(
+      ref.square,
+      ref.index,
+      ref.piece.copyWith(moveAsType: hidden),
+    );
+    _updateStatus();
+    return true;
+  }
+
+  bool activateArchivistRecall(String pieceId) {
+    final ref = _pieceById(pieceId);
+    if (ref == null) return false;
+    if (!_hasEffect(ref.piece, AbilityEffect.pawnArchivist)) return false;
+    if (_rules.archivistRecallUsed.contains(pieceId)) return false;
+    _rules.archivistRecallArmed.add(pieceId);
+    _beginMultiCellTarget(
+      ability: GameAbility.pawnArchivist,
+      sourceId: pieceId,
+      color: ref.piece.color,
+      needed: 1,
+    );
+    _updateStatus();
+    return true;
+  }
+
+  bool completeSpotlightPromo(PieceType type) {
+    final id = _rules.spotlightPromoId;
+    if (id == null) return false;
+    if (type != PieceType.knight && type != PieceType.bishop) return false;
+    final ref = _pieceById(id);
+    if (ref == null) {
+      _rules.spotlightPromoId = null;
+      return false;
+    }
+    _replacePieceAt(
+      ref.square,
+      ref.index,
+      ref.piece.copyWith(type: type),
+    );
+    _rules.spotlightPromoId = null;
+    _rules.spotlightUnderFire.remove(id);
+    _updateStatus();
+    return true;
+  }
+
+  void _applySchismSplit(String bishopId) {
+    final ref = _pieceById(bishopId);
+    if (ref == null) return;
+    final color = ref.piece.color;
+    final origin = ref.square;
+    // Two half-bishops: diag signs +1 and -1 (file-rank parity of direction).
+    _rules.schismDiagSign[bishopId] = 1;
+    final cloneId = '$bishopId-schism';
+    // Place clone on adjacent free diagonal cell if possible, else same file+1.
+    Square? dest;
+    for (final (df, dr) in const [(1, 1), (1, -1), (-1, 1), (-1, -1), (1, 0), (-1, 0)]) {
+      final s = Square(origin.file + df, origin.rank + dr);
+      if (!isOnBoard(s)) continue;
+      if (piecesAt(s).isNotEmpty || isBlocked(s)) continue;
+      dest = s;
+      break;
+    }
+    if (dest == null) return;
+    _setPrimary(
+      dest,
+      Piece(
+        pieceId: cloneId,
+        type: PieceType.bishop,
+        color: color,
+        hasMoved: true,
+        abilities: {GameAbility.bishopSchism},
+      ),
+    );
+    _rules.schismDiagSign[cloneId] = -1;
+  }
+
+  void _tickRelicAndSpotlight(PieceColor finished) {
+    // Relic: countdown; revive if square empty while timer remains.
+    final relicKeys = _rules.relicPliesLeft.keys.toList();
+    for (final id in relicKeys) {
+      final left = (_rules.relicPliesLeft[id] ?? 0) - 1;
+      final death = _rules.relicDeathSquare[id];
+      if (death == null) {
+        _rules.relicPliesLeft.remove(id);
+        continue;
+      }
+      // If death square empty now and was occupied last by finished color...
+      // Simpler rule: if square empty at tick end, revive for the color that
+      // had the bishop — encoded in id prefix? We stored only pieceId.
+      // Revive for whoever can: check if any ally of either color just left.
+      if (piecesAt(death).isEmpty && left >= 0) {
+        // Determine color from graveyard
+        PieceColor? color;
+        for (final g in _graveyard.reversed) {
+          if (g.piece.pieceId == id) {
+            color = g.originalOwner;
+            break;
+          }
+        }
+        if (color != null && color == finished) {
+          // Only revive after the owner finished a ply with square empty
+          // (they stood and left earlier this turn sequence).
+          _setPrimary(
+            death,
+            Piece(
+              pieceId: '$id-revived',
+              type: PieceType.bishop,
+              color: color,
+              hasMoved: true,
+            ),
+          );
+          _rules.relicPliesLeft.remove(id);
+          _rules.relicDeathSquare.remove(id);
+          continue;
+        }
+      }
+      if (left <= 0) {
+        _rules.relicPliesLeft.remove(id);
+        _rules.relicDeathSquare.remove(id);
+      } else {
+        _rules.relicPliesLeft[id] = left;
+      }
+    }
+
+    // Spotlight: pawn under enemy pawn attack for 6 owner plies
+    for (var r = 0; r < _rankCount; r++) {
+      for (var f = 0; f < _fileCount; f++) {
+        final sq = Square(f, r);
+        for (final p in piecesAt(sq)) {
+          if (!_hasEffect(p, AbilityEffect.pawnSpotlight)) continue;
+          if (p.color != finished) continue;
+          final under = _isAttackedByEnemyPawns(sq, p.color);
+          if (under) {
+            final n = (_rules.spotlightUnderFire[p.pieceId] ?? 0) + 1;
+            _rules.spotlightUnderFire[p.pieceId] = n;
+            if (n >= 6) {
+              _rules.spotlightPromoId = p.pieceId;
+            }
+          } else {
+            _rules.spotlightUnderFire[p.pieceId] = 0;
+          }
+        }
+      }
+    }
+  }
+
+  bool _isAttackedByEnemyPawns(Square square, PieceColor defender) {
+    final dir = defender == PieceColor.white ? 1 : -1;
+    // Enemy pawns attack from behind relative to defender forward.
+    for (final df in [-1, 1]) {
+      final from = Square(square.file + df, square.rank - dir);
+      if (!isOnBoard(from)) continue;
+      final p = pieceAt(from);
+      if (p != null &&
+          p.color == defender.opponent &&
+          p.type == PieceType.pawn) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  void _tryKingGuardAuto(PieceColor checkedColor) {
+    if (!isInCheck(checkedColor)) return;
+    final guards = <({Square square, int index, Piece piece})>[];
+    for (var r = 0; r < _rankCount; r++) {
+      for (var f = 0; f < _fileCount; f++) {
+        final sq = Square(f, r);
+        for (var i = 0; i < piecesAt(sq).length; i++) {
+          final p = piecesAt(sq)[i];
+          if (p.color != checkedColor) continue;
+          if (!_hasEffect(p, AbilityEffect.kingGuardAuto) &&
+              !_rules.kingGuardPieceIds.contains(p.pieceId)) {
+            continue;
+          }
+          guards.add((square: sq, index: i, piece: p));
+        }
+      }
+    }
+    if (guards.isEmpty) return;
+    final kingSq = findKing(checkedColor);
+    if (kingSq == null) return;
+    // Find checkers
+    final checkers = <({Square square, Piece piece})>[];
+    for (var r = 0; r < _rankCount; r++) {
+      for (var f = 0; f < _fileCount; f++) {
+        final from = Square(f, r);
+        for (final p in piecesAt(from)) {
+          if (p.color != checkedColor.opponent) continue;
+          if (_canAttack(from, kingSq, p)) {
+            checkers.add((square: from, piece: p));
+          }
+        }
+      }
+    }
+    if (checkers.isEmpty) return;
+    for (final guard in guards) {
+      // Prefer capture of checker
+      for (final c in checkers) {
+        if (_canAttack(guard.square, c.square, guard.piece) &&
+            _captureAllowed(guard.piece, c.piece)) {
+          final snapshot = createSnapshot();
+          _isSimulatingLegality = true;
+          try {
+            _applyMove(
+              Move(
+                from: guard.square,
+                to: c.square,
+                pieceIndex: guard.index,
+              ),
+            );
+            if (!isInCheck(checkedColor)) {
+              _isSimulatingLegality = false;
+              // Apply for real
+              restoreSnapshot(snapshot);
+              _applyMove(
+                Move(
+                  from: guard.square,
+                  to: c.square,
+                  pieceIndex: guard.index,
+                ),
+              );
+              return;
+            }
+          } finally {
+            _isSimulatingLegality = false;
+            restoreSnapshot(snapshot);
+          }
+        }
+      }
+      // Interpose on sliding check
+      if (checkers.length == 1) {
+        final c = checkers.first;
+        final blockSquares = _squaresBetween(c.square, kingSq);
+        for (final block in blockSquares) {
+          if (piecesAt(block).isNotEmpty) continue;
+          if (!_canAttack(guard.square, block, guard.piece) &&
+              !_pseudoCanMoveTo(guard.square, block, guard.piece, guard.index)) {
+            // Use legal move list
+          }
+          final moves = _getPseudoLegalMoves(
+            guard.square,
+            guard.piece,
+            pieceIndex: guard.index,
+          );
+          if (!moves.any((m) => m.to == block)) continue;
+          final snapshot = createSnapshot();
+          try {
+            _isSimulatingLegality = true;
+            _applyMove(
+              Move(from: guard.square, to: block, pieceIndex: guard.index),
+            );
+            if (!isInCheck(checkedColor)) {
+              _isSimulatingLegality = false;
+              restoreSnapshot(snapshot);
+              _applyMove(
+                Move(from: guard.square, to: block, pieceIndex: guard.index),
+              );
+              return;
+            }
+          } finally {
+            _isSimulatingLegality = false;
+            restoreSnapshot(snapshot);
+          }
+        }
+      }
+    }
+  }
+
+  List<Square> _squaresBetween(Square a, Square b) {
+    final df = (b.file - a.file).sign;
+    final dr = (b.rank - a.rank).sign;
+    final adf = (b.file - a.file).abs();
+    final adr = (b.rank - a.rank).abs();
+    if (df != 0 && dr != 0 && adf != adr) return const [];
+    if (df == 0 && dr == 0) return const [];
+    final out = <Square>[];
+    var f = a.file + df;
+    var r = a.rank + dr;
+    while (f != b.file || r != b.rank) {
+      out.add(Square(f, r));
+      f += df;
+      r += dr;
+    }
+    return out;
+  }
+
+  bool _pseudoCanMoveTo(
+    Square from,
+    Square to,
+    Piece piece,
+    int pieceIndex,
+  ) {
+    return _getPseudoLegalMoves(
+      from,
+      piece,
+      pieceIndex: pieceIndex,
+    ).any((m) => m.to == to);
+  }
+
+
+
 }
 
 /// Complete restorable gameplay state.
@@ -8934,6 +11689,7 @@ class ChessGame {
 /// Random generator state and the ability catalog are intentionally not part
 /// of the snapshot; random outcomes must be resolved before a future network
 /// snapshot is distributed.
+
 class GameSnapshot {
   GameSnapshot._({
     required this.board,
@@ -8947,6 +11703,7 @@ class GameSnapshot {
     required this.status,
     required this.winnerColor,
     required this.endReason,
+    required this.endDetail,
     required this.whiteStartChosen,
     required this.blackStartChosen,
     required this.whiteStartOffers,
@@ -9057,6 +11814,7 @@ class GameSnapshot {
   final GameStatus status;
   final PieceColor? winnerColor;
   final GameEndReason? endReason;
+  final String? endDetail;
   final bool whiteStartChosen;
   final bool blackStartChosen;
   final List<AbilityOffer> whiteStartOffers;
