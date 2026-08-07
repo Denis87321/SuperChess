@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../auth/auth_service.dart';
 import '../chess/chess_game.dart';
 import '../chess/move.dart';
+import '../chess/move_history.dart';
 import '../chess/stockfish_player.dart';
 import '../l10n/app_strings.dart';
 import '../l10n/models/game_ability.dart';
@@ -20,6 +21,7 @@ import '../online/online_game_service.dart';
 import '../theme/balatro_theme.dart';
 import '../widgets/chess_piece_widget.dart';
 import '../widgets/lava_death_overlay.dart';
+import '../widgets/move_history_panel.dart';
 import '../widgets/online_chat_panel.dart';
 import '../widgets/online_game_menu.dart';
 import '../widgets/online_player_bar.dart';
@@ -110,6 +112,20 @@ class _GameScreenState extends State<GameScreen> {
   bool _awaitingTakebackResponse = false;
   bool _gameResultReported = false;
 
+  final MoveHistoryLog _moveLog = MoveHistoryLog();
+  /// `null` = live position; otherwise index into [_moveLog.plies].
+  int? _viewPlyIndex;
+  ChessGame? _browseGame;
+  Map<String, String> _modsFingerprint = {};
+  Map<String, String> _modsBeforeLastPly = {};
+  ({
+    Move move,
+    PieceColor side,
+    String notation,
+    Map<String, String> beforeMods,
+  })? _pendingPlyDraft;
+  Move? _premove;
+
   PieceColor? get _botColor {
     if (!widget.vsComputer || widget.localColor == null) return null;
     return widget.localColor == PieceColor.white
@@ -191,10 +207,239 @@ class _GameScreenState extends State<GameScreen> {
     }
 
     if (mounted) {
-      setState(() => _startFlowDone = true);
+      setState(() {
+        _startFlowDone = true;
+        _modsFingerprint = collectModFingerprint(_game);
+        _modsBeforeLastPly = _modsFingerprint;
+      });
       _ensureClockRunning();
       _maybeScheduleComputerMove();
     }
+  }
+
+  bool get _isBrowsingHistory => _viewPlyIndex != null;
+
+  ChessGame get _displayGame {
+    final browse = _browseGame;
+    if (_viewPlyIndex != null && browse != null) return browse;
+    return _game;
+  }
+
+  bool get _canSetPremove {
+    if (!widget.hasFixedSeat || widget.localColor == null) return false;
+    if (!_startFlowDone || !_game.isReadyToPlay || _showEndOverlay) {
+      return false;
+    }
+    if (_game.enginePhase != GameEnginePhase.play) return false;
+    if (_game.isAwaitingGallop) return false;
+    return !_isMyTurn;
+  }
+
+  Widget _buildMoveHistoryPanel({bool compact = false}) {
+    return MoveHistoryPanel(
+      log: _moveLog,
+      viewPlyIndex: _viewPlyIndex,
+      compact: compact,
+      onSelectPly: _viewHistoryPly,
+      onGoLive: _goToLivePosition,
+    );
+  }
+
+  void _exitHistoryView() {
+    _viewPlyIndex = null;
+    _browseGame = null;
+  }
+
+  void _goToLivePosition() {
+    setState(_exitHistoryView);
+  }
+
+  void _viewHistoryPly(int index) {
+    if (index < 0 || index >= _moveLog.length) {
+      setState(_exitHistoryView);
+      return;
+    }
+    final ply = _moveLog.plies[index];
+    final browse = _browseGame ?? ChessGame();
+    browse.restoreSnapshot(ply.after);
+    browse.setLastMoveHighlight(ply.move);
+    setState(() {
+      _browseGame = browse;
+      _viewPlyIndex = index;
+      _selectedSquare = null;
+      _selectedPieceIndex = 0;
+      _availableMoves = [];
+    });
+  }
+
+  void _commitMoveToHistory({
+    required Move move,
+    required PieceColor side,
+    required String notation,
+    required Map<String, String> beforeMods,
+  }) {
+    final afterMods = collectModFingerprint(_game);
+    _modsBeforeLastPly = beforeMods;
+    _moveLog.add(
+      PlyRecord(
+        plyIndex: _moveLog.length,
+        move: move,
+        side: side,
+        notation: notation,
+        after: _game.createSnapshot(),
+        modEvents: diffModFingerprints(beforeMods, afterMods),
+      ),
+    );
+    _modsFingerprint = afterMods;
+    _pendingPlyDraft = null;
+    _exitHistoryView();
+  }
+
+  void _refreshLastHistoryPly() {
+    if (_moveLog.isEmpty) return;
+    final last = _moveLog.plies.last;
+    final afterMods = collectModFingerprint(_game);
+    last.modEvents = diffModFingerprints(_modsBeforeLastPly, afterMods);
+    last.after = _game.createSnapshot();
+    _modsFingerprint = afterMods;
+    if (_viewPlyIndex == last.plyIndex && _browseGame != null) {
+      _browseGame!.restoreSnapshot(last.after);
+      _browseGame!.setLastMoveHighlight(last.move);
+    }
+  }
+
+  void _popHistoryAfterTakeback() {
+    if (_moveLog.isNotEmpty) _moveLog.removeLast();
+    _pendingPlyDraft = null;
+    _modsFingerprint = collectModFingerprint(_game);
+    _modsBeforeLastPly = _modsFingerprint;
+    _premove = null;
+    _exitHistoryView();
+  }
+
+  void _recordAppliedMove(Move move, {
+    required PieceColor side,
+    required String notation,
+    required Map<String, String> beforeMods,
+    required MoveResult result,
+  }) {
+    if (result.wasCancelled) {
+      _pendingPlyDraft = null;
+      return;
+    }
+    if (result.isAwaitingReaction) {
+      _pendingPlyDraft = (
+        move: move,
+        side: side,
+        notation: notation,
+        beforeMods: beforeMods,
+      );
+      return;
+    }
+    _commitMoveToHistory(
+      move: move,
+      side: side,
+      notation: notation,
+      beforeMods: beforeMods,
+    );
+  }
+
+  void _commitPendingPlyDraft() {
+    final draft = _pendingPlyDraft;
+    if (draft == null) return;
+    _commitMoveToHistory(
+      move: draft.move,
+      side: draft.side,
+      notation: draft.notation,
+      beforeMods: draft.beforeMods,
+    );
+  }
+
+  Future<void> _tryExecutePremove() async {
+    final pm = _premove;
+    if (pm == null || !mounted) return;
+    if (!widget.hasFixedSeat || !_isMyTurn) return;
+    if (_game.enginePhase != GameEnginePhase.play) return;
+    if (_pieceFlight != null || _showEndOverlay) return;
+    if (_game.isAwaitingGallop) return;
+
+    final legal = _game.getLegalMoves(from: pm.from);
+    Move? match;
+    for (final m in legal) {
+      if (m.from != pm.from ||
+          m.to != pm.to ||
+          m.pieceIndex != pm.pieceIndex) {
+        continue;
+      }
+      if (pm.promotion != null) {
+        if (m.promotion == pm.promotion) {
+          match = m;
+          break;
+        }
+      } else if (m.promotion == null) {
+        match = m;
+        break;
+      } else if (m.promotion == PieceType.queen) {
+        match = m;
+        break;
+      }
+    }
+
+    setState(() {
+      _premove = null;
+      _selectedSquare = null;
+      _selectedPieceIndex = 0;
+      _availableMoves = [];
+    });
+    if (match != null) {
+      await _executeMove(match);
+    }
+  }
+
+  Future<void> _openMoveHistorySheet() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: BalatroTheme.felt,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModal) {
+            return SizedBox(
+              height: MediaQuery.sizeOf(context).height * 0.55,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+                    child: Text(
+                      'ХОДЫ',
+                      style: BalatroTheme.titleStyle.copyWith(fontSize: 14),
+                    ),
+                  ),
+                  Expanded(
+                    child: MoveHistoryPanel(
+                      log: _moveLog,
+                      viewPlyIndex: _viewPlyIndex,
+                      onSelectPly: (index) {
+                        _viewHistoryPly(index);
+                        setModal(() {});
+                      },
+                      onGoLive: () {
+                        _goToLivePosition();
+                        setModal(() {});
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   Future<void> _showStartPicker(PieceColor color) async {
@@ -247,8 +492,10 @@ class _GameScreenState extends State<GameScreen> {
           _game.applyRemoteAbility(event.ability, offer: event.offer);
           _opponentChoosingSkill = false;
           _skillChoicePeek = false;
+          _refreshLastHistoryPly();
         });
         _checkStateHash(event.stateHash, 'ability');
+        unawaited(_tryExecutePremove());
       case OnlineOpponentStartAbility():
         setState(() {
           _game.applyRemoteStartAbility(
@@ -257,6 +504,8 @@ class _GameScreenState extends State<GameScreen> {
             lavaRank: event.lavaRank,
             offer: event.offer,
           );
+          _modsFingerprint = collectModFingerprint(_game);
+          _modsBeforeLastPly = _modsFingerprint;
         });
         if (_game.isReadyToPlay) _ensureClockRunning();
       case OnlineOpponentAbilityTarget():
@@ -270,14 +519,17 @@ class _GameScreenState extends State<GameScreen> {
               index: event.index,
             );
           }
+          _refreshLastHistoryPly();
         });
         _checkStateHash(event.stateHash, 'ability_target');
+        unawaited(_tryExecutePremove());
       case OnlineOpponentReaction():
         if (event.accepted) {
           setState(() {
             if (event.ability != null) {
               _game.acceptRansom(event.ability!);
             }
+            _pendingPlyDraft = null;
           });
         } else {
           final result = _game.declineRansom();
@@ -287,6 +539,7 @@ class _GameScreenState extends State<GameScreen> {
             _availableMoves = [];
           });
           if (result != null) {
+            _commitPendingPlyDraft();
             unawaited(_finishRemoteDeclineRansom(result));
           }
         }
@@ -345,6 +598,7 @@ class _GameScreenState extends State<GameScreen> {
         if (event.accepted) {
           setState(() {
             _game.takeback();
+            _popHistoryAfterTakeback();
             _selectedSquare = null;
             _selectedPieceIndex = 0;
             _availableMoves = [];
@@ -528,6 +782,7 @@ class _GameScreenState extends State<GameScreen> {
     if (ok && mounted) {
       setState(() {
         _game.takeback();
+        _popHistoryAfterTakeback();
         _selectedSquare = null;
         _selectedPieceIndex = 0;
         _availableMoves = [];
@@ -751,6 +1006,7 @@ class _GameScreenState extends State<GameScreen> {
       if (_game.isAwaitingSkillChoice &&
           _game.pendingSkillColor == _botColor) {
         _game.skipPendingAbility();
+        _refreshLastHistoryPly();
         changed = true;
         continue;
       }
@@ -759,18 +1015,21 @@ class _GameScreenState extends State<GameScreen> {
         final result = _game.declineRansom();
         changed = true;
         if (result != null) {
+          _commitPendingPlyDraft();
           unawaited(_finishRemoteDeclineRansom(result));
         }
         break;
       }
       if (_game.isAwaitingGallop && _game.turn == _botColor) {
         _game.skipGallop();
+        _refreshLastHistoryPly();
         changed = true;
         continue;
       }
       if (_game.isAwaitingAbilityTarget &&
           _game.pendingTargetColor == _botColor) {
         _game.autoResolveAbilityTarget();
+        _refreshLastHistoryPly();
         changed = true;
         continue;
       }
@@ -954,12 +1213,22 @@ class _GameScreenState extends State<GameScreen> {
     if (!_startFlowDone || !_game.isReadyToPlay) return;
     if (_showEndOverlay) return;
 
+    if (_isBrowsingHistory) {
+      setState(_exitHistoryView);
+      // Continue on the live board with this tap.
+    }
+
     if (_game.isAwaitingReaction) return;
 
     if (_game.isAwaitingAbilityTarget) {
       if (_canPickAbilityTarget) {
         unawaited(_localChooseAbilityTarget(square));
       }
+      return;
+    }
+
+    if (_canSetPremove) {
+      _onPremoveSquareTap(square);
       return;
     }
 
@@ -988,6 +1257,7 @@ class _GameScreenState extends State<GameScreen> {
         _selectedSquare = null;
         _selectedPieceIndex = 0;
         _availableMoves = [];
+        _premove = null;
       });
       return;
     }
@@ -998,6 +1268,130 @@ class _GameScreenState extends State<GameScreen> {
     }
 
     unawaited(_pickStackedPiece(square, controllable, pieces));
+  }
+
+  void _onPremoveSquareTap(Square square) {
+    final color = widget.localColor!;
+    final pieces = _game.piecesAt(square);
+
+    if (_selectedSquare != null) {
+      final move = _findPremoveTarget(_selectedSquare!, square);
+      if (move != null) {
+        setState(() {
+          _premove = move;
+          _selectedSquare = null;
+          _selectedPieceIndex = 0;
+          _availableMoves = [];
+        });
+        return;
+      }
+    }
+
+    // Tap premove destination again to clear.
+    if (_premove != null &&
+        (_premove!.from == square || _premove!.to == square) &&
+        _selectedSquare == null) {
+      setState(() => _premove = null);
+      return;
+    }
+
+    final controllable = <int>[];
+    for (var i = 0; i < pieces.length; i++) {
+      if (_game.canControlPiece(pieces[i], color)) controllable.add(i);
+    }
+    if (controllable.isEmpty) {
+      setState(() {
+        _selectedSquare = null;
+        _selectedPieceIndex = 0;
+        _availableMoves = [];
+      });
+      return;
+    }
+
+    if (controllable.length == 1) {
+      _selectPremovePiece(square, controllable.first);
+      return;
+    }
+
+    unawaited(_pickStackedPremovePiece(square, controllable, pieces));
+  }
+
+  Future<void> _pickStackedPremovePiece(
+    Square square,
+    List<int> indices,
+    List<Piece> pieces,
+  ) async {
+    final chosen = await showModalBottomSheet<int>(
+      context: context,
+      backgroundColor: BalatroTheme.felt,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return _flipOverlay(
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'ПРЕМУВ',
+                    style: BalatroTheme.titleStyle.copyWith(fontSize: 18),
+                  ),
+                  const SizedBox(height: 12),
+                  for (final i in indices)
+                    ListTile(
+                      leading: ChessPieceWidget(piece: pieces[i], size: 36),
+                      title: Text(
+                        _pieceTypeRu(pieces[i].type),
+                        style: BalatroTheme.statusStyle,
+                      ),
+                      onTap: () => Navigator.pop(context, i),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+    if (chosen != null && mounted) {
+      _selectPremovePiece(square, chosen);
+    }
+  }
+
+  void _selectPremovePiece(Square square, int pieceIndex) {
+    final color = widget.localColor!;
+    setState(() {
+      _selectedSquare = square;
+      _selectedPieceIndex = pieceIndex;
+      _availableMoves = _game.getPremoveMoves(
+        forColor: color,
+        from: square,
+        pieceIndex: pieceIndex,
+      );
+    });
+  }
+
+  Move? _findPremoveTarget(Square from, Square to) {
+    final matching = _availableMoves
+        .where(
+          (m) =>
+              m.from == from &&
+              m.to == to &&
+              m.pieceIndex == _selectedPieceIndex,
+        )
+        .toList();
+    if (matching.isEmpty) return null;
+    final promos = matching.where((m) => m.promotion != null).toList();
+    if (promos.isNotEmpty) {
+      for (final m in promos) {
+        if (m.promotion == PieceType.queen) return m;
+      }
+      return promos.first;
+    }
+    return matching.first;
   }
 
   Future<void> _pickStackedPiece(
@@ -1279,6 +1673,7 @@ class _GameScreenState extends State<GameScreen> {
     setState(() {
       _game.applyAbility(ability);
       _skillChoicePeek = false;
+      _refreshLastHistoryPly();
     });
     widget.onlineService?.sendAbility(
       ability,
@@ -1297,6 +1692,7 @@ class _GameScreenState extends State<GameScreen> {
       setState(_beginSkillChoice);
     } else {
       _maybeScheduleComputerMove();
+      unawaited(_tryExecutePremove());
     }
   }
 
@@ -1417,6 +1813,7 @@ class _GameScreenState extends State<GameScreen> {
       _selectedSquare = null;
       _selectedPieceIndex = 0;
       _availableMoves = [];
+      _refreshLastHistoryPly();
     });
     widget.onlineService?.sendAbilityTarget(
       pieceId: pieceId,
@@ -1434,6 +1831,7 @@ class _GameScreenState extends State<GameScreen> {
       setState(_beginSkillChoice);
     } else {
       _maybeScheduleComputerMove();
+      unawaited(_tryExecutePremove());
     }
     _maybeSendGameOver();
   }
@@ -1489,7 +1887,9 @@ class _GameScreenState extends State<GameScreen> {
       index: chosen.sequence,
     );
     if (!ok) return;
-    setState(() {});
+    setState(() {
+      _refreshLastHistoryPly();
+    });
     widget.onlineService?.sendAbilityTarget(
       pieceId: chosen.piece.pieceId,
       index: chosen.sequence,
@@ -1501,6 +1901,7 @@ class _GameScreenState extends State<GameScreen> {
       setState(_beginSkillChoice);
     } else {
       _maybeScheduleComputerMove();
+      unawaited(_tryExecutePremove());
     }
     _maybeSendGameOver();
   }
@@ -1548,7 +1949,9 @@ class _GameScreenState extends State<GameScreen> {
 
   void _localChooseAbilityToRemove(GameAbility ability) {
     if (!_game.chooseAbilityToRemove(ability)) return;
-    setState(() {});
+    setState(() {
+      _refreshLastHistoryPly();
+    });
     widget.onlineService?.sendAbilityTarget(
       removeAbility: ability,
       stateHash: _game.stateHash,
@@ -1558,12 +1961,15 @@ class _GameScreenState extends State<GameScreen> {
       setState(_beginSkillChoice);
     } else {
       _maybeScheduleComputerMove();
+      unawaited(_tryExecutePremove());
     }
   }
 
   void _localAcceptRansom(GameAbility ability) {
     if (!_game.acceptRansom(ability)) return;
-    setState(() {});
+    setState(() {
+      _pendingPlyDraft = null;
+    });
     widget.onlineService?.sendReaction(
       accepted: true,
       ability: ability,
@@ -1577,6 +1983,7 @@ class _GameScreenState extends State<GameScreen> {
     final result = _game.declineRansom();
     if (result == null) return;
     setState(() {
+      _commitPendingPlyDraft();
       _selectedSquare = null;
       _selectedPieceIndex = 0;
       _availableMoves = [];
@@ -1588,12 +1995,14 @@ class _GameScreenState extends State<GameScreen> {
     await _playLavaDeaths(_game.consumeLavaDeaths());
     if (!mounted) return;
     await _handleMoveResult(result);
+    if (mounted) await _tryExecutePremove();
   }
 
   Future<void> _finishRemoteDeclineRansom(MoveResult result) async {
     await _playLavaDeaths(_game.consumeLavaDeaths());
     if (!mounted) return;
     await _handleMoveResult(result);
+    if (mounted) await _tryExecutePremove();
   }
 
   Future<void> _handleMoveResult(MoveResult result) async {
@@ -1678,12 +2087,30 @@ class _GameScreenState extends State<GameScreen> {
 
     final movers = _game.piecesAt(move.from);
     if (movers.isEmpty) return;
+    final mover =
+        movers[move.pieceIndex.clamp(0, movers.length - 1)];
+    final side = _game.turn;
+    final beforeMods = collectModFingerprint(_game);
+    final notation = formatMoveNotation(_game, move, movingPiece: mover);
 
     // Lichess/chessground style: apply the move, then animate pieces from their
     // previous squares to the new ones in one paint (no end blink / teleport).
     final before = _snapshotBoard();
     final result = _game.makeMove(move);
     if (result == null) return;
+
+    _recordAppliedMove(
+      move,
+      side: side,
+      notation: notation,
+      beforeMods: beforeMods,
+      result: result,
+    );
+    if (widget.hasFixedSeat &&
+        widget.localColor != null &&
+        mover.color == widget.localColor) {
+      _premove = null;
+    }
 
     widget.onlineService?.sendMove(move);
     _syncClockAfterMove();
@@ -1700,6 +2127,7 @@ class _GameScreenState extends State<GameScreen> {
 
     if (!mounted) return;
     await _handleMoveResult(result);
+    if (mounted) await _tryExecutePremove();
   }
 
   void _skipGallop() {
@@ -1709,6 +2137,7 @@ class _GameScreenState extends State<GameScreen> {
       _selectedSquare = null;
       _selectedPieceIndex = 0;
       _availableMoves = [];
+      _refreshLastHistoryPly();
     });
   }
 
@@ -1718,8 +2147,33 @@ class _GameScreenState extends State<GameScreen> {
     }
     if (!mounted) return;
 
+    final movers = _game.piecesAt(move.from);
+    final mover = movers.isEmpty
+        ? null
+        : movers[move.pieceIndex.clamp(0, movers.length - 1)];
+    final side = _game.turn;
+    final beforeMods = collectModFingerprint(_game);
+    final notation = formatMoveNotation(_game, move, movingPiece: mover);
+
     final before = _snapshotBoard();
     _game.applyRemoteMove(move);
+    final recorded = MoveResult(
+      requiresSkillChoice: _game.isAwaitingSkillChoice,
+      outcome: _game.isAwaitingReaction
+          ? MoveOutcome.awaitingReaction
+          : _game.isAwaitingAbilityTarget
+              ? MoveOutcome.awaitingTarget
+              : _game.isAwaitingSkillChoice
+                  ? MoveOutcome.awaitingSkillChoice
+                  : MoveOutcome.completed,
+    );
+    _recordAppliedMove(
+      move,
+      side: side,
+      notation: notation,
+      beforeMods: beforeMods,
+      result: recorded,
+    );
     _ensureClockRunning();
 
     if (!move.isInquisitorStrip) {
@@ -1732,6 +2186,7 @@ class _GameScreenState extends State<GameScreen> {
     }
 
     await _playLavaDeaths(_game.consumeLavaDeaths());
+    if (mounted) await _tryExecutePremove();
   }
 
   /// pieceId → (square, piece) before a move is applied.
@@ -2028,6 +2483,8 @@ class _GameScreenState extends State<GameScreen> {
     final width = MediaQuery.sizeOf(context).width;
     final onlineWide = widget.isOnline && width >= _onlineWideBreakpoint;
     final webModsBeside = _webModsBesideBoard(width);
+    final historyBeside =
+        !onlineWide && width >= _onlineWideBreakpoint;
 
     return Scaffold(
       backgroundColor: BalatroTheme.background,
@@ -2046,6 +2503,11 @@ class _GameScreenState extends State<GameScreen> {
         elevation: 0,
         automaticallyImplyLeading: false,
         actions: [
+          IconButton(
+            tooltip: 'Ходы',
+            onPressed: () => unawaited(_openMoveHistorySheet()),
+            icon: const Icon(Icons.format_list_numbered_rounded),
+          ),
           IconButton(
             tooltip: 'Настройки',
             onPressed: _openSettings,
@@ -2096,45 +2558,59 @@ class _GameScreenState extends State<GameScreen> {
                     onTakeback: () => unawaited(_offerTakeback()),
                     onDraw: () => unawaited(_offerDraw()),
                     onResign: () => unawaited(_resignLocal()),
+                    moveHistory: _buildMoveHistoryPanel(),
                   ),
                 ],
               )
-            : webModsBeside
-                ? Row(
-                    children: [
-                      Expanded(
-                        child: _buildGameStack(
-                          bottomPad: bottomPad,
-                          modsOnTop: modsOnTop,
-                          showMobileChrome: false,
-                          showModsButton: false,
-                        ),
-                      ),
-                      _buildActiveModsSidePanel(),
-                    ],
-                  )
-                : _buildGameStack(
-                    bottomPad: bottomPad,
-                    modsOnTop: modsOnTop,
-                    showMobileChrome: widget.isOnline,
-                    showModsButton: true,
+            : Row(
+                children: [
+                  Expanded(
+                    child: webModsBeside
+                        ? Row(
+                            children: [
+                              Expanded(
+                                child: _buildGameStack(
+                                  bottomPad: bottomPad,
+                                  modsOnTop: modsOnTop,
+                                  showMobileChrome: false,
+                                  showModsButton: false,
+                                ),
+                              ),
+                              _buildActiveModsSidePanel(),
+                            ],
+                          )
+                        : _buildGameStack(
+                            bottomPad: bottomPad,
+                            modsOnTop: modsOnTop,
+                            showMobileChrome: widget.isOnline,
+                            showModsButton: true,
+                          ),
                   ),
+                  if (historyBeside)
+                    MoveHistorySideChrome(
+                      child: _buildMoveHistoryPanel(),
+                    ),
+                ],
+              ),
       ),
     );
   }
 
   Widget _buildBoard(double maxWidth, double maxHeight) {
     return _ChessBoard(
-      game: _game,
-      selectedSquare: _selectedSquare,
-      availableMoves: _availableMoves,
-      animatingLavaDeaths: _animatingLavaDeaths,
+      game: _displayGame,
+      selectedSquare: _isBrowsingHistory ? null : _selectedSquare,
+      availableMoves: _isBrowsingHistory ? const [] : _availableMoves,
+      premove: _isBrowsingHistory ? null : _premove,
+      availableMovesArePremoves: _canSetPremove && !_isBrowsingHistory,
+      animatingLavaDeaths:
+          _isBrowsingHistory ? const [] : _animatingLavaDeaths,
       onLavaDeathFinished: _onLavaDeathFinished,
       onSquareTap: _onSquareTap,
       viewerColor: _viewerColor,
       maxWidth: maxWidth,
       maxHeight: maxHeight,
-      pieceFlight: _pieceFlight,
+      pieceFlight: _isBrowsingHistory ? null : _pieceFlight,
       onPieceFlightFinished: _onPieceFlightFinished,
       rotatePieces: _uiFlipped,
       flipBoard: _boardPerspectiveFlipped,
@@ -2230,6 +2706,15 @@ class _GameScreenState extends State<GameScreen> {
                                     Icons.chat_bubble_outline_rounded,
                                     color: BalatroTheme.cream,
                                   ),
+                                ),
+                              ),
+                              IconButton(
+                                tooltip: 'Ходы',
+                                onPressed: () =>
+                                    unawaited(_openMoveHistorySheet()),
+                                icon: const Icon(
+                                  Icons.format_list_numbered_rounded,
+                                  color: BalatroTheme.cream,
                                 ),
                               ),
                               const Spacer(),
@@ -2874,6 +3359,8 @@ class _ChessBoard extends StatelessWidget {
     required this.viewerColor,
     required this.maxWidth,
     required this.maxHeight,
+    this.premove,
+    this.availableMovesArePremoves = false,
     this.pieceFlight,
     this.onPieceFlightFinished,
     this.rotatePieces = false,
@@ -2883,6 +3370,8 @@ class _ChessBoard extends StatelessWidget {
   final ChessGame game;
   final Square? selectedSquare;
   final List<Move> availableMoves;
+  final Move? premove;
+  final bool availableMovesArePremoves;
   final List<LavaDeathEvent> animatingLavaDeaths;
   final VoidCallback onLavaDeathFinished;
   final ValueChanged<Square> onSquareTap;
@@ -3073,6 +3562,17 @@ class _ChessBoard extends StatelessWidget {
         (square == last.from || square == last.to)) {
       backgroundColor = Color.alphaBlend(
         const Color(0x99CDD26A),
+        backgroundColor,
+      );
+    }
+
+    final pm = premove;
+    if (pm != null &&
+        isVisible &&
+        !inCheck &&
+        (square == pm.from || square == pm.to)) {
+      backgroundColor = Color.alphaBlend(
+        const Color(0x88C62828),
         backgroundColor,
       );
     }
@@ -3271,9 +3771,13 @@ class _ChessBoard extends StatelessWidget {
                 height: cellSize * 0.26,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: BalatroTheme.moveHint,
+                  color: availableMovesArePremoves
+                      ? const Color(0xAAC62828)
+                      : BalatroTheme.moveHint,
                   border: Border.all(
-                    color: BalatroTheme.gold.withValues(alpha: 0.6),
+                    color: availableMovesArePremoves
+                        ? const Color(0xEEEF5350)
+                        : BalatroTheme.gold.withValues(alpha: 0.6),
                     width: 1.5,
                   ),
                 ),
@@ -3285,7 +3789,9 @@ class _ChessBoard extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: BalatroTheme.accent.withValues(alpha: 0.9),
+                    color: availableMovesArePremoves
+                        ? const Color(0xEEEF5350)
+                        : BalatroTheme.accent.withValues(alpha: 0.9),
                     width: cellSize * 0.1,
                   ),
                 ),

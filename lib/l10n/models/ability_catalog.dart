@@ -437,6 +437,14 @@ class AbilityCatalog {
   }) {
     final group = ability.group;
     if (group == AbilityGroup.board) {
+      if (ability == GameAbility.boardTeleport) {
+        return _teleportOfferFromBoard(
+          board,
+          rankCount: rankCount,
+          fileCount: fileCount,
+          blockedSquares: blockedSquares,
+        );
+      }
       return _offerForStart(ability);
     }
     if (group == AbilityGroup.random) {
@@ -741,6 +749,37 @@ class AbilityCatalog {
     );
   }
 
+  AbilityOffer _teleportOfferFromBoard(
+    List<List<Piece?>> board, {
+    required int rankCount,
+    required int fileCount,
+    Set<Square> blockedSquares = const {},
+  }) {
+    final empty = <Square>[];
+    for (var rank = 0; rank < rankCount; rank++) {
+      for (var file = 0; file < fileCount; file++) {
+        final square = Square(file, rank);
+        if (blockedSquares.contains(square)) continue;
+        final row = rank < board.length ? board[rank] : null;
+        final piece = row != null && file < row.length ? row[file] : null;
+        if (piece != null) continue;
+        empty.add(square);
+      }
+    }
+    if (empty.length < 2) {
+      return _offerForStart(GameAbility.boardTeleport);
+    }
+    empty.shuffle(_random);
+    return AbilityOffer(
+      ability: GameAbility.boardTeleport,
+      applyMode: AbilityApplyMode.boardWide,
+      boardFileCount: fileCount,
+      boardRankCount: rankCount,
+      teleportA: empty[0],
+      teleportB: empty[1],
+    );
+  }
+
   AbilityOffer _offerForStart(GameAbility ability) {
     if (ability == GameAbility.boardSecretRoute) {
       final route = <Square>[];
@@ -791,10 +830,20 @@ class AbilityCatalog {
       );
     }
     if (ability == GameAbility.boardTeleport) {
-      final a = Square(_random.nextInt(8), _random.nextInt(8));
+      // Placeholder; ChessGame re-bakes against currently empty squares.
+      // Prefer typical empty start ranks so mid-game fallback is less wrong
+      // if board state is unavailable here.
+      final emptyRanks = [2, 3, 4, 5];
+      final a = Square(
+        _random.nextInt(8),
+        emptyRanks[_random.nextInt(emptyRanks.length)],
+      );
       Square b;
       do {
-        b = Square(_random.nextInt(8), _random.nextInt(8));
+        b = Square(
+          _random.nextInt(8),
+          emptyRanks[_random.nextInt(emptyRanks.length)],
+        );
       } while (b == a);
       return AbilityOffer(
         ability: ability,

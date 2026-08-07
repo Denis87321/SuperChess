@@ -798,7 +798,7 @@ extension GameAbilityInfo on GameAbility {
       case GameAbility.boardShuffle:
         return 'Каждая клетка доски случайно становится светлой или тёмной — чередование цветов пропадает';
       case GameAbility.boardTeleport:
-        return 'Две случайные клетки связаны: вход на одну = выход на другую';
+        return 'Две случайные свободные клетки связаны: вход на одну = выход на другую';
       case GameAbility.boardVanityFair:
         return 'Каждая ваша лёгкая фигура (конь или слон) с вероятностью 50% становится другой лёгкой фигурой';
       case GameAbility.boardMinefield:
@@ -1470,7 +1470,7 @@ extension GameAbilityInfo on GameAbility {
         fileCount: boardFileCount ?? 8,
         extraFile: boardExtraFile,
       );
-      return 'Клетки $a и $b связаны: вход на одну = выход на другую';
+      return 'Свободные клетки $a и $b связаны: вход на одну = выход на другую';
     }
     if (this == GameAbility.randomQuarantine && quarantineSquare != null) {
       final moves = quarantineMoves ?? 5;

@@ -18,6 +18,7 @@ class OnlineSidePanel extends StatelessWidget {
     this.canTakeback = true,
     this.opponentRating,
     this.localRating,
+    this.moveHistory,
   });
 
   final String opponentName;
@@ -32,6 +33,7 @@ class OnlineSidePanel extends StatelessWidget {
   final bool canTakeback;
   final int? opponentRating;
   final int? localRating;
+  final Widget? moveHistory;
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +50,16 @@ class OnlineSidePanel extends StatelessWidget {
             active: opponentActive,
             rating: opponentRating,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
+          if (moveHistory != null)
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: moveHistory!,
+              ),
+            )
+          else
+            const Spacer(),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10),
             child: Row(
@@ -83,7 +94,7 @@ class OnlineSidePanel extends StatelessWidget {
               ],
             ),
           ),
-          const Spacer(),
+          const SizedBox(height: 8),
           _clockBlock(
             name: localName,
             ms: localMs,

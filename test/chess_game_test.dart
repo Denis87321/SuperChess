@@ -2674,4 +2674,41 @@ void main() {
     expect(game.isFrozenPiece('wr'), isFalse);
     expect(game.pieceAt(const Square(1, 3))?.frostLevel, 0);
   });
+
+  test('teleport offer and apply use only empty squares', () {
+    var sawOffer = false;
+    for (var seed = 0; seed < 300; seed++) {
+      final game = ChessGame(random: Random(seed));
+      for (final color in [PieceColor.white, PieceColor.black]) {
+        for (final offer in game.startOffersFor(color)) {
+          if (offer.ability != GameAbility.boardTeleport) continue;
+          sawOffer = true;
+          expect(offer.teleportA, isNotNull);
+          expect(offer.teleportB, isNotNull);
+          expect(offer.teleportA == offer.teleportB, isFalse);
+          expect(game.piecesAt(offer.teleportA!).isEmpty, isTrue);
+          expect(game.piecesAt(offer.teleportB!).isEmpty, isTrue);
+        }
+      }
+    }
+    expect(sawOffer, isTrue);
+
+    final game = ChessGame(random: Random(42));
+    game.applyStartAbility(
+      PieceColor.white,
+      GameAbility.boardTeleport,
+      remoteOffer: const AbilityOffer(
+        ability: GameAbility.boardTeleport,
+        applyMode: AbilityApplyMode.boardWide,
+        // Occupied corners on the initial board — must be rejected.
+        teleportA: Square(0, 0),
+        teleportB: Square(7, 7),
+      ),
+    );
+    expect(game.teleportA, isNotNull);
+    expect(game.teleportB, isNotNull);
+    expect(game.piecesAt(game.teleportA!).isEmpty, isTrue);
+    expect(game.piecesAt(game.teleportB!).isEmpty, isTrue);
+    expect(game.teleportA == game.teleportB, isFalse);
+  });
 }

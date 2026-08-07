@@ -186,13 +186,17 @@ class ChessGame {
            const {PieceColor.white, PieceColor.black},
        _excludedAbilities = excludedAbilities ?? const {} {
     _board = _createInitialBoard();
-    _whiteStartOffers = _catalog.pickStartOffers(
-      forColor: PieceColor.white,
-      excludedAbilities: _excludedAbilities,
+    _whiteStartOffers = _resolveTeleportOffers(
+      _catalog.pickStartOffers(
+        forColor: PieceColor.white,
+        excludedAbilities: _excludedAbilities,
+      ),
     );
-    _blackStartOffers = _catalog.pickStartOffers(
-      forColor: PieceColor.black,
-      excludedAbilities: _excludedAbilities,
+    _blackStartOffers = _resolveTeleportOffers(
+      _catalog.pickStartOffers(
+        forColor: PieceColor.black,
+        excludedAbilities: _excludedAbilities,
+      ),
     );
     // Sides that never pick mods (e.g. computer) skip start selection.
     if (!_abilityChoosingColors.contains(PieceColor.white)) {
@@ -1834,6 +1838,34 @@ class ChessGame {
       legal = retry.where(_isLegalMove).where(_isBoardRuleLegalMove).toList();
     }
     return legal;
+  }
+
+  /// Pseudo-legal moves a seated player may queue while waiting for the
+  /// opponent. Validated again with [getLegalMoves] / [makeMove] on execute.
+  List<Move> getPremoveMoves({
+    required PieceColor forColor,
+    required Square from,
+    int pieceIndex = 0,
+  }) {
+    if (!isReadyToPlay || isGameOver) return const [];
+    final pieces = piecesAt(from);
+    if (pieceIndex < 0 || pieceIndex >= pieces.length) return const [];
+    final piece = pieces[pieceIndex];
+    if (!_canControl(piece, forColor)) return const [];
+    if (piece.skipTurnsLeft > 0) return const [];
+    if (_rules.frozenPieceIds.contains(piece.pieceId)) return const [];
+    if ((_rules.quicksandSkipLeft[piece.pieceId] ?? 0) > 0) return const [];
+    final movePiece = _isUnrevealedEnemySpy(piece, forColor)
+        ? piece.copyWith(color: forColor)
+        : piece;
+    return _getPseudoLegalMoves(from, movePiece, pieceIndex: pieceIndex)
+        .where(_isBoardRuleLegalMove)
+        .toList();
+  }
+
+  /// View-only last-move highlight (history browse). Not part of snapshots.
+  void setLastMoveHighlight(Move? move) {
+    _lastMove = move;
   }
 
   void applyRemoteMove(Move move) {
@@ -4050,24 +4082,64 @@ class ChessGame {
   }
 
   void _applyTeleport(Square? a, Square? b, [Random? rng]) {
-    if (a != null && b != null && a != b) {
+    final random = rng ?? _random;
+    if (_isValidTeleportEndpoint(a) &&
+        _isValidTeleportEndpoint(b) &&
+        a != b) {
       _teleportA = a;
       _teleportB = b;
       return;
     }
-    final random = rng ?? _random;
+    final pair = _pickTwoEmptyTeleportSquares(random);
+    if (pair == null) return;
+    _teleportA = pair.$1;
+    _teleportB = pair.$2;
+  }
+
+  bool _isValidTeleportEndpoint(Square? square) {
+    if (square == null || !isOnBoard(square)) return false;
+    if (piecesAt(square).isNotEmpty) return false;
+    if (isBlocked(square) || isGhostCell(square)) return false;
+    return true;
+  }
+
+  List<Square> _emptyTeleportCandidates() {
     final candidates = <Square>[];
     for (var rank = 0; rank < _rankCount; rank++) {
       for (var file = 0; file < _fileCount; file++) {
         final square = Square(file, rank);
-        if (isBlocked(square) || isGhostCell(square)) continue;
+        if (!_isValidTeleportEndpoint(square)) continue;
         candidates.add(square);
       }
     }
-    if (candidates.length < 2) return;
+    return candidates;
+  }
+
+  (Square, Square)? _pickTwoEmptyTeleportSquares(Random random) {
+    final candidates = _emptyTeleportCandidates();
+    if (candidates.length < 2) return null;
     candidates.shuffle(random);
-    _teleportA = candidates[0];
-    _teleportB = candidates[1];
+    return (candidates[0], candidates[1]);
+  }
+
+  /// Телепорт в оффере должен показывать только свободные клетки.
+  List<AbilityOffer> _resolveTeleportOffers(List<AbilityOffer> offers) {
+    return [
+      for (final offer in offers)
+        if (offer.ability == GameAbility.boardTeleport)
+          _bakeTeleportOffer(offer)
+        else
+          offer,
+    ];
+  }
+
+  AbilityOffer _bakeTeleportOffer(AbilityOffer offer) {
+    final pair = _pickTwoEmptyTeleportSquares(_rngForOffer(offer));
+    if (pair == null) return offer;
+    final json = offer.toJson();
+    json['teleportA'] = {'file': pair.$1.file, 'rank': pair.$1.rank};
+    json['teleportB'] = {'file': pair.$2.file, 'rank': pair.$2.rank};
+    return AbilityOffer.fromJson(json);
   }
 
   void _applyInvisibleRegiment() {
