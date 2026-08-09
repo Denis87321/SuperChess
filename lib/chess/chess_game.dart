@@ -186,6 +186,7 @@ class ChessGame {
            const {PieceColor.white, PieceColor.black},
        _excludedAbilities = excludedAbilities ?? const {} {
     _board = _createInitialBoard();
+    _rebuildPieceIndex();
     _whiteStartOffers = _resolveTeleportOffers(
       _catalog.pickStartOffers(
         forColor: PieceColor.white,
@@ -228,6 +229,16 @@ class ChessGame {
   String? _endDetail;
   bool _isSimulatingLegality = false;
   GameSnapshot? _undoSnapshot;
+  /// Set when mate is cancelled via takeback (statist / shop token).
+  bool _forcedTakebackPending = false;
+
+  int _boardRevision = 0;
+  int? _legalMovesCacheKey;
+  List<Move>? _cachedAllLegalMoves;
+  final Map<String, Square> _pieceSquareById = {};
+  int _kingCacheRevision = -1;
+  Square? _cachedWhiteKing;
+  Square? _cachedBlackKing;
 
   bool _whiteStartChosen = false;
   bool _blackStartChosen = false;
@@ -820,21 +831,97 @@ class ChessGame {
     return pieces[index];
   }
 
+  void _bumpBoardRevision() {
+    _boardRevision++;
+    _cachedAllLegalMoves = null;
+    _legalMovesCacheKey = null;
+  }
+
+  int _legalMovesStateKey() => Object.hash(
+        _boardRevision,
+        _turn,
+        _status,
+        _enPassantTarget,
+        _awaitingGallopFrom,
+        _awaitingGallopIndex,
+        _rules.tangledAwaitingSecondDest,
+        _rules.forcedMovePieceId,
+        _rules.meatGrinderTurnsLeft,
+        _rules.avengeCaptureSquare,
+        _rules.duckNeedsPlacement,
+      );
+
+  void _indexPieceAt(Piece? piece, Square square) {
+    if (piece == null || piece.pieceId.isEmpty) return;
+    _pieceSquareById[piece.pieceId] = square;
+  }
+
+  void _unindexPiece(Piece? piece) {
+    if (piece == null || piece.pieceId.isEmpty) return;
+    _pieceSquareById.remove(piece.pieceId);
+  }
+
+  void _rebuildPieceIndex() {
+    _pieceSquareById.clear();
+    for (var rank = 0; rank < _rankCount; rank++) {
+      for (var file = 0; file < _fileCount; file++) {
+        final square = Square(file, rank);
+        for (final piece in piecesAt(square)) {
+          _indexPieceAt(piece, square);
+        }
+      }
+    }
+    _kingCacheRevision = -1;
+  }
+
+  void _refreshKingCache() {
+    _cachedWhiteKing = null;
+    _cachedBlackKing = null;
+    for (var rank = 0; rank < _rankCount; rank++) {
+      for (var file = 0; file < _fileCount; file++) {
+        final square = Square(file, rank);
+        for (final piece in piecesAt(square)) {
+          if (piece.type != PieceType.king) continue;
+          if (piece.color == PieceColor.white) {
+            _cachedWhiteKing = square;
+          } else {
+            _cachedBlackKing = square;
+          }
+        }
+      }
+    }
+    _kingCacheRevision = _boardRevision;
+  }
+
   void _setPrimary(Square square, Piece? piece) {
     if (!isOnBoard(square)) return;
-    _board[square.rank][square.file] = piece == null
-        ? null
-        : _ensurePieceIdentity(piece);
+    final old = _board[square.rank][square.file];
+    if (old != null &&
+        (piece == null || old.pieceId != piece.pieceId)) {
+      _unindexPiece(old);
+    }
+    final next = piece == null ? null : _ensurePieceIdentity(piece);
+    _board[square.rank][square.file] = next;
+    _indexPieceAt(next, square);
+    _bumpBoardRevision();
   }
 
   void _setExtra(Square square, Piece? piece) {
     if (!isOnBoard(square)) return;
     final key = _stackKey(square);
+    final old = _stackExtra[key];
+    if (old != null &&
+        (piece == null || old.pieceId != piece.pieceId)) {
+      _unindexPiece(old);
+    }
     if (piece == null) {
       _stackExtra.remove(key);
     } else {
-      _stackExtra[key] = _ensurePieceIdentity(piece);
+      final next = _ensurePieceIdentity(piece);
+      _stackExtra[key] = next;
+      _indexPieceAt(next, square);
     }
+    _bumpBoardRevision();
   }
 
   Piece _ensurePieceIdentity(Piece piece) {
@@ -1050,6 +1137,18 @@ class ChessGame {
   @visibleForTesting
   void debugSetTurn(PieceColor color) {
     _turn = color;
+    _cachedAllLegalMoves = null;
+    _legalMovesCacheKey = null;
+  }
+
+  @visibleForTesting
+  void debugSetShopTokenHeld(PieceColor color, bool held) {
+    _rules.shopTokenHeld[color] = held;
+  }
+
+  @visibleForTesting
+  void debugSetMateVetoEnemy(PieceColor owner, String enemyPieceId) {
+    _rules.mateVetoEnemyPieceId[owner] = enemyPieceId;
   }
 
   @visibleForTesting
@@ -1941,17 +2040,10 @@ class ChessGame {
   }
 
   Square? findKing(PieceColor color) {
-    for (var rank = 0; rank < _rankCount; rank++) {
-      for (var file = 0; file < _fileCount; file++) {
-        final square = Square(file, rank);
-        for (final piece in piecesAt(square)) {
-          if (piece.type == PieceType.king && piece.color == color) {
-            return square;
-          }
-        }
-      }
+    if (_kingCacheRevision != _boardRevision) {
+      _refreshKingCache();
     }
-    return null;
+    return color == PieceColor.white ? _cachedWhiteKing : _cachedBlackKing;
   }
 
   bool isInCheck(
@@ -1970,6 +2062,13 @@ class ChessGame {
   List<Move> getLegalMoves({Square? from}) {
     if (!isReadyToPlay || isGameOver) {
       return const [];
+    }
+
+    final legalKey = _legalMovesStateKey();
+    if (from == null &&
+        _cachedAllLegalMoves != null &&
+        _legalMovesCacheKey == legalKey) {
+      return _cachedAllLegalMoves!;
     }
 
     if (_rules.tangledAwaitingSecondDest) {
@@ -2074,6 +2173,10 @@ class ChessGame {
         }
       }
       legal = retry.where(_isLegalMove).where(_isBoardRuleLegalMove).toList();
+    }
+    if (from == null) {
+      _cachedAllLegalMoves = legal;
+      _legalMovesCacheKey = _legalMovesStateKey();
     }
     return legal;
   }
@@ -2212,7 +2315,16 @@ class ChessGame {
   }
 
   MoveResult? makeMove(Move move) {
-    return _executeLegalMove(_normalizeCastleMove(move));
+    final result = _executeLegalMove(_normalizeCastleMove(move));
+    if (result == null) return null;
+    if (_forcedTakebackPending) {
+      _forcedTakebackPending = false;
+      return const MoveResult(
+        requiresSkillChoice: false,
+        outcome: MoveOutcome.cancelled,
+      );
+    }
+    return result;
   }
 
   MoveResult? _executeLegalMove(Move move, {bool skipReaction = false}) {
@@ -3564,6 +3676,7 @@ class ChessGame {
         }
       }
     }
+    _rebuildPieceIndex();
   }
 
   void _applyPawnFront(PieceColor color) {
@@ -4657,6 +4770,7 @@ class ChessGame {
       _blackThrone = Square(_blackThrone.file, _blackThrone.rank + 1);
     }
     _shiftSpecialSquaresRank(fromRank: 4);
+    _rebuildPieceIndex();
   }
 
   void _shiftSpecialSquaresRank({required int fromRank}) {
@@ -4725,6 +4839,7 @@ class ChessGame {
     _whiteThrone = Square(_whiteThrone.file + 1, _whiteThrone.rank);
     _blackThrone = Square(_blackThrone.file + 1, _blackThrone.rank);
     _shiftSpecialSquaresFile(insertOnLeft: true);
+    _rebuildPieceIndex();
   }
 
   void _insertExtraFileRight() {
@@ -4747,6 +4862,7 @@ class ChessGame {
       _extraFileOnLeft = false;
     }
     _shiftSpecialSquaresFile(insertOnLeft: false);
+    _rebuildPieceIndex();
   }
 
   void _insertTerritoryExpand() {
@@ -5745,7 +5861,20 @@ class ChessGame {
         } else if (_tryShopTokenCancelMate(_turn)) {
           _status = GameStatus.playing;
         } else if (_mateVetoBlocksMate(_turn)) {
-          _status = GameStatus.playing;
+          if (canTakeback) {
+            takeback();
+            _forcedTakebackPending = true;
+            _rules.mateVetoBanner =
+                'Статист не может поставить мат — партия продолжается';
+            _status = GameStatus.playing;
+          } else {
+            _finishGame(
+              winner: null,
+              reason: GameEndReason.stalemate,
+              status: GameStatus.stalemate,
+              detail: 'mateVeto',
+            );
+          }
         } else {
           _finishGame(winner: _turn.opponent, reason: GameEndReason.checkmate);
         }
@@ -5888,7 +6017,10 @@ class ChessGame {
         mover.type != PieceType.king) {
       return false;
     }
-    if (_rules.centerTaxSkipNext.contains(mover.pieceId)) return false;
+    if ((_rules.centerTaxSkipNext[mover.pieceId] ?? 0) > 0 &&
+        _isCapture(move)) {
+      return false;
+    }
     if ((_rules.wastelandTollSkip[mover.pieceId] ?? 0) > 0) return false;
     // Time zone: off-hour → only 1-square steps.
     if (_rules.timeZoneActive) {
@@ -7077,9 +7209,10 @@ class ChessGame {
     return pieceAt(move.to)?.pieceId;
   }
 
-  /// True when the only mating attacks come from the opponent's «Статист».
+  /// True when the only mating attacks come from the enemy piece marked by
+  /// the mated side's «Статист».
   bool _mateVetoBlocksMate(PieceColor matedColor) {
-    final vetoId = _rules.mateVetoEnemyPieceId[matedColor.opponent];
+    final vetoId = _rules.mateVetoEnemyPieceId[matedColor];
     if (vetoId == null) return false;
     final kingSq = findKing(matedColor);
     if (kingSq == null) return false;
@@ -7096,21 +7229,17 @@ class ChessGame {
         }
       }
     }
-    final blocked =
-        attackers.isNotEmpty && attackers.every((id) => id == vetoId);
-    if (blocked) {
-      _rules.mateVetoBanner =
-          'Статист не может поставить мат — партия продолжается';
-    }
-    return blocked;
+    return attackers.isNotEmpty && attackers.every((id) => id == vetoId);
   }
 
   bool _tryShopTokenCancelMate(PieceColor matedColor) {
     if (!_rules.shopTokenActive) return false;
     if (!(_rules.shopTokenHeld[matedColor] ?? false)) return false;
     if (!canTakeback) return false;
-    _rules.shopTokenHeld[matedColor] = false;
+    // Restore first — snapshot still has the token held — then spend it.
     takeback();
+    _rules.shopTokenHeld[matedColor] = false;
+    _forcedTakebackPending = true;
     _rules.shopMateCancelBanner =
         'Жетон «Во имя высшей цели»: мат отменён, ход возвращён';
     return true;
@@ -7215,13 +7344,35 @@ class ChessGame {
   }
 
   ({Square square, int index, Piece piece})? _pieceById(String? pieceId) {
-    if (pieceId == null) return null;
+    if (pieceId == null || pieceId.isEmpty) return null;
+    final indexed = _pieceSquareById[pieceId];
+    if (indexed != null) {
+      final pieces = piecesAt(indexed);
+      for (var index = 0; index < pieces.length; index++) {
+        if (pieces[index].pieceId == pieceId) {
+          return (square: indexed, index: index, piece: pieces[index]);
+        }
+      }
+      // Stale index entry — rebuild once.
+      _rebuildPieceIndex();
+      final again = _pieceSquareById[pieceId];
+      if (again != null) {
+        final pieces2 = piecesAt(again);
+        for (var index = 0; index < pieces2.length; index++) {
+          if (pieces2[index].pieceId == pieceId) {
+            return (square: again, index: index, piece: pieces2[index]);
+          }
+        }
+      }
+      return null;
+    }
     for (var rank = 0; rank < _rankCount; rank++) {
       for (var file = 0; file < _fileCount; file++) {
         final square = Square(file, rank);
         final pieces = piecesAt(square);
         for (var index = 0; index < pieces.length; index++) {
           if (pieces[index].pieceId == pieceId) {
+            _pieceSquareById[pieceId] = square;
             return (square: square, index: index, piece: pieces[index]);
           }
         }
@@ -8141,7 +8292,8 @@ class ChessGame {
         centerFiles.contains(landed.file) &&
         centerRanks.contains(landed.rank) &&
         moved.type != PieceType.king) {
-      _rules.centerTaxSkipNext.add(moved.pieceId);
+      // 2 plies: landing turn ticks to 1, next turn of this color still taxed.
+      _rules.centerTaxSkipNext[moved.pieceId] = 2;
     }
     // Atomic explosion.
     if (_rules.atomicActive && wasCapture) {
@@ -8199,7 +8351,8 @@ class ChessGame {
       _rules.wastelandClaims[move.from] = moved.color;
       final claimOwner = _rules.wastelandClaims[landed];
       if (claimOwner != null && claimOwner != moved.color) {
-        _rules.wastelandTollSkip[moved.pieceId] = 1;
+        // 2 plies so the landing ply tick does not clear the toll immediately.
+        _rules.wastelandTollSkip[moved.pieceId] = 2;
       }
       _rules.wastelandClaims.remove(landed);
     }
@@ -8871,6 +9024,7 @@ class ChessGame {
     _stackExtra
       ..clear()
       ..addAll(_rules.timeCapsuleStackExtra ?? const {});
+    _rebuildPieceIndex();
 
     for (var rank = 0; rank < _rankCount; rank++) {
       for (var file = 0; file < _fileCount; file++) {
@@ -9755,6 +9909,7 @@ class ChessGame {
         }
         _fileCount += 1;
         _shiftSpecialSquaresFile(insertOnLeft: false);
+        _rebuildPieceIndex();
       }
     }
     // z-file = 0, i-file = fileCount-1; pawns on ranks 1 and 6.
@@ -9937,11 +10092,18 @@ class ChessGame {
     if (_rules.riverRank != null) {
       _flowRiver(finished);
     }
-    // Clear one-turn taxes for the side that just finished their turn.
-    _rules.centerTaxSkipNext.removeWhere((id) {
+    // Tick one-turn taxes for the side that just finished their turn.
+    final taxKeys = _rules.centerTaxSkipNext.keys.toList();
+    for (final id in taxKeys) {
       final ref = _pieceById(id);
-      return ref?.piece.color == finished;
-    });
+      if (ref?.piece.color != finished) continue;
+      final left = (_rules.centerTaxSkipNext[id] ?? 0) - 1;
+      if (left <= 0) {
+        _rules.centerTaxSkipNext.remove(id);
+      } else {
+        _rules.centerTaxSkipNext[id] = left;
+      }
+    }
     final tollKeys = _rules.wastelandTollSkip.keys.toList();
     for (final id in tollKeys) {
       final ref = _pieceById(id);
@@ -10314,8 +10476,9 @@ class ChessGame {
     if (!_rules.shopTokenActive) return false;
     if (!(_rules.shopTokenHeld[color] ?? false)) return false;
     if (!_gameCanTakebackForShop()) return false;
-    _rules.shopTokenHeld[color] = false;
     takeback();
+    // Spend after restore — the undo snapshot still had the token.
+    _rules.shopTokenHeld[color] = false;
     return true;
   }
 
@@ -10756,6 +10919,7 @@ class ChessGame {
       graveyardSequence: _graveyardSequence,
       pendingExchangeOwnSequence: _pendingExchangeOwnSequence,
       pendingRemoveModTargetId: _pendingRemoveModTargetId,
+      lastMove: _lastMove,
       boardRules: _rules.copy(),
     );
   }
@@ -10945,7 +11109,12 @@ class ChessGame {
     _graveyardSequence = snapshot.graveyardSequence;
     _pendingExchangeOwnSequence = snapshot.pendingExchangeOwnSequence;
     _pendingRemoveModTargetId = snapshot.pendingRemoveModTargetId;
+    _lastMove = snapshot.lastMove;
     _rules.restoreFrom(snapshot.boardRules);
+    _rebuildPieceIndex();
+    _forcedTakebackPending = false;
+    _cachedAllLegalMoves = null;
+    _legalMovesCacheKey = null;
   }
 
   static List<List<Piece?>> _createInitialBoard() {
@@ -11810,6 +11979,7 @@ class GameSnapshot {
     required this.graveyardSequence,
     required this.pendingExchangeOwnSequence,
     required this.pendingRemoveModTargetId,
+    required this.lastMove,
     required this.boardRules,
   });
 
@@ -11921,6 +12091,7 @@ class GameSnapshot {
   final int graveyardSequence;
   final int? pendingExchangeOwnSequence;
   final String? pendingRemoveModTargetId;
+  final Move? lastMove;
   final BoardCataclysmState boardRules;
 }
 

@@ -2859,4 +2859,184 @@ void main() {
     expect(legal.any((m) => m.to == const Square(4, 5)), isTrue);
     expect(legal.any((m) => m.to == const Square(5, 5)), isTrue);
   });
+
+  test('wasteland toll blocks trespasser on the next turn', () {
+    final game = _emptyReadyGame();
+    game.debugApplyOffer(
+      PieceColor.white,
+      const AbilityOffer(
+        ability: GameAbility.modeWasteland,
+        applyMode: AbilityApplyMode.boardWide,
+      ),
+    );
+    game.debugSetPiece(
+      const Square(0, 1),
+      const Piece(
+        pieceId: 'wp',
+        type: PieceType.pawn,
+        color: PieceColor.white,
+      ),
+    );
+    game.debugSetPiece(
+      const Square(1, 3),
+      const Piece(
+        pieceId: 'bn',
+        type: PieceType.knight,
+        color: PieceColor.black,
+        hasMoved: true,
+      ),
+    );
+
+    expect(
+      game.makeMove(const Move(from: Square(0, 1), to: Square(0, 2))),
+      isNotNull,
+    );
+    expect(
+      game.makeMove(const Move(from: Square(1, 3), to: Square(0, 1))),
+      isNotNull,
+    );
+    // White quiet king step so the toll remains for Black's next turn.
+    expect(
+      game.makeMove(const Move(from: Square(7, 0), to: Square(7, 1))),
+      isNotNull,
+    );
+    expect(game.turn, PieceColor.black);
+    expect(game.getLegalMoves(from: const Square(0, 1)), isEmpty);
+  });
+
+  test('center tax blocks captures on the taxed turn', () {
+    final game = _emptyReadyGame();
+    game.debugApplyOffer(
+      PieceColor.white,
+      const AbilityOffer(
+        ability: GameAbility.boardCenterTax,
+        applyMode: AbilityApplyMode.boardWide,
+      ),
+    );
+    game.debugSetPiece(
+      const Square(3, 0),
+      const Piece(
+        pieceId: 'wq',
+        type: PieceType.queen,
+        color: PieceColor.white,
+        hasMoved: true,
+      ),
+    );
+    game.debugSetPiece(
+      const Square(4, 4),
+      const Piece(
+        pieceId: 'bp',
+        type: PieceType.pawn,
+        color: PieceColor.black,
+        hasMoved: true,
+      ),
+    );
+
+    expect(
+      game.makeMove(const Move(from: Square(3, 0), to: Square(3, 3))),
+      isNotNull,
+    );
+    expect(
+      game.makeMove(const Move(from: Square(7, 7), to: Square(7, 6))),
+      isNotNull,
+    );
+    expect(game.turn, PieceColor.white);
+    final legal = game.getLegalMoves(from: const Square(3, 3));
+    expect(legal.any((m) => m.to == const Square(4, 4)), isFalse);
+    expect(legal.any((m) => m.to == const Square(3, 4)), isTrue);
+  });
+
+  test('shop token cancels mate via takeback and spends the token', () {
+    final game = _emptyReadyGame();
+    game.debugApplyOffer(
+      PieceColor.black,
+      const AbilityOffer(
+        ability: GameAbility.modeShopToken,
+        applyMode: AbilityApplyMode.boardWide,
+      ),
+    );
+    game.debugSetShopTokenHeld(PieceColor.black, true);
+    // K+R vs K: Kb6, ka8, Rc1-c8# (b8/a7 covered, rook not capturable).
+    game.debugSetPiece(const Square(7, 0), null);
+    game.debugSetPiece(const Square(7, 7), null);
+    game.debugSetPiece(
+      const Square(1, 5),
+      const Piece(
+        pieceId: 'wk',
+        type: PieceType.king,
+        color: PieceColor.white,
+        hasMoved: true,
+      ),
+    );
+    game.debugSetPiece(
+      const Square(0, 7),
+      const Piece(
+        pieceId: 'bk',
+        type: PieceType.king,
+        color: PieceColor.black,
+        hasMoved: true,
+      ),
+    );
+    game.debugSetPiece(
+      const Square(2, 0),
+      const Piece(
+        pieceId: 'wr',
+        type: PieceType.rook,
+        color: PieceColor.white,
+        hasMoved: true,
+      ),
+    );
+
+    final result = game.makeMove(
+      const Move(from: Square(2, 0), to: Square(2, 7)),
+    );
+    expect(result?.wasCancelled, isTrue);
+    expect(game.isGameOver, isFalse);
+    expect(game.turn, PieceColor.white);
+    expect(game.pieceAt(const Square(2, 0))?.pieceId, 'wr');
+    expect(game.shopTokenHeldBy(PieceColor.black), isFalse);
+  });
+
+  test('statist mate veto takebacks a mate that only that piece delivers', () {
+    final game = _emptyReadyGame();
+    game.debugSetPiece(const Square(7, 0), null);
+    game.debugSetPiece(const Square(7, 7), null);
+    game.debugSetPiece(
+      const Square(1, 5),
+      const Piece(
+        pieceId: 'wk',
+        type: PieceType.king,
+        color: PieceColor.white,
+        hasMoved: true,
+      ),
+    );
+    game.debugSetPiece(
+      const Square(0, 7),
+      const Piece(
+        pieceId: 'bk',
+        type: PieceType.king,
+        color: PieceColor.black,
+        hasMoved: true,
+      ),
+    );
+    game.debugSetPiece(
+      const Square(2, 0),
+      const Piece(
+        pieceId: 'wr',
+        type: PieceType.rook,
+        color: PieceColor.white,
+        hasMoved: true,
+      ),
+    );
+    game.debugSetMateVetoEnemy(PieceColor.black, 'wr');
+
+    final result = game.makeMove(
+      const Move(from: Square(2, 0), to: Square(2, 7)),
+    );
+    expect(result?.wasCancelled, isTrue);
+    expect(game.isGameOver, isFalse);
+    expect(game.turn, PieceColor.white);
+    expect(game.mateVetoBanner, isNotNull);
+    expect(game.pieceAt(const Square(2, 0))?.pieceId, 'wr');
+  });
 }

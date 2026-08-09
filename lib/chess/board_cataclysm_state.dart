@@ -230,7 +230,8 @@ class BoardCataclysmState {
   String? shadowPieceId;
   bool shadowJumpAvailable = false;
   bool centerTaxActive = false;
-  final Set<String> centerTaxSkipNext = {};
+  /// pieceId -> plies remaining where captures are blocked (set to 2 on grant).
+  final Map<String, int> centerTaxSkipNext = {};
   bool walkingCastleActive = false;
   String? invisibleHandForcedPieceId;
   PieceColor? invisibleHandOwner;

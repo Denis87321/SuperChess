@@ -2303,6 +2303,14 @@ class _GameScreenState extends State<GameScreen> {
       _premove = null;
     }
 
+    // Mate veto / shop-token cancel restores the prior position — do not
+    // broadcast or animate a move that was undone.
+    if (result.wasCancelled) {
+      if (mounted) setState(_clearSelectionAfterMove);
+      await _handleMoveResult(result);
+      return;
+    }
+
     widget.onlineService?.sendMove(move);
     _syncClockAfterMove();
     _ensureClockRunning();

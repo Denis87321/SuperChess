@@ -3,6 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import '../l10n/models/piece.dart';
 import '../theme/balatro_theme.dart';
+import 'board_fx/frost_ice_overlay.dart';
 
 class ChessPieceWidget extends StatelessWidget {
   const ChessPieceWidget({
@@ -465,17 +466,13 @@ class _ChessPieceRenderState extends State<_ChessPieceRender>
                 ],
               ),
             ),
-          if (widget.isFrozen)
+          if (widget.isFrozen ||
+              (widget.showFrostCounter && widget.piece.frostLevel > 0))
             Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0x667DD3FC),
-                  border: Border.all(
-                    color: const Color(0xFF38BDF8),
-                    width: widget.size * 0.04,
-                  ),
-                ),
+              child: FrostIceOverlay(
+                level: widget.piece.frostLevel,
+                size: widget.size,
+                frozen: widget.isFrozen,
               ),
             ),
           if (widget.isEnemyTurncoat)
