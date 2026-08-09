@@ -3,7 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import '../l10n/models/piece.dart';
 import '../theme/balatro_theme.dart';
-import 'board_fx/frost_ice_overlay.dart';
+import 'board_fx/piece_fx_layer.dart';
 
 class ChessPieceWidget extends StatelessWidget {
   const ChessPieceWidget({
@@ -21,6 +21,7 @@ class ChessPieceWidget extends StatelessWidget {
     this.isFrozen = false,
     this.isEnemyTurncoat = false,
     this.showFrostCounter = false,
+    this.sandStuck = false,
   });
 
   final Piece piece;
@@ -36,6 +37,7 @@ class ChessPieceWidget extends StatelessWidget {
   final bool isFrozen;
   final bool isEnemyTurncoat;
   final bool showFrostCounter;
+  final bool sandStuck;
 
   static String assetFor(PieceColor color, PieceType type) {
     final prefix = color == PieceColor.white ? 'w' : 'b';
@@ -66,6 +68,7 @@ class ChessPieceWidget extends StatelessWidget {
       isFrozen: isFrozen,
       isEnemyTurncoat: isEnemyTurncoat,
       showFrostCounter: showFrostCounter,
+      sandStuck: sandStuck,
     );
   }
 }
@@ -85,6 +88,7 @@ class _ChessPieceRender extends StatefulWidget {
     required this.isFrozen,
     required this.isEnemyTurncoat,
     required this.showFrostCounter,
+    required this.sandStuck,
   });
 
   final Piece piece;
@@ -100,6 +104,7 @@ class _ChessPieceRender extends StatefulWidget {
   final bool isFrozen;
   final bool isEnemyTurncoat;
   final bool showFrostCounter;
+  final bool sandStuck;
 
   @override
   State<_ChessPieceRender> createState() => _ChessPieceRenderState();
@@ -466,15 +471,21 @@ class _ChessPieceRenderState extends State<_ChessPieceRender>
                 ],
               ),
             ),
-          if (widget.isFrozen ||
-              (widget.showFrostCounter && widget.piece.frostLevel > 0))
-            Positioned.fill(
-              child: FrostIceOverlay(
-                level: widget.piece.frostLevel,
-                size: widget.size,
-                frozen: widget.isFrozen,
-              ),
+          Positioned.fill(
+            child: PieceFxLayer(
+              piece: widget.piece,
+              size: widget.size,
+              isFrozen: widget.isFrozen,
+              inDuel: widget.inDuel,
+              hasSanctuaryWard: widget.hasSanctuaryWard,
+              underCurfew: widget.underCurfew,
+              hasTorch: widget.hasTorch,
+              isZebra: widget.isZebra,
+              sandStuck: widget.sandStuck,
+              siegeCounter: widget.siegeCounter,
+              showFrost: widget.showFrostCounter,
             ),
+          ),
           if (widget.isEnemyTurncoat)
             Positioned(
               right: widget.size * 0.02,

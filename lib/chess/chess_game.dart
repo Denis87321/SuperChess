@@ -8,8 +8,10 @@ import '../l10n/models/ability_effects.dart';
 import '../l10n/models/game_ability.dart';
 import '../l10n/models/piece.dart';
 import '../l10n/models/square.dart';
+import 'ability_fx_map.dart';
 import 'board_cataclysm_state.dart';
 import 'board_labels.dart';
+import 'board_vfx_event.dart';
 import 'move.dart';
 
 export 'board_labels.dart'
@@ -19,6 +21,8 @@ export 'board_labels.dart'
         chessRankLabel,
         fileLabel,
         squareLabel;
+export 'board_vfx_event.dart';
+export 'fx_skin.dart';
 
 enum GameStatus { playing, check, checkmate, stalemate }
 
@@ -278,6 +282,7 @@ class ChessGame {
   int _skillChoiceRerollsUsed = 0;
   final Set<int> _lavaRanks = {};
   final List<LavaDeathEvent> _pendingLavaDeaths = [];
+  final List<BoardVfxEvent> _pendingVfx = [];
   bool _fogOfWar = false;
   bool _sprintActive = false;
   Square? _quarantineSquare;
@@ -651,6 +656,21 @@ class ChessGame {
   Set<Square> get sunSquares => Set<Square>.from(_rules.sunSquares);
   Set<Square> get quicksandRevealed =>
       Set<Square>.from(_rules.quicksandRevealed);
+  Set<Square> get mines => Set<Square>.from(_mines);
+  Set<Square> get inkBlotSquares => _rules.inkBlotPlies.keys.toSet();
+  Set<Square> get volcanoSquares => Set<Square>.from(_rules.volcanoSquares);
+  Set<Square> get snailSlimeSquares => _rules.snailSlimePlies.keys.toSet();
+  Set<Square> get hoofSmokeSquares => Set<Square>.from(_rules.hoofSmokeSquares);
+  Set<Square> get fuseSquares => _rules.fuseTimers.keys.toSet();
+  Set<Square> get seedSquares => _rules.pawnSeeds.keys.toSet();
+  Map<Square, PieceColor> get wastelandClaims =>
+      Map<Square, PieceColor>.from(_rules.wastelandClaims);
+  Square? get gravityWellSquare => _rules.gravityWellSquare;
+  int? get riverRank => _rules.riverRank;
+  bool get seasonsActive => _rules.seasonsActive;
+  int get seasonIndex => _rules.seasonIndex;
+  bool isSandStuck(String pieceId) =>
+      (_rules.quicksandSkipLeft[pieceId] ?? 0) > 0;
   bool isFrozenPiece(String pieceId) =>
       _rules.frozenPieceIds.contains(pieceId);
   bool hasTorch(String pieceId) {
@@ -1103,6 +1123,31 @@ class ChessGame {
     final events = List<LavaDeathEvent>.from(_pendingLavaDeaths);
     _pendingLavaDeaths.clear();
     return events;
+  }
+
+  List<BoardVfxEvent> consumeBoardVfx() {
+    if (_pendingVfx.isEmpty) return const [];
+    final events = List<BoardVfxEvent>.from(_pendingVfx);
+    _pendingVfx.clear();
+    return events;
+  }
+
+  void _emitVfx(BoardVfxEvent event) {
+    if (_isSimulatingLegality || _suppressCaptureSideEffects) return;
+    _pendingVfx.add(event);
+  }
+
+  void _emitAbilityVfx(GameAbility ability, {Square? at, Piece? piece}) {
+    final profile = fxProfileFor(ability);
+    if (profile.layer == FxLayer.none) return;
+    final square = at ??
+        findKing(_turn) ??
+        const Square(3, 3);
+    final skin = profile.layer == FxLayer.burst
+        ? FxSkin.burstImpact
+        : profile.skin;
+    if (skin == FxSkin.none) return;
+    _emitVfx(BoardVfxEvent(skin: skin, square: square, piece: piece));
   }
 
   /// Local UI-only preview of applying [offer] (does not sync online).
@@ -1761,6 +1806,7 @@ class ChessGame {
     );
 
     _applyOffer(color, offer, null);
+    _emitAbilityVfx(offer.ability);
 
     final info = _infoFromOffer(offer);
     if (color == PieceColor.white) {
@@ -2930,6 +2976,18 @@ class ChessGame {
       capturingPieceIndex: pendingIndex != null && pendingIndex >= 0
           ? pendingIndex
           : 0,
+    );
+    _emitAbilityVfx(
+      offer.ability,
+      at: pendingSquare,
+      piece: pendingSquare == null
+          ? null
+          : pieceAt(
+              pendingSquare,
+              index: pendingIndex != null && pendingIndex >= 0
+                  ? pendingIndex
+                  : 0,
+            ),
     );
 
     if (isAwaitingAbilityTarget) {
@@ -4753,6 +4811,12 @@ class ChessGame {
 
   void _insertExtraRank() {
     if (_rankCount >= 9) return;
+    _emitVfx(
+      BoardVfxEvent(
+        skin: FxSkin.burstImpact,
+        square: Square(_fileCount ~/ 2, 4),
+      ),
+    );
     _board.insert(4, List<Piece?>.filled(_fileCount, null));
     _rekeyStackExtras(rankDelta: 1, shouldShift: (square) => square.rank >= 4);
     _rankCount = 9;
@@ -8359,6 +8423,13 @@ class ChessGame {
   }
 
   void _resolveAtomicExplosion(Square epicenter, PieceColor attacker) {
+    _emitVfx(
+      BoardVfxEvent(
+        skin: FxSkin.burstImpact,
+        square: epicenter,
+        intensity: 1.4,
+      ),
+    );
     var enemyKingHit = false;
     for (var dr = -1; dr <= 1; dr++) {
       for (var df = -1; df <= 1; df++) {
@@ -10419,8 +10490,6 @@ class ChessGame {
   Square? get kansasTyphoon => _rules.kansasTyphoon;
   Square? get kansasTyphoonNext => _rules.kansasTyphoonNext;
   int? get forbiddenFile => _rules.forbiddenFile;
-  int? get riverRank => _rules.riverRank;
-  Set<Square> get inkBlotSquares => _rules.inkBlotPlies.keys.toSet();
 
   bool tryPlaceDuck(Square square) {
     if (!_rules.duckChessActive || !_rules.duckNeedsPlacement) return false;

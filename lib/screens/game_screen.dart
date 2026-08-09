@@ -19,6 +19,10 @@ import '../l10n/models/stockfish_ability_filter.dart';
 import '../online/game_clock.dart';
 import '../online/online_game_service.dart';
 import '../theme/balatro_theme.dart';
+import '../widgets/board_fx/burst_fx_overlay.dart';
+import '../widgets/board_fx/fx_host.dart';
+import '../widgets/board_fx/fx_painters.dart';
+import '../widgets/board_fx/square_fx_layer.dart';
 import '../widgets/chess_piece_widget.dart';
 import '../widgets/game_end_side_panel.dart';
 import '../widgets/lava_death_overlay.dart';
@@ -91,6 +95,8 @@ class _GameScreenState extends State<GameScreen> {
   bool _opponentChoosingSkill = false;
   bool _startFlowDone = false;
   List<LavaDeathEvent> _animatingLavaDeaths = const [];
+  List<BoardVfxEvent> _animatingVfx = const [];
+  VoidCallback? _vfxFinishCallback;
   VoidCallback? _lavaDeathFinishCallback;
   bool _skillChoicePeek = false;
   Timer? _skillChoiceTimer;
@@ -1871,6 +1877,7 @@ class _GameScreenState extends State<GameScreen> {
       offer: offer,
       stateHash: _game.stateHash,
     );
+    unawaited(_playBoardVfx(_game.consumeBoardVfx()));
     _maybeSendGameOver();
     if (!mounted) return;
     if (_game.isAwaitingAbilityTarget && _canPickAbilityTarget) {
@@ -2183,14 +2190,14 @@ class _GameScreenState extends State<GameScreen> {
       accepted: false,
       stateHash: _game.stateHash,
     );
-    await _playLavaDeaths(_game.consumeLavaDeaths());
+    await _playPostMoveFx();
     if (!mounted) return;
     await _handleMoveResult(result);
     if (mounted) await _tryExecutePremove();
   }
 
   Future<void> _finishRemoteDeclineRansom(MoveResult result) async {
-    await _playLavaDeaths(_game.consumeLavaDeaths());
+    await _playPostMoveFx();
     if (!mounted) return;
     await _handleMoveResult(result);
     if (mounted) await _tryExecutePremove();
@@ -2273,6 +2280,34 @@ class _GameScreenState extends State<GameScreen> {
     _lavaDeathFinishCallback?.call();
   }
 
+  Future<void> _playBoardVfx(List<BoardVfxEvent> events) async {
+    if (events.isEmpty || !mounted) return;
+    final completer = Completer<void>();
+    var remaining = events.length;
+    setState(() {
+      _animatingVfx = events;
+      _vfxFinishCallback = () {
+        remaining--;
+        if (remaining <= 0 && !completer.isCompleted) {
+          completer.complete();
+        }
+      };
+    });
+    await completer.future.timeout(
+      const Duration(milliseconds: 650),
+      onTimeout: () {},
+    );
+    _vfxFinishCallback = null;
+    if (mounted) setState(() => _animatingVfx = const []);
+  }
+
+  void _onVfxFinished() => _vfxFinishCallback?.call();
+
+  Future<void> _playPostMoveFx() async {
+    await _playLavaDeaths(_game.consumeLavaDeaths());
+    await _playBoardVfx(_game.consumeBoardVfx());
+  }
+
   Future<void> _executeMove(Move move) async {
     if (_pieceFlight != null) return;
 
@@ -2321,8 +2356,7 @@ class _GameScreenState extends State<GameScreen> {
       setState(_clearSelectionAfterMove);
     }
 
-    final lavaDeaths = _game.consumeLavaDeaths();
-    await _playLavaDeaths(lavaDeaths);
+    await _playPostMoveFx();
 
     if (!mounted) return;
     await _handleMoveResult(result);
@@ -2384,7 +2418,7 @@ class _GameScreenState extends State<GameScreen> {
       });
     }
 
-    await _playLavaDeaths(_game.consumeLavaDeaths());
+    await _playPostMoveFx();
     if (mounted) await _tryExecutePremove();
   }
 
@@ -2817,6 +2851,8 @@ class _GameScreenState extends State<GameScreen> {
       animatingLavaDeaths:
           _isBrowsingHistory ? const [] : _animatingLavaDeaths,
       onLavaDeathFinished: _onLavaDeathFinished,
+      animatingVfx: _isBrowsingHistory ? const [] : _animatingVfx,
+      onVfxFinished: _onVfxFinished,
       onSquareTap: _onSquareTap,
       viewerColor: _viewerColor,
       maxWidth: maxWidth,
@@ -3918,6 +3954,8 @@ class _ChessBoard extends StatelessWidget {
     required this.availableMoves,
     required this.animatingLavaDeaths,
     required this.onLavaDeathFinished,
+    required this.animatingVfx,
+    required this.onVfxFinished,
     required this.onSquareTap,
     required this.viewerColor,
     required this.maxWidth,
@@ -3937,6 +3975,8 @@ class _ChessBoard extends StatelessWidget {
   final bool availableMovesArePremoves;
   final List<LavaDeathEvent> animatingLavaDeaths;
   final VoidCallback onLavaDeathFinished;
+  final List<BoardVfxEvent> animatingVfx;
+  final VoidCallback onVfxFinished;
   final ValueChanged<Square> onSquareTap;
   final PieceColor viewerColor;
   final double maxWidth;
@@ -3971,6 +4011,48 @@ class _ChessBoard extends StatelessWidget {
     for (final death in animatingLavaDeaths) {
       if (death.square == square) return death;
     }
+    return null;
+  }
+
+  BoardVfxEvent? _vfxAt(Square square) {
+    for (final event in animatingVfx) {
+      if (event.square == square) return event;
+    }
+    return null;
+  }
+
+  List<FxSkin> _squareSkins(Square square) {
+    final skins = <FxSkin>[];
+    if (game.lavaRanks.contains(square.rank)) skins.add(FxSkin.lavaGlow);
+    if (game.quicksandRevealed.contains(square)) skins.add(FxSkin.sandSink);
+    if (game.isDustSquare(square)) skins.add(FxSkin.dustCloud);
+    if (game.inkBlotSquares.contains(square)) skins.add(FxSkin.inkBleed);
+    if (game.wormholes.contains(square) ||
+        game.gravityWellSquare == square ||
+        game.isTeleportSquare(square)) {
+      skins.add(FxSkin.portalSpin);
+    }
+    if (game.mines.contains(square)) skins.add(FxSkin.mineSpike);
+    if (game.volcanoSquares.contains(square)) skins.add(FxSkin.volcanoGlow);
+    if (game.snailSlimeSquares.contains(square)) skins.add(FxSkin.slimeTrail);
+    if (game.hoofSmokeSquares.contains(square)) skins.add(FxSkin.dustCloud);
+    if (game.fuseSquares.contains(square)) skins.add(FxSkin.fuseTick);
+    if (game.seedSquares.contains(square)) skins.add(FxSkin.seedSprout);
+    if (game.riverRank == square.rank) skins.add(FxSkin.riverFlow);
+    if (game.wastelandClaims.containsKey(square)) {
+      skins.add(FxSkin.territoryPaint);
+    }
+    if (game.sunSquares.contains(square)) skins.add(FxSkin.heatPulse);
+    if (game.isGhostCell(square)) skins.add(FxSkin.ghostFade);
+    return skins;
+  }
+
+  FxSkin? get _boardAmbientSkin {
+    if (game.seasonsActive) return FxSkin.seasonWash;
+    if (game.virusActive) return FxSkin.virusSpark;
+    if (game.attractionActive) return FxSkin.attractionPull;
+    if (game.swampActive) return FxSkin.swampMurk;
+    if (game.frostMapActive) return FxSkin.iceGrow;
     return null;
   }
 
@@ -4009,6 +4091,7 @@ class _ChessBoard extends StatelessWidget {
           game.frostMapActive &&
           !game.hasTorch(piece.pieceId) &&
           piece.type != PieceType.king,
+      sandStuck: game.isSandStuck(piece.pieceId),
     );
     if (!rotatePieces) return child;
     return Transform.rotate(angle: math.pi, child: child);
@@ -4058,6 +4141,8 @@ class _ChessBoard extends StatelessWidget {
     final isCustoms = customsSquares.contains(square);
     final territoryOwner = game.territory[square];
     final lavaDeath = _lavaDeathAt(square);
+    final vfxEvent = _vfxAt(square);
+    final squareSkins = isVisible ? _squareSkins(square) : const <FxSkin>[];
     final showPieces =
         visiblePieces.isNotEmpty && lavaDeath == null && isVisible;
     final showLavaDeath = lavaDeath != null && isVisible;
@@ -4235,20 +4320,12 @@ class _ChessBoard extends StatelessWidget {
                   ),
                 ),
               ),
-            if (isVisible && isLava)
+            if (isVisible && squareSkins.isNotEmpty)
               Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.bottomCenter,
-                      end: Alignment.topCenter,
-                      colors: [
-                        const Color(0xFFFF6B00).withValues(alpha: 0.55),
-                        const Color(0xFFFFD000).withValues(alpha: 0.25),
-                        Colors.transparent,
-                      ],
-                    ),
-                  ),
+                child: SquareFxLayer(
+                  size: cellSize,
+                  skins: squareSkins,
+                  seed: square.file * 31 + square.rank * 17,
                 ),
               ),
             if (isVisible && isWormhole)
@@ -4406,6 +4483,14 @@ class _ChessBoard extends StatelessWidget {
                   onFinished: onLavaDeathFinished,
                 ),
               ),
+            if (isVisible && vfxEvent != null)
+              Positioned.fill(
+                child: BurstFxOverlay(
+                  event: vfxEvent,
+                  size: cellSize,
+                  onFinished: onVfxFinished,
+                ),
+              ),
           ],
         ),
       ),
@@ -4466,6 +4551,7 @@ class _ChessBoard extends StatelessWidget {
     final bottomRank = flipBoard ? rankCount - 1 : 0;
     final rightFile = flipBoard ? 0 : fileCount - 1;
 
+    final ambient = _boardAmbientSkin;
     return SizedBox(
       width: boardWidth,
       height: boardHeight,
@@ -4550,25 +4636,30 @@ class _ChessBoard extends StatelessWidget {
               height: cellSize,
               child: IgnorePointer(
                 child: Center(
-                  child: Container(
-                    width: cellSize * 0.62,
-                    height: cellSize * 0.62,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFB300),
-                      borderRadius: BorderRadius.circular(cellSize * 0.2),
-                      border: Border.all(
-                        color: const Color(0xFF5D4037),
-                        width: 2,
+                  child: FxHost(
+                    duration: const Duration(milliseconds: 1200),
+                    builder: (_, t) => CustomPaint(
+                      size: Size.square(cellSize * 0.7),
+                      painter: FxSkinPainter(
+                        skin: FxSkin.duckMarker,
+                        t: t,
+                        seed: 7,
                       ),
                     ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      'D',
-                      style: TextStyle(
-                        fontSize: cellSize * 0.32,
-                        fontWeight: FontWeight.w800,
-                        color: const Color(0xFF3E2723),
-                      ),
+                  ),
+                ),
+              ),
+            ),
+          if (ambient != null)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: FxHost(
+                  duration: const Duration(milliseconds: 2400),
+                  builder: (_, t) => CustomPaint(
+                    painter: FxSkinPainter(
+                      skin: ambient,
+                      t: t,
+                      seed: 99,
                     ),
                   ),
                 ),
