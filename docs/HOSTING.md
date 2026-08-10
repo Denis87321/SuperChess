@@ -23,6 +23,8 @@ Web Service на free **засыпает ~после 15 минут**. Первы
 
 `build_web.ps1` **не** обновляет API. Без пуша `server/` на GitHub Render продолжает крутить старый бэкенд.
 
+**Docker context API:** в Render для `superchess-api` Build Context должен быть **корень репо** (`.`), не `./server` — иначе не видно `packages/super_chess_engine`. Это уже в `render.yaml`; если сервис создавался вручную раньше, в Dashboard → Settings поменяй **Docker Build Context Directory** на `.` (пусто / root) и сделай **Manual Deploy**.
+
 ---
 
 ## 1. Postgres + API
