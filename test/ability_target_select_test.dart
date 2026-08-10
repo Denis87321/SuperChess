@@ -2,10 +2,10 @@ import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:super_chess/chess/chess_game.dart';
-import 'package:super_chess/models/ability_catalog.dart';
-import 'package:super_chess/models/game_ability.dart';
-import 'package:super_chess/models/piece.dart';
-import 'package:super_chess/models/square.dart';
+import 'package:super_chess/l10n/models/ability_catalog.dart';
+import 'package:super_chess/l10n/models/game_ability.dart';
+import 'package:super_chess/l10n/models/piece.dart';
+import 'package:super_chess/l10n/models/square.dart';
 
 ChessGame _readyPlain() {
   final game = ChessGame(catalog: AbilityCatalog(random: Random(1)));

@@ -76,6 +76,53 @@ class RivalryScore {
   final DateTime lastPlayed;
 }
 
+class FriendUser {
+  FriendUser({
+    required this.id,
+    required this.username,
+    required this.rating,
+  });
+
+  final String id;
+  final String username;
+  final int rating;
+}
+
+class FriendsBundle {
+  const FriendsBundle({
+    required this.friends,
+    required this.incoming,
+    required this.outgoing,
+  });
+
+  static const empty = FriendsBundle(
+    friends: [],
+    incoming: [],
+    outgoing: [],
+  );
+
+  final List<FriendUser> friends;
+  final List<FriendUser> incoming;
+  final List<FriendUser> outgoing;
+
+  factory FriendsBundle.fromJson(Map<String, dynamic> body) {
+    FriendUser parse(Map u) => FriendUser(
+          id: '${u['id']}',
+          username: '${u['username']}',
+          rating: u['rating'] as int? ?? 1500,
+        );
+    List<FriendUser> list(dynamic raw) => [
+          for (final u in (raw as List<dynamic>? ?? const []))
+            if (u is Map) parse(u),
+        ];
+    return FriendsBundle(
+      friends: list(body['friends']),
+      incoming: list(body['incoming']),
+      outgoing: list(body['outgoing']),
+    );
+  }
+}
+
 class AuthService extends ChangeNotifier {
   AuthService({String? httpBaseUrl})
       : _httpBase = httpBaseUrl ?? defaultHttpBaseUrl();
@@ -242,6 +289,123 @@ class AuthService extends ChangeNotifier {
                 DateTime.fromMillisecondsSinceEpoch(0),
           ),
     ];
+  }
+
+  Future<List<String>> fetchSeenAbilities() async {
+    final token = _token;
+    if (token == null) return const [];
+    final response = await http.get(
+      Uri.parse('$_httpBase/user/abilities'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Accept': 'application/json',
+      },
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw AuthException(
+        _errorMessage(response) ?? 'Request failed',
+        statusCode: response.statusCode,
+      );
+    }
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final list = body['abilities'] as List<dynamic>? ?? const [];
+    return [for (final a in list) '$a'];
+  }
+
+  Future<FriendsBundle> fetchFriends() async {
+    final token = _token;
+    if (token == null) {
+      return FriendsBundle.empty;
+    }
+    final response = await http.get(
+      Uri.parse('$_httpBase/user/friends'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Accept': 'application/json',
+      },
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw AuthException(
+        _errorMessage(response) ?? 'Request failed',
+        statusCode: response.statusCode,
+      );
+    }
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    return FriendsBundle.fromJson(body);
+  }
+
+  Future<List<FriendUser>> searchUsers(String query) async {
+    final token = _token;
+    if (token == null) return const [];
+    final response = await http.get(
+      Uri.parse('$_httpBase/user/search').replace(
+        queryParameters: {'q': query},
+      ),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Accept': 'application/json',
+      },
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw AuthException(
+        _errorMessage(response) ?? 'Request failed',
+        statusCode: response.statusCode,
+      );
+    }
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final list = body['users'] as List<dynamic>? ?? const [];
+    return [
+      for (final u in list)
+        if (u is Map)
+          FriendUser(
+            id: '${u['id']}',
+            username: '${u['username']}',
+            rating: u['rating'] as int? ?? 1500,
+          ),
+    ];
+  }
+
+  Future<void> requestFriend(String username) async {
+    final token = _token;
+    if (token == null) throw AuthException('Unauthorized', statusCode: 401);
+    final response = await http.post(
+      Uri.parse('$_httpBase/user/friends/request'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: jsonEncode({'username': username}),
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw AuthException(
+        _errorMessage(response) ?? 'Request failed',
+        statusCode: response.statusCode,
+      );
+    }
+  }
+
+  Future<void> respondFriend({
+    required String userId,
+    required bool accept,
+  }) async {
+    final token = _token;
+    if (token == null) throw AuthException('Unauthorized', statusCode: 401);
+    final response = await http.post(
+      Uri.parse('$_httpBase/user/friends/respond'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: jsonEncode({'userId': userId, 'accept': accept}),
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw AuthException(
+        _errorMessage(response) ?? 'Request failed',
+        statusCode: response.statusCode,
+      );
+    }
   }
 
   Future<Map<String, dynamic>?> fetchMatchReplay(String gameId) async {

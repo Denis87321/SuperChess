@@ -4,9 +4,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:super_chess/chess/chess_game.dart';
 import 'package:super_chess/chess/move.dart';
 import 'package:super_chess/chess/move_codec.dart';
-import 'package:super_chess/models/game_ability.dart';
-import 'package:super_chess/models/piece.dart';
-import 'package:super_chess/models/square.dart';
+import 'package:super_chess/l10n/models/game_ability.dart';
+import 'package:super_chess/l10n/models/piece.dart';
+import 'package:super_chess/l10n/models/square.dart';
+import 'package:super_chess/online/online_game_service.dart';
 
 /// Message types the SuperChess websocket server relays to the opponent
 /// (same path as `move` / `ability` / `start_ability`).
@@ -20,6 +21,7 @@ const relayMessageTypes = <String>{
   'skip_turn',
   'game_over',
   'state_resync',
+  'clock_sync',
 };
 
 void main() {
@@ -191,5 +193,30 @@ void main() {
     expect(roundTrip.typhoonOrigin, const Square(3, 3));
     expect(roundTrip.affectedPieceType, PieceType.rook);
     expect(roundTrip.hiddenData['pieceId'], 'forced');
+  });
+
+  test('move payload carries clock snapshot for peer sync', () {
+    const move = Move(from: Square(4, 1), to: Square(4, 3));
+    final payload = <String, dynamic>{
+      'type': 'move',
+      'gameId': 'g1',
+      'move': MoveCodec.toJson(move),
+      'whiteMs': 290_000,
+      'blackMs': 301_500,
+    };
+
+    final encoded = jsonEncode(payload);
+    final decoded = jsonDecode(encoded) as Map<String, dynamic>;
+    expect(decoded['whiteMs'], 290_000);
+    expect(decoded['blackMs'], 301_500);
+    final event = OnlineOpponentMove(
+      MoveCodec.fromJson(decoded['move'] as Map<String, dynamic>),
+      whiteMs: decoded['whiteMs'] as int?,
+      blackMs: decoded['blackMs'] as int?,
+    );
+    expect(event.move.from, const Square(4, 1));
+    expect(event.whiteMs, 290_000);
+    expect(event.blackMs, 301_500);
+    expect(relayMessageTypes, contains('clock_sync'));
   });
 }

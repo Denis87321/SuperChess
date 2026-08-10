@@ -105,7 +105,7 @@ class GameEndSidePanel extends StatelessWidget {
               TextButton(
                 onPressed: onFindAnother,
                 child: Text(
-                  online ? 'НАЙТИ ДРУГОГО СОПЕРНИКА' : 'В МЕНЮ',
+                  online ? 'NEW OPPONENT' : 'MENU',
                   style: BalatroTheme.statusStyle.copyWith(
                     fontSize: 11,
                     color: BalatroTheme.cream.withValues(alpha: 0.7),

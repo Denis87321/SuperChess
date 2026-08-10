@@ -146,11 +146,26 @@ class StockfishService {
     required String fen,
     int movetimeMs = 2000,
   }) {
-    final clamped = movetimeMs.clamp(200, 8000);
-    return _synchronized(() => _goImpl(fen, clamped));
+    final clamped = movetimeMs.clamp(50, 8000);
+    return _synchronized(() => _goImpl(fen: fen, movetimeMs: clamped));
   }
 
-  Future<String?> _goImpl(String fen, int movetimeMs) async {
+  /// Best move from startpos after [moves] (UCI list).
+  Future<String?> goBestMoveFromMoves({
+    required List<String> moves,
+    int movetimeMs = 2000,
+  }) {
+    final clamped = movetimeMs.clamp(50, 8000);
+    return _synchronized(
+      () => _goImpl(moves: moves, movetimeMs: clamped),
+    );
+  }
+
+  Future<String?> _goImpl({
+    String? fen,
+    List<String>? moves,
+    required int movetimeMs,
+  }) async {
     final started = await _ensureStartedImpl();
     final proc = _process;
     if (!started || proc == null) return null;
@@ -168,7 +183,16 @@ class StockfishService {
     });
 
     try {
-      proc.stdin.writeln('position fen $fen');
+      if (fen != null) {
+        proc.stdin.writeln('position fen $fen');
+      } else {
+        final mv = moves ?? const <String>[];
+        if (mv.isEmpty) {
+          proc.stdin.writeln('position startpos');
+        } else {
+          proc.stdin.writeln('position startpos moves ${mv.join(' ')}');
+        }
+      }
       proc.stdin.writeln('go movetime $movetimeMs');
       return await completer.future.timeout(
         Duration(milliseconds: movetimeMs + 5000),

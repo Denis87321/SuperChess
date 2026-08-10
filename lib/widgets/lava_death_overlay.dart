@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../models/piece.dart';
+import '../l10n/models/piece.dart';
 import 'chess_piece_widget.dart';
 
 /// Анимация: фигура проваливается сквозь доску и растворяется в лаве.

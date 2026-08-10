@@ -1,0 +1,164 @@
+[
+  {
+    "id": "tour-de-france-1",
+    "titleRu": "Тур де Франс",
+    "titleEn": "Tour de France",
+    "turn": "white",
+    "goal": "alternativeWin",
+    "hintAbility": "modeKingCenter",
+    "boardAbilities": ["modeKingCenter"],
+    "pieces": [
+      {"square": "e3", "type": "king", "color": "white", "id": "wk"},
+      {"square": "a8", "type": "king", "color": "black", "id": "bk"},
+      {"square": "h8", "type": "rook", "color": "black", "id": "br"}
+    ],
+    "solution": [{"from": "e3", "to": "e4"}]
+  },
+  {
+    "id": "atomic-knight-1",
+    "titleRu": "Атомный взрыв",
+    "titleEn": "Atomic blast",
+    "turn": "white",
+    "goal": "captureKing",
+    "hintAbility": "modeAtomic",
+    "boardAbilities": ["modeAtomic"],
+    "pieces": [
+      {"square": "a1", "type": "king", "color": "white", "id": "wk"},
+      {"square": "e8", "type": "king", "color": "black", "id": "bk"},
+      {"square": "d7", "type": "knight", "color": "black", "id": "bn"},
+      {"square": "d1", "type": "rook", "color": "white", "id": "wr"}
+    ],
+    "solution": [{"from": "d1", "to": "d7"}]
+  },
+  {
+    "id": "airborne-1",
+    "titleRu": "Десант",
+    "titleEn": "Airborne",
+    "turn": "white",
+    "goal": "checkmate",
+    "hintAbility": "pawnAirborne",
+    "boardAbilities": [],
+    "pieces": [
+      {"square": "a1", "type": "king", "color": "white", "id": "wk"},
+      {"square": "a7", "type": "rook", "color": "white", "id": "wr"},
+      {"square": "e6", "type": "pawn", "color": "white", "id": "wp", "abilities": ["pawnAirborne"], "hasMoved": true},
+      {"square": "c8", "type": "king", "color": "black", "id": "bk"},
+      {"square": "e7", "type": "pawn", "color": "black", "id": "bp"},
+      {"square": "b7", "type": "pawn", "color": "black", "id": "bp2"},
+      {"square": "d7", "type": "pawn", "color": "black", "id": "bp3"}
+    ],
+    "solution": [{"from": "e6", "to": "e8"}]
+  },
+  {
+    "id": "back-rank-mate",
+    "titleRu": "Мат на последней горизонтали",
+    "titleEn": "Back-rank mate",
+    "turn": "white",
+    "goal": "checkmate",
+    "boardAbilities": [],
+    "pieces": [
+      {"square": "g1", "type": "king", "color": "white", "id": "wk"},
+      {"square": "g8", "type": "king", "color": "black", "id": "bk"},
+      {"square": "f7", "type": "pawn", "color": "black", "id": "bp1"},
+      {"square": "g7", "type": "pawn", "color": "black", "id": "bp2"},
+      {"square": "h7", "type": "pawn", "color": "black", "id": "bp3"},
+      {"square": "a1", "type": "rook", "color": "white", "id": "wr"}
+    ],
+    "solution": [{"from": "a1", "to": "a8"}]
+  },
+  {
+    "id": "atomic-queen-1",
+    "titleRu": "Атомный ферзь",
+    "titleEn": "Atomic queen",
+    "turn": "white",
+    "goal": "captureKing",
+    "hintAbility": "modeAtomic",
+    "boardAbilities": ["modeAtomic"],
+    "pieces": [
+      {"square": "c1", "type": "king", "color": "white", "id": "wk"},
+      {"square": "g8", "type": "king", "color": "black", "id": "bk"},
+      {"square": "f7", "type": "bishop", "color": "black", "id": "bb"},
+      {"square": "a4", "type": "queen", "color": "white", "id": "wq"}
+    ],
+    "solution": [{"from": "a4", "to": "f7"}]
+  },
+  {
+    "id": "center-race-2",
+    "titleRu": "Гонка к центру",
+    "titleEn": "Race to the center",
+    "turn": "white",
+    "goal": "alternativeWin",
+    "hintAbility": "modeKingCenter",
+    "boardAbilities": ["modeKingCenter"],
+    "pieces": [
+      {"square": "c3", "type": "king", "color": "white", "id": "wk"},
+      {"square": "h8", "type": "king", "color": "black", "id": "bk"},
+      {"square": "a7", "type": "rook", "color": "black", "id": "br"}
+    ],
+    "solution": [{"from": "c3", "to": "d4"}]
+  },
+  {
+    "id": "queen-mate-1",
+    "titleRu": "Ферзевый мат",
+    "titleEn": "Queen mate",
+    "turn": "white",
+    "goal": "checkmate",
+    "boardAbilities": [],
+    "pieces": [
+      {"square": "c6", "type": "king", "color": "white", "id": "wk"},
+      {"square": "a8", "type": "king", "color": "black", "id": "bk"},
+      {"square": "c7", "type": "queen", "color": "white", "id": "wq"}
+    ],
+    "solution": [{"from": "c7", "to": "b7"}]
+  },
+  {
+    "id": "rook-corridor",
+    "titleRu": "Коридор ладьёй",
+    "titleEn": "Rook corridor",
+    "turn": "white",
+    "goal": "checkmate",
+    "boardAbilities": [],
+    "pieces": [
+      {"square": "e1", "type": "king", "color": "white", "id": "wk"},
+      {"square": "a8", "type": "king", "color": "black", "id": "bk"},
+      {"square": "a7", "type": "rook", "color": "white", "id": "wr"},
+      {"square": "h7", "type": "rook", "color": "white", "id": "wr2"}
+    ],
+    "solution": [{"from": "h7", "to": "h8"}]
+  },
+  {
+    "id": "survive-1",
+    "titleRu": "Удержаться",
+    "titleEn": "Hold the line",
+    "turn": "white",
+    "goal": "surviveNMoves",
+    "surviveMoves": 1,
+    "boardAbilities": [],
+    "pieces": [
+      {"square": "e1", "type": "king", "color": "white", "id": "wk"},
+      {"square": "e8", "type": "king", "color": "black", "id": "bk"},
+      {"square": "a8", "type": "rook", "color": "black", "id": "br"},
+      {"square": "h2", "type": "pawn", "color": "white", "id": "wp", "hasMoved": true}
+    ],
+    "solution": [{"from": "e1", "to": "f2"}, {"from": "e1", "to": "d2"}, {"from": "e1", "to": "f1"}, {"from": "e1", "to": "d1"}, {"from": "e1", "to": "e2"}]
+  },
+  {
+    "id": "astronomicon-mate",
+    "titleRu": "Астрономикон рядом",
+    "titleEn": "Astronomicon nearby",
+    "turn": "white",
+    "goal": "checkmate",
+    "hintAbility": "rookAstronomicon",
+    "boardAbilities": [],
+    "pieces": [
+      {"square": "b1", "type": "king", "color": "white", "id": "wk"},
+      {"square": "g8", "type": "king", "color": "black", "id": "bk"},
+      {"square": "a1", "type": "rook", "color": "white", "id": "wr", "abilities": ["rookAstronomicon"]},
+      {"square": "h7", "type": "queen", "color": "white", "id": "wq"},
+      {"square": "f7", "type": "pawn", "color": "black", "id": "bp"},
+      {"square": "g7", "type": "pawn", "color": "black", "id": "bp2"},
+      {"square": "h8", "type": "pawn", "color": "black", "id": "bp3"}
+    ],
+    "solution": [{"from": "h7", "to": "h8"}]
+  }
+]

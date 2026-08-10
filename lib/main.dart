@@ -4,7 +4,10 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'auth/auth_service.dart';
 import 'l10n/app_strings.dart';
+import 'l10n/gen/app_localizations.dart';
 import 'l10n/locale_controller.dart';
+import 'l10n/supported_locales.dart';
+import 'notifications/push_service.dart';
 import 'screens/home_screen.dart';
 import 'theme/balatro_theme.dart';
 
@@ -24,6 +27,8 @@ Future<void> main() async {
   final localeController = LocaleController();
   final auth = AuthService();
   await Future.wait([localeController.load(), auth.load()]);
+  // Safe no-op when google-services.json / Firebase is not configured.
+  await PushService.instance.init(auth);
 
   runApp(
     SuperChessApp(
@@ -81,8 +86,9 @@ class _SuperChessAppState extends State<SuperChessApp>
         title: 'SuperChess',
         debugShowCheckedModeBanner: false,
         locale: locale,
-        supportedLocales: const [Locale('ru'), Locale('en')],
+        supportedLocales: kSupportedLocales,
         localizationsDelegates: const [
+          AppLocalizations.delegate,
           GlobalMaterialLocalizations.delegate,
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,

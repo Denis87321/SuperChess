@@ -5,6 +5,7 @@
 - **Сайт**: Flutter Web (папка `public/` в git) → **Render Static Site**
 - **Сервер**: Dart (WebSocket + auth HTTP) → **Render Web Service** `wss://superchess-api.onrender.com/ws`
 - **БД**: Render Postgres (`DATABASE_URL`) для аккаунтов (ник + пароль)
+- **Redis** (опционально): `REDIS_URL` — pub/sub для нескольких инстансов API (`sc:*`)
 - Cloudflare Pages лучше не использовать как основной сайт из РФ (часто нужен VPN)
 
 ## Важно: API на Render засыпает
@@ -27,8 +28,37 @@ Web Service на free **засыпает ~после 15 минут**. Первы
 
 Проверка:
 
-- `https://superchess-api.onrender.com/health` → `{"ok":true,"auth":true}`  
-  (`auth:false` = нет БД / ошибка подключения)
+- `https://superchess-api.onrender.com/health` → `{"ok":true,"auth":true,...}`  
+  (`auth:false` = нет БД / ошибка подключения; `redis:true` = multi-instance fanout)
+
+### Redis (несколько инстансов WS)
+
+Без `REDIS_URL` сервер работает в single-instance режиме (как раньше).
+
+С Redis:
+
+1. Поднять Redis (Upstash / Render Redis / локально).
+2. В Environment API: `REDIS_URL=redis://:password@host:6379` (или `rediss://…`).
+3. Опционально `INSTANCE_ID` — читаемый id инстанса в логах и `/health`.
+
+Поведение:
+
+- Владелец партии пишет `sc:game:{id}:owner`.
+- События партии публикуются в `sc:game:{id}`; чужие инстансы доставляют локально подключённым клиентам.
+- Ход / resume с не-owner инстанса → `sc:game:{id}:ingress` → owner.
+- Presence: ключ `sc:presence:{userId}` (TTL ~90s).
+
+### Fair-play (облачный движок во время партии)
+
+В **rated**-партиях сервер асинхронно сравнивает ходы с Stockfish (короткий movetime). Высокий match-rate → soft-флаг в БД и WS `fairplay_alert` (без автобана).
+
+- `GET /games/:id/fairplay` — отчёт (sides + recent samples)
+- `GET /fairplay/flags` — список soft-флагов (auth)
+- Health: `"anticheat": true` (сэмплер всегда включён; нужен Stockfish)
+
+### Push (FCM)
+
+Клиент регистрирует токен в `POST /user/devices`. Сервер шлёт push, если задан `FCM_SERVER_KEY` (legacy FCM HTTP). Без ключа — no-op.
 
 Auth endpoints:
 

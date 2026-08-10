@@ -48,6 +48,13 @@ class GameEndMessages {
         if (winner == PieceColor.white) return 'Чёрные сдались';
         if (winner == PieceColor.black) return 'Белые сдались';
         return 'Сдача';
+      case GameEndReason.disconnect:
+        if (online && localColor != null && winner != null) {
+          return winner == localColor
+              ? 'Соперник отключился'
+              : 'Поражение: потеря связи';
+        }
+        return 'Отключение';
       case GameEndReason.timeout:
         if (winner == PieceColor.white) return 'Чёрные просрочили время';
         if (winner == PieceColor.black) return 'Белые просрочили время';
@@ -118,7 +125,7 @@ class GameEndMessages {
       case 'onlyEqualsKill':
         return 'Только равных: 5 взятий фигурами того же типа';
       case 'restlessKings':
-        return 'Беспокойные короли: король остался на стартовой клетке';
+        return 'Не сидится на месте: король не ушёл со своей клетки за 3 полухода';
       case 'cornerQuest':
         return 'Угловой квест: кони посетили 3 угла';
       case 'fatherDream':
@@ -126,7 +133,7 @@ class GameEndMessages {
       case 'ownHands':
         return 'Своими руками: короли оказались вплотную';
       case 'kingCenter':
-        return 'Король центра: король встал на d4/d5/e4/e5';
+        return 'Тур де Франс: король встал на одну из центральных клеток';
       case 'prioritySetup':
         return 'Приоритетная расстановка: заняты все приоритетные клетки';
       default:
@@ -157,6 +164,12 @@ class GameEndMessages {
       id: 'resign',
       title: 'Сдача',
       body: 'Игрок сдался. Победа соперника.',
+    ),
+    (
+      id: 'disconnect',
+      title: 'Отключение',
+      body:
+          'Игрок потерял связь и не вернулся за время ожидания (или вышел). Победа соперника.',
     ),
     (
       id: 'timeout',
@@ -249,8 +262,8 @@ class GameEndMessages {
     ),
     (
       id: 'kingCenter',
-      title: 'Король центра',
-      body: 'Король встал на одну из клеток d4, d5, e4, e5.',
+      title: 'Тур де Франс',
+      body: 'Первый король, вставший на одну из центральных клеток, побеждает.',
     ),
     (
       id: 'prioritySetup',

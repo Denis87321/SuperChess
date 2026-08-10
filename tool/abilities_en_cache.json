@@ -1,0 +1,1042 @@
+{
+  "boardPawnsSideways": {
+    "title": "At a crossroads",
+    "desc": "Your pawns can move straight, left and right"
+  },
+  "boardPawnsDiagonal": {
+    "title": "Partisans",
+    "desc": "Your pawns now move diagonally and eat in a straight line"
+  },
+  "boardPawnsBackward": {
+    "title": "One step back",
+    "desc": "Your pawns can move backwards"
+  },
+  "boardKingSwap": {
+    "title": "Royal Decree",
+    "desc": "Instead of castling, the king and rook can exchange places (even if there are pieces between them)"
+  },
+  "boardLavaRank": {
+    "title": "The floor is lava",
+    "desc": "A random horizontal line is covered with lava"
+  },
+  "boardExtraRank": {
+    "title": "New floor",
+    "desc": "The board becomes higher by 1 line"
+  },
+  "boardExtraFile": {
+    "title": "New vertical",
+    "desc": "A new vertical is emerging"
+  },
+  "boardFogOfWar": {
+    "title": "Fog of War",
+    "desc": "Players only see their pieces and the squares they are attacking."
+  },
+  "boardTide": {
+    "title": "Tide",
+    "desc": "Your pawns are 1 line further."
+  },
+  "boardDoubleStart": {
+    "title": "Double start",
+    "desc": "Pawns from the starting line can move 3 squares forward"
+  },
+  "boardSprint": {
+    "title": "Sprint",
+    "desc": "You have 10 seconds to choose a mod instead of 30"
+  },
+  "boardZebras": {
+    "title": "Zebras",
+    "desc": "All knights become common: both players move them on their turn. These knights cannot give check or checkmate"
+  },
+  "boardFisher": {
+    "title": "Fischer Chess",
+    "desc": "The royal line of both players is shuffled."
+  },
+  "boardFisherMadness": {
+    "title": "Fischer Madness",
+    "desc": "All player pieces are shuffled"
+  },
+  "boardNight": {
+    "title": "In the darkness of the night",
+    "desc": "For the next 3 moves, pieces can only move onto dark squares."
+  },
+  "boardDay": {
+    "title": "In the light of day",
+    "desc": "For the next 3 moves, pieces can only stand on light squares"
+  },
+  "boardColorblind": {
+    "title": "Colorblind",
+    "desc": "All figures are now different colors"
+  },
+  "boardPawnFront": {
+    "title": "Pawn front",
+    "desc": "All your pawns move forward 1 square if the path is clear"
+  },
+  "boardCavalry": {
+    "title": "By horse",
+    "desc": "All your pawns become knights for 3 moves"
+  },
+  "boardMirror": {
+    "title": "Mirror",
+    "desc": "The left and right borders of the board are connected"
+  },
+  "boardGhostCells": {
+    "title": "Ghost Cells",
+    "desc": "You can only walk through a few random cells, you cannot stand on them"
+  },
+  "boardAttraction": {
+    "title": "Attraction",
+    "desc": "Every 10 moves, all pieces move 1 square to the center of the board"
+  },
+  "boardVirus": {
+    "title": "Chess virus",
+    "desc": "After being captured, a piece infects an adjacent enemy piece: it loses one feature"
+  },
+  "boardInvisibleRegiment": {
+    "title": "Invisible Regiment",
+    "desc": "Both players do not see the opponent's pawns until they capture or reach the 4th line (for black - up to the 5th)"
+  },
+  "boardShuffle": {
+    "title": "Shuffle",
+    "desc": "Each square of the board randomly becomes light or dark - the alternation of colors disappears"
+  },
+  "boardTeleport": {
+    "title": "Teleport",
+    "desc": "Two random free cells are connected: entry to one = exit to the other"
+  },
+  "boardVanityFair": {
+    "title": "Vanity Fair",
+    "desc": "Each of your minor pieces (knight or bishop) has a 50% chance of becoming another minor piece"
+  },
+  "boardMinefield": {
+    "title": "Minefield",
+    "desc": "Invisible mines are placed on 1–3 random free cells: the next figure on the mine is destroyed"
+  },
+  "boardGolconda": {
+    "title": "Golconda",
+    "desc": "At the beginning of each move, with a probability of 1%, a pawn, knight or bishop of the player whose turn it is will fall onto an empty square."
+  },
+  "boardUnbridledHorse": {
+    "title": "Horse without a bridle",
+    "desc": "At the beginning of the move, with a 5% probability, your horse randomly makes a move to a random available square"
+  },
+  "boardBaskerville": {
+    "title": "Baskerville Effect",
+    "desc": "For both players: if a player puts 3 checks on the enemy king in a game, the king will die of fear"
+  },
+  "boardBloodOath": {
+    "title": "Blood Oath",
+    "desc": "When checkmate, the king can eat his piece nearby and take its place to avoid checkmate"
+  },
+  "boardSilentFile": {
+    "title": "Dumb vertical",
+    "desc": "The pieces on the chosen file cannot give check or mate"
+  },
+  "boardFourHorsemen": {
+    "title": "4 horsemen",
+    "desc": "The first capture of each knight turns the victim into your piece: both remain on the square until someone leaves"
+  },
+  "boardReroll": {
+    "title": "Re-election",
+    "desc": "All players can update the proposed mods until the end of the game"
+  },
+  "boardPassiveAggression": {
+    "title": "Passive aggression",
+    "desc": "Each player must check at least once in 10 of his moves, otherwise he loses; after check the counter is 10 again"
+  },
+  "boardSkipTurn": {
+    "title": "I'm still thinking",
+    "desc": "Both players can skip a move and pass it to their opponent"
+  },
+  "boardTroopFatigue": {
+    "title": "Troop fatigue",
+    "desc": "One piece cannot move two moves in a row"
+  },
+  "boardCombatOptics": {
+    "title": "Combat optics",
+    "desc": "The bishop, rook and queen move no further than 3 cells without capturing, and without limit when capturing"
+  },
+  "boardKingOfHill": {
+    "title": "King of the Hill",
+    "desc": "Visited cells are colored in the player's color; staining more than 48 cells out of 64 wins"
+  },
+  "boardSecretRoute": {
+    "title": "Secret route",
+    "desc": "Each player receives a hidden route of three squares; visiting all three brings victory"
+  },
+  "boardRoyalPilgrimage": {
+    "title": "Royal pilgrimage",
+    "desc": "A king reaching the opponent's extreme rank without check brings his player victory"
+  },
+  "boardMightMakesRight": {
+    "title": "The right of the strong",
+    "desc": "A figure can only take pieces not more expensive than itself; the king can take everyone and everyone can attack the king"
+  },
+  "boardExpeditionaryCorps": {
+    "title": "Survey Corps",
+    "desc": "A piece in the opponent's half cannot return to its own half until it has made at least one capture"
+  },
+  "boardWitnessProtection": {
+    "title": "Witness Protection Program",
+    "desc": "Both players secretly choose one of their pieces, except the king; her first take is canceled"
+  },
+  "boardDeserters": {
+    "title": "Deserters",
+    "desc": "Each player secretly has a deserter pawn; on the enemy side it changes color"
+  },
+  "boardLetterH": {
+    "title": "H",
+    "desc": "Make the letter H from 7 of your pieces - win"
+  },
+  "boardFullCircle": {
+    "title": "Full circle",
+    "desc": "A rook visiting all 4 corner cells brings victory"
+  },
+  "boardArchitect": {
+    "title": "Architect",
+    "desc": "3–8 walls appear between random adjacent cells: you cannot walk or attack through them"
+  },
+  "boardBigAssortment": {
+    "title": "Large assortment",
+    "desc": "Only you choose from 4 mods in the wave until the end of the game; the opponent is still from 3"
+  },
+  "boardBlindSpot": {
+    "title": "Blind spot",
+    "desc": "Rival mods are hidden by question marks; yours are visible as usual"
+  },
+  "boardOnlyEqualsKill": {
+    "title": "Only an equal will kill",
+    "desc": "Five captures of pieces of the same type as the captured one bring victory."
+  },
+  "boardMarseillesChess": {
+    "title": "Marseille chess",
+    "desc": "In one move, the player makes two consecutive movements. In a balanced variation, White makes only one move on the first move"
+  },
+  "boardInitiativeFear": {
+    "title": "Fear of initiative",
+    "desc": "The first player whose piece is eaten additionally selects a mod outside the normal wave once every 3 turns"
+  },
+  "boardSwamp": {
+    "title": "What are you doing in my swamp",
+    "desc": "The piece gets stuck after a move: you can’t move it on your next move (you can with others)"
+  },
+  "boardCollectiveMyopia": {
+    "title": "Collective myopia",
+    "desc": "Bishops, rooks and queens cannot move further than 3 squares"
+  },
+  "boardTerritoryExpand": {
+    "title": "Territory expansion",
+    "desc": "The Z and I verticals appear on the board immediately"
+  },
+  "boardFrostMap": {
+    "title": "Frosty card",
+    "desc": "Each figure has a frost counter of 0–3 (normal → cold → getting cold → frozen). For a move without a torch next to it +1, next to a torch -1. The piece does not move to 3. Each player has 3 torches; The eaten torch goes to the nearest ally. Just the start of the game."
+  },
+  "boardScorchingSun": {
+    "title": "scorching sun",
+    "desc": "The sun burns 3–6 cells (changes every 5 moves). Heating 0→3 in 3 half-moves of the owner of the figure: on the 3rd the figure dies. Outside the sun, heating drops as the wearer moves"
+  },
+  "boardTurncoats": {
+    "title": "Renegades",
+    "desc": "Each player has one spy among the minor pieces. You see an enemy spy and can defeat him, revealing him to your side. A spy cannot checkmate “his” king"
+  },
+  "boardInkBlot": {
+    "title": "ink blot",
+    "desc": "After a capture, a spot remains on the cell for 4 moves: pieces on the spot cannot give check."
+  },
+  "boardGravityWell": {
+    "title": "Gravity well",
+    "desc": "Select an empty well cell. Every 6 half-moves, pieces within a radius of 2 move towards him by 1, if free (there is no king)."
+  },
+  "boardIdealSymmetry": {
+    "title": "Perfect symmetry",
+    "desc": "The board strives for mirror symmetry around the center: asymmetrical pairs of cells are periodically aligned."
+  },
+  "boardShadowRight": {
+    "title": "Right of the shadow",
+    "desc": "Each of your figures has a “shadow” - a cell that is symmetrical about the center. Once per game, a piece can step into its shadow instead of moving, if it is free."
+  },
+  "boardCenterTax": {
+    "title": "Center tax",
+    "desc": "Entering d4/d5/e4/e5 costs a tax: this piece does not capture on its next move."
+  },
+  "boardWalkingCastle": {
+    "title": "Howl's Moving Castle",
+    "desc": "Walls appear on the board like the Architect, but every 5 moves each wall moves 1 orthogonally if the path is clear."
+  },
+  "boardInvisibleHand": {
+    "title": "invisible hand",
+    "desc": "Once every 8 of your moves, your opponent chooses one of your pieces (not the king): your next move with this piece is mandatory, if there is a legal one."
+  },
+  "boardRiver": {
+    "title": "River",
+    "desc": "Select a horizontal river with two fords. You can only cross through fords; You can't stay on the river."
+  },
+  "boardForbiddenLetter": {
+    "title": "Forbidden letter",
+    "desc": "A random file is prohibited for entry for 6 moves to everyone except kings. Already standing figures can leave, but not come back."
+  },
+  "boardEarnedRest": {
+    "title": "Well-deserved rest",
+    "desc": "After a series of quiet moves, a piece can declare rest: it does not move for one half-move and cannot be captured."
+  },
+  "modeTimeZone": {
+    "title": "Time zone",
+    "desc": "On odd-numbered moves, White’s pieces move as usual, and Black’s pieces move a maximum of 1 square; in even numbers - vice versa."
+  },
+  "modeMateVeto": {
+    "title": "Statistician",
+    "desc": "Secretly select an enemy piece - it cannot checkmate (you can attack the king's square)."
+  },
+  "modeDebtPit": {
+    "title": "Debt hole",
+    "desc": "Capturing enemy pieces increases your debt by 1, and losing a piece decreases it by 1. With a debt of 6, you lose."
+  },
+  "modeWasteland": {
+    "title": "Badlands",
+    "desc": "After your move, you leave barren land - an enemy piece that steps on the square misses the next move."
+  },
+  "modeBus": {
+    "title": "Bus",
+    "desc": "In the event of a stalemate, the player with the fewest pieces on the board wins."
+  },
+  "modeShopToken": {
+    "title": "In the name of a higher goal",
+    "desc": "Players can sell one of their pieces for a token. The token is spent to cancel one of your moves."
+  },
+  "modeSeasons": {
+    "title": "Seasons",
+    "desc": "Every 6 turns the weather changes: first Vulcan."
+  },
+  "modeBloodFeud": {
+    "title": "Blood feud",
+    "desc": "If after your capture the opponent does not respond with a capture within 2 half moves, enmity breaks out: you receive a bonus mod."
+  },
+  "modePrioritySetup": {
+    "title": "Prioritization",
+    "desc": "4 priority squares are marked on the board (2 per side). The first one to occupy all of his own wins."
+  },
+  "modeBrokenPerspective": {
+    "title": "Broken Perspective",
+    "desc": "The pawns are promoted to the 7th rank for White and to the 2nd rank for Black."
+  },
+  "modeCallOf22": {
+    "title": "Summons '22",
+    "desc": "The board expands to 10x8; Additional pawns appear on the extreme Z and I files."
+  },
+  "modeKriegspiel": {
+    "title": "Kriegspiel",
+    "desc": "Only your own figures are visible. Moves are tried blindly; Captures, checks and impossibility of a move are announced."
+  },
+  "modeKingCenter": {
+    "title": "Tour de France",
+    "desc": "The first king to stand on one of the central squares wins."
+  },
+  "modeAtomic": {
+    "title": "Atomic Chess",
+    "desc": "When captured, a 3x3 area explodes (pawns do not explode). The king is in the explosion zone - his side is defeated."
+  },
+  "modeCrazyhouse": {
+    "title": "Crazyhouse",
+    "desc": "Captured pieces go into the hand and can be dropped to a free square instead of moving (pawns - not to the outermost ranks)."
+  },
+  "modeDuckChess": {
+    "title": "Duck Chess",
+    "desc": "After each move you need to move the “duck” to a free cell. You can't walk through the duck or pick it up - it blocks the cage."
+  },
+  "pawnSideways": {
+    "title": "Carcinization",
+    "desc": "The selected pawn can move 1 square sideways"
+  },
+  "pawnInverted": {
+    "title": "Diagonal move",
+    "desc": "The chosen pawn moves diagonally and eats straight"
+  },
+  "pawnAlwaysDoubleStep": {
+    "title": "Long stride",
+    "desc": "The chosen pawn can always move 2 squares forward"
+  },
+  "pawnRam": {
+    "title": "To ram",
+    "desc": "The selected pawn moves and eats only forward, not diagonally"
+  },
+  "pawnAirborne": {
+    "title": "Airborne",
+    "desc": "The selected pawn can jump over the piece directly in front of it once"
+  },
+  "bishopBoomerang": {
+    "title": "Boomerang",
+    "desc": "After the next capture, the selected piece immediately returns to the square from which it moved"
+  },
+  "pawnKamikaze": {
+    "title": "Kamikaze",
+    "desc": "On your next turn, the selected pawn explodes and pushes adjacent pieces 1 square away from itself, if possible"
+  },
+  "pawnCaliph": {
+    "title": "Caliph for an hour",
+    "desc": "On your 1st move, the chosen pawn becomes a queen, then a pawn again"
+  },
+  "pawnSticky": {
+    "title": "Lipota",
+    "desc": "An enemy piece that eats the selected pawn will not be able to move on its next move."
+  },
+  "pawnPolymorph": {
+    "title": "Polymorph",
+    "desc": "After capture, the selected pawn becomes the type of captured piece for the next 1 move and moves like it"
+  },
+  "pawnInheritance": {
+    "title": "Inheritance",
+    "desc": "After the death of the selected pawn, all its mods are transferred to its nearest pawn"
+  },
+  "pawnRansom": {
+    "title": "Ransom",
+    "desc": "When trying to capture the selected pawn, you can destroy one of its mods and cancel the capture. Can only appear if the player already has a pawn with the mod."
+  },
+  "pawnForTheKing": {
+    "title": "In the name of the King",
+    "desc": "If the chosen pawn dies on a mine, your king gets the mod's choice"
+  },
+  "pawnCamouflageNet": {
+    "title": "Camouflage network",
+    "desc": "A piece surrounded by three or more of your pawns is invisible to your opponent"
+  },
+  "pawnTrench": {
+    "title": "Trench",
+    "desc": "If the selected pawn has not moved for 5 or more of its moves, it can only be captured with two or more attacks"
+  },
+  "rookSignalFire": {
+    "title": "Signal fire",
+    "desc": "A random cell under the fog of war is permanently unlocked for you"
+  },
+  "pawnAvengeMe": {
+    "title": "Avenge me",
+    "desc": "If the chosen pawn is captured, any adjacent allied pawn can capture the captured piece even with an unusual move"
+  },
+  "pawnCaravan": {
+    "title": "Caravan",
+    "desc": "Doubled or tripled pawns selected on the same file move forward simultaneously"
+  },
+  "pawnFaceControl": {
+    "title": "Face control",
+    "desc": "The enemy piece directly in front of the chosen pawn misses its next move"
+  },
+  "knightRearing": {
+    "title": "rear up",
+    "desc": "Other pieces can move onto the square of the selected knight; this horse can't be eaten"
+  },
+  "knightLongJump": {
+    "title": "Pegasus",
+    "desc": "The selected horse jumps only on 3+1, not 2+1"
+  },
+  "knightSecondChance": {
+    "title": "Second chance",
+    "desc": "When captured, the selected knight returns to the previous square if it is free"
+  },
+  "knightGallop": {
+    "title": "Gallop",
+    "desc": "After the move, the selected knight can immediately make a second jump to an empty square"
+  },
+  "knightDust": {
+    "title": "Dust from under hooves",
+    "desc": "The square from which the selected knight left is inaccessible to anyone for 1 move"
+  },
+  "knightCentaur": {
+    "title": "Centaur",
+    "desc": "The selected knight can also move as a king 1 square"
+  },
+  "knightTrojan": {
+    "title": "Trojan horse",
+    "desc": "After 3 moves, the chosen knight explodes and destroys all surrounding pieces; the countdown is visible from the horse"
+  },
+  "knightDuel": {
+    "title": "Challenge to a duel",
+    "desc": "The chosen knight chooses an enemy piece; Until one of the duelists dies, they can only take each other"
+  },
+  "knightGuard": {
+    "title": "Guard",
+    "desc": "The selected knight chooses an available square and defends it for 3 moves: it immediately captures an enemy piece placed there out of turn"
+  },
+  "knightTour": {
+    "title": "Horse riding tour",
+    "desc": "After visiting 8 different cells, the selected horse receives an additional mod"
+  },
+  "knightDoppelgangerOnce": {
+    "title": "Double",
+    "desc": "After the move, the chosen knight leaves an illusion on the starting square once; only her opponent can see her"
+  },
+  "knightDoppelgangers": {
+    "title": "Doubles",
+    "desc": "After each move, the chosen knight leaves an illusion at the start; only the opponent can see them"
+  },
+  "knightFifthLeg": {
+    "title": "Fifth leg",
+    "desc": "The selected knight moves to 2+2 squares instead of 2+1"
+  },
+  "bishopElusive": {
+    "title": "Elusive",
+    "desc": "The selected piece can only be captured if it is attacked by at least two enemy pieces"
+  },
+  "knightStomp": {
+    "title": "Stomp",
+    "desc": "After the next move of the selected knight, neighboring enemy pawns move away from it if possible"
+  },
+  "knightSurveyor": {
+    "title": "Surveyor",
+    "desc": "Cells visited by the selected horse are protected from random disasters"
+  },
+  "knightCornerQuest": {
+    "title": "Not an easy task",
+    "desc": "If the player’s knights together visit any 3 of the 4 corner cells - victory"
+  },
+  "knightRideMe": {
+    "title": "Sit on me",
+    "desc": "Before the selected knight moves, select an adjacent pawn: it will move with it, maintaining its relative position"
+  },
+  "knightMagicHooves": {
+    "title": "Magic hooves",
+    "desc": "The next move of the selected knight creates a portal from the starting square to the final one"
+  },
+  "bishopHopAlly": {
+    "title": "Jump over your",
+    "desc": "The chosen bishop can jump over one of its pieces"
+  },
+  "bishopColorChaos": {
+    "title": "Color chaos",
+    "desc": "Once selected, the bishop can move to an adjacent empty square, changing the color of the field"
+  },
+  "bishopInquisitor": {
+    "title": "Inquisitor",
+    "desc": "Instead of capturing, the chosen bishop can remove one mod from the attacked enemy piece while remaining in place"
+  },
+  "bishopColorVow": {
+    "title": "Colored oath",
+    "desc": "The chosen elephant is tied to the color of its square and dies on another color; but it can ricochet 1 square from the edge of the board"
+  },
+  "bishopBrothers": {
+    "title": "Brothers in mind",
+    "desc": "If you have 2+ bishops, the chosen one's move moves all your bishops by the same vector where possible"
+  },
+  "bishopSanctuary": {
+    "title": "Sanctuary",
+    "desc": "The chosen bishop chooses an ally other than the king; the next time the defendant is captured, the elephant dies instead"
+  },
+  "bishopExcommunication": {
+    "title": "Excommunication",
+    "desc": "Once a piece is captured by the chosen bishop, other enemies of the same type cannot capture it until that bishop's next move."
+  },
+  "bishopTithe": {
+    "title": "Tithe",
+    "desc": "A modified enemy that leaves the selected bishop's diagonal loses one mod until that bishop's next move."
+  },
+  "bishopPilgrimage": {
+    "title": "Pilgrimage",
+    "desc": "Having visited all four quarters of the board, the chosen bishop chooses an ally and protects him from the next capture"
+  },
+  "bishopCrusade": {
+    "title": "Crusade",
+    "desc": "After two captures by the chosen bishop, a random cataclysm is triggered on the board"
+  },
+  "bishopPost": {
+    "title": "Fast",
+    "desc": "Three moves of the selected bishop without capturing gives two mod selections in a row"
+  },
+  "bishopParallelWorlds": {
+    "title": "Parallel worlds",
+    "desc": "The chosen bishop changes places once with an allied piece on the same diagonal"
+  },
+  "bishopAlcove": {
+    "title": "Alcove",
+    "desc": "The chosen bishop can once create one square beyond the edge of the board and stand on it"
+  },
+  "bishopGlassCeiling": {
+    "title": "glass ceiling",
+    "desc": "The chosen bishop can jump over one enemy piece instead of capturing; she misses a turn"
+  },
+  "rookHopAlly": {
+    "title": "Jump over your",
+    "desc": "The selected rook can jump over one of its pieces"
+  },
+  "rookRam": {
+    "title": "To ram",
+    "desc": "The selected rook can push its piece 1 square further and take its place"
+  },
+  "rookAstronomicon": {
+    "title": "Astronomicon",
+    "desc": "The selected rook burns its vertical for 3 of its half-moves: the enemy piece that stands on the burned cell is destroyed; the king cannot stand there. Appears only if there is a rook on the file without enemies; with several - choice."
+  },
+  "rookFortress": {
+    "title": "Fortress",
+    "desc": "The square in front of the selected rook is a strengthening: enemy pawns and minor pieces cannot eat the piece on it"
+  },
+  "rookStandardBearer": {
+    "title": "Standard Bearer",
+    "desc": "Pieces on eight squares around the selected rook cannot be moved by forced mod effects"
+  },
+  "rookCustoms": {
+    "title": "Customs",
+    "desc": "For the next 3 turns, enemies cannot stand on a randomly chosen rank or file of a rook if they are not already on it"
+  },
+  "rookDrawbridge": {
+    "title": "Drawbridge",
+    "desc": "Allied pieces can pass through the selected rook"
+  },
+  "rookCurfew": {
+    "title": "Curfew",
+    "desc": "The enemy next to the selected rook cannot move away from it for 3 of his moves until the rook itself moves away"
+  },
+  "rookSiegeCalculation": {
+    "title": "Siege crew",
+    "desc": "If the selected rook can capture the same enemy piece for 3 moves in a row, but does not capture it, this piece disappears"
+  },
+  "rookFerry": {
+    "title": "Crossing",
+    "desc": "For the selected rook, the left and right borders of the board are connected, like the Mirror"
+  },
+  "rookSignalTower": {
+    "title": "Signal tower",
+    "desc": "The selected rook reveals the fog of war on its vertical and horizontal lines"
+  },
+  "queenKnightStep": {
+    "title": "Horse move",
+    "desc": "The chosen queen additionally moves as a knight"
+  },
+  "queenHopAlly": {
+    "title": "Jump over your",
+    "desc": "The chosen queen can jump over one of its pieces"
+  },
+  "queenSplit": {
+    "title": "Separation",
+    "desc": "The selected queen disappears: a bishop and a rook remain on the square at the same time"
+  },
+  "queenMatka": {
+    "title": "Uterus",
+    "desc": "The selected queen cannot eat anyone, but every 3 of your moves a pawn appears around him on a random free square"
+  },
+  "queenShadowEmpress": {
+    "title": "Empress of Shadows",
+    "desc": "The selected queen additionally moves like a knight (2+1), but can only stand on squares of the same color (selected randomly)"
+  },
+  "queenEscape": {
+    "title": "Escape",
+    "desc": "If the selected queen is eaten, your bishop or rook will appear on a random free square (50%), without checkmate to the enemy king"
+  },
+  "queenDelayedSentence": {
+    "title": "Deferred sentence",
+    "desc": "The chosen queen marks the enemy being attacked; after the opponent's move, he dies if he is still under the queen's attack"
+  },
+  "queenTrophyEmbargo": {
+    "title": "Embargo on trophies",
+    "desc": "Capturing a square controlled by the selected queen no longer gives a reward (compatibility rule; mod waves do not depend on captures)"
+  },
+  "queenYouShallNotPass": {
+    "title": "You won't pass!",
+    "desc": "An enemy piece that captures the selected queen is also destroyed"
+  },
+  "kingRoyalDecree": {
+    "title": "Royal Decree",
+    "desc": "The selected king and rook are swapped, even if there are pieces between them"
+  },
+  "kingExtraStep": {
+    "title": "Long stride",
+    "desc": "Your king can move 2 squares in any direction (for example, from e1 to e3)"
+  },
+  "kingShield": {
+    "title": "King's Shield",
+    "desc": "Once chosen king avoids checkmate by teleporting to a random free square"
+  },
+  "kingAura": {
+    "title": "Aura",
+    "desc": "The selected king cannot be checkmated with a pawn"
+  },
+  "kingDoppelganger": {
+    "title": "Doppelganger",
+    "desc": "All your pawns and queen look like a king"
+  },
+  "kingThrone": {
+    "title": "The Power of the Throne",
+    "desc": "While the chosen king is on the throne, check is counted only from pieces no further than 3 squares"
+  },
+  "kingFamilyUnion": {
+    "title": "Uniting families",
+    "desc": "The chosen king can eat his minor piece (knight or bishop) nearby and until the end of the game he can only move like it"
+  },
+  "kingPrisonerExchange": {
+    "title": "Prisoner exchange",
+    "desc": "You choose your piece taken by your opponent, and your opponent chooses the piece you took; both return to random free cells"
+  },
+  "kingRemoveEnemyMod": {
+    "title": "Not before they're hanged",
+    "desc": "You select and remove one mod from any enemy piece"
+  },
+  "kingAssemblyHall": {
+    "title": "Meeting room",
+    "desc": "Pieces next to the chosen king cannot be the target of a random cataclysm"
+  },
+  "randomShift": {
+    "title": "Shift",
+    "desc": "Vertical? moves 1 square"
+  },
+  "randomCalm": {
+    "title": "Calm",
+    "desc": "Nothing happens"
+  },
+  "randomQuarantine": {
+    "title": "Quarantine",
+    "desc": "A random free cell is unavailable for 3–10 moves"
+  },
+  "randomEarthquake": {
+    "title": "Earthquake",
+    "desc": "Horizontal? moves left or right by 1 square"
+  },
+  "randomTyphoon": {
+    "title": "Typhoon",
+    "desc": "2x2 area rotates clockwise"
+  },
+  "randomWormhole": {
+    "title": "Worm-hole",
+    "desc": "A random empty cell is not available until the end of the game"
+  },
+  "randomClone": {
+    "title": "Clone",
+    "desc": "Another pawn appears in your half"
+  },
+  "randomNoQueen": {
+    "title": "Without a queen",
+    "desc": "The enemy queen turns into a knight for 2 of its moves"
+  },
+  "randomTruce": {
+    "title": "Truce",
+    "desc": "You cannot take pieces for 3 moves; Checkmate is temporarily not counted"
+  },
+  "randomMeteorRain": {
+    "title": "Meteor shower",
+    "desc": "Meteorites fall on 3 random cells, destroying all pieces except kings"
+  },
+  "randomCensus": {
+    "title": "Census",
+    "desc": "A random enemy figure with mods will have one random mod disappear"
+  },
+  "randomExterminatus": {
+    "title": "exterminatus",
+    "desc": "During the next turn for both players: a check to the enemy king instantly kills him"
+  },
+  "randomGoldenThrone": {
+    "title": "Golden throne",
+    "desc": "If your pawn dies, your king chooses his mod"
+  },
+  "randomLottery": {
+    "title": "Lottery",
+    "desc": "Your two random non-king pieces switch types"
+  },
+  "randomPlague": {
+    "title": "Plague",
+    "desc": "Each turn a figure has a 1% chance of contracting the plague and dying after 3 turns; next to the patient the chance is 10%. Kings can get sick too"
+  },
+  "randomMutation": {
+    "title": "Mutation",
+    "desc": "Your random pawn becomes a random minor piece (knight or bishop) of the same color"
+  },
+  "randomAuction": {
+    "title": "Auction",
+    "desc": "A random square becomes an auction one: whoever stands on it first will receive 2 mods"
+  },
+  "randomRightToMove": {
+    "title": "Right of way",
+    "desc": "Choose an enemy piece: on the next move, the opponent must move it if he can"
+  },
+  "randomFurtherMore": {
+    "title": "Further - more",
+    "desc": "Nothing is happening now; the next time you select you will be able to update the suggested mods once"
+  },
+  "randomWordOfHonor": {
+    "title": "The boy's word",
+    "desc": "Select a square: if you stand on it on your next turn, you will receive a mod, otherwise you will lose one random mod"
+  },
+  "randomSymmetry": {
+    "title": "Symmetry",
+    "desc": "For the next 3 moves, your opponent must move with the same types of pieces that you moved before him"
+  },
+  "randomVeto": {
+    "title": "Veto",
+    "desc": "Select an enemy piece: the opponent cannot move it for the next 3 turns"
+  },
+  "randomInitiativeIntercept": {
+    "title": "Seizing the Initiative",
+    "desc": "The player with the weaker army gets an extra turn without capture, checkmate or checkmate."
+  },
+  "randomStrike": {
+    "title": "Strike",
+    "desc": "Both players cannot move pieces of a random type for 3–10 moves"
+  },
+  "randomBorderClosure": {
+    "title": "Closing borders",
+    "desc": "The next 2 moves of the piece cannot cross the middle of the board"
+  },
+  "randomMyopia": {
+    "title": "Myopia",
+    "desc": "Bishops, rooks and queens temporarily see and move no further than 2 squares"
+  },
+  "randomMagicShutdown": {
+    "title": "Turning off magic",
+    "desc": "For the next 3–10 turns all mods are disabled"
+  },
+  "randomTimeCapsule": {
+    "title": "Time capsule",
+    "desc": "The position is maintained; After two turns of each player, the board returns to it, but the earned mods are saved"
+  },
+  "randomSuicideCapture": {
+    "title": "Suicide bomber",
+    "desc": "The next capture destroys both the captured piece and the piece that captured it"
+  },
+  "randomMeatGrinder": {
+    "title": "Meat grinder",
+    "desc": "Both players' next move must be a capture if a capture is possible"
+  },
+  "randomQuicksand": {
+    "title": "Quicksand",
+    "desc": "2–5 hidden cells are quicksand. The risen piece does not move for 2–5 moves; the cell opens forever"
+  },
+  "randomMoveSteal": {
+    "title": "Stealing a move",
+    "desc": "Once per game, instead of your move, announce a “steal”: your opponent moves, but you choose the piece. Then your turn is skipped."
+  },
+  "randomSerialManiac": {
+    "title": "Serial maniac",
+    "desc": "The third capture by the same piece of yours for the game turns it into a pawn (except for the king)."
+  },
+  "randomSnailTrail": {
+    "title": "Snail trail",
+    "desc": "The figure leaves the slime on the care cell for 2 turns: long-range ones move through the slime for a maximum of 1 cell."
+  },
+  "randomDisinfo": {
+    "title": "Disinformation",
+    "desc": "You get 3 false cell markers: the opponent sees them as mines, lava or walls, but they are fake before interaction."
+  },
+  "randomFamilyContract": {
+    "title": "Family contract",
+    "desc": "All your pieces of the same random type accumulate a common move counter. On the 6th - a free move with any piece of this type without capturing."
+  },
+  "randomKansasHurricanes": {
+    "title": "Hurricanes in Kansas",
+    "desc": "Each vertical receives wind ←/→ for several moves: pawns after moving forward are carried 1 downwind, if free."
+  },
+  "randomLoneWarrior": {
+    "title": "One warrior in the field",
+    "desc": "A piece (except the king) can take only if at least one allied piece also attacks the victim's square."
+  },
+  "randomTwentyOne": {
+    "title": "twenty one",
+    "desc": "Captures accumulate points based on the value of the pieces. Exactly 21 - bonus mod; busting - penalty: skipping a move or resetting the score."
+  },
+  "pawnArchivist": {
+    "title": "Archivist",
+    "desc": "The player chooses one of his pawns. She remembers all the squares she stepped on. Once per game you can return to one of them if the cell is free."
+  },
+  "pawnPairStep": {
+    "title": "Pair step",
+    "desc": "The chosen pawn chooses an ally pawn on an adjacent square: while both are alive, a move by one can move both forward by 1 if the path is clear."
+  },
+  "pawnFarsight": {
+    "title": "Farsightedness",
+    "desc": "The selected pawn moves only 2 squares forward and shoots 2 squares diagonally forward. You cannot jump over or hit the pieces."
+  },
+  "pawnMortar": {
+    "title": "Mortar",
+    "desc": "The selected pawn shoots 2 squares directly in front of it every 3 moves: the piece there is destroyed. The timer is visible to both."
+  },
+  "pawnSapper": {
+    "title": "Sapper",
+    "desc": "The chosen pawn disarms the hidden trap upon entering the square and does not itself suffer. Appears only when traps are active."
+  },
+  "pawnHereditaryEdict": {
+    "title": "Hereditary decree",
+    "desc": "When promoting a pawn, the opponent can only choose a type of piece that he does not currently have on the board."
+  },
+  "pawnInfantryShadow": {
+    "title": "Shadow of the Foot Soldier",
+    "desc": "While the chosen pawn is alive, the square directly behind it (towards your edge) is a shelter: the allied piece there is not captured by the pawn."
+  },
+  "pawnStarvation": {
+    "title": "Hunger strike",
+    "desc": "The player chooses an enemy pawn. If it does not eat 6 half-moves of the owner, it disappears. The counter is visible to both; taking resets it."
+  },
+  "pawnSeed": {
+    "title": "seed",
+    "desc": "After the death of the selected pawn, a seed remains on the cell: after 3 full moves, if the cell is free, your pawn is again without mods."
+  },
+  "pawnRockPaperScissors": {
+    "title": "Tsu-e-fa",
+    "desc": "Appears if there are mutually blocking pawns on the board. The player chooses the following pair: rock-paper-scissors until victory; the loser dies. The choice is visible to both."
+  },
+  "pawnDoubleLife": {
+    "title": "Double life",
+    "desc": "The selected pawn has a hidden second type (knight or bishop). Once per game, for one of your moves, she moves like him, then again a pawn. The type is secret for the enemy."
+  },
+  "pawnLittleBrother": {
+    "title": "Little brother",
+    "desc": "If there is an enemy non-king piece directly in front of the chosen pawn, it skips the next move."
+  },
+  "pawnSpotlight": {
+    "title": "Under the spotlights",
+    "desc": "If the selected pawn is attacked by enemy pawns for 6 moves in a row and is not eaten, it turns into a minor piece of your choice."
+  },
+  "pawnFuse": {
+    "title": "Wick",
+    "desc": "The chosen pawn puts a fuse on the escape square: after 2 moves the square explodes (non-kings). Both can see it."
+  },
+  "knightMaskSwap": {
+    "title": "Changing masks",
+    "desc": "The selected minor piece alternates between types after each move: knight ↔ bishop."
+  },
+  "bishopMaskSwap": {
+    "title": "Changing masks 1",
+    "desc": "The selected minor piece alternates between types after each move: bishop ↔ knight."
+  },
+  "knightNonAggression": {
+    "title": "Non-aggression pact",
+    "desc": "Choose your and the enemy's light pieces: they do not attack each other, but they hit the others and are hit by the others."
+  },
+  "bishopNonAggression": {
+    "title": "Non-Aggression Pact 1",
+    "desc": "Choose your and the enemy's light pieces: they do not attack each other, but they hit the others and are hit by the others."
+  },
+  "knightKingGuard": {
+    "title": "King's Guard",
+    "desc": "When in check, the selected minor piece automatically eats the checker or closes if it can - this does not waste your turn."
+  },
+  "bishopKingGuard": {
+    "title": "King's Guard 1",
+    "desc": "When in check, the selected minor piece automatically eats the checker or closes if it can - this does not waste your turn."
+  },
+  "knightNightWatch": {
+    "title": "Night watch of the horse",
+    "desc": "Only during the fog of war: the selected horse sees everything within a 2-cell radius through the fog."
+  },
+  "knightGallopContract": {
+    "title": "Gallop contract",
+    "desc": "Announce 3 route cells. If the chosen knight passes them in order, a random enemy non-king piece dies."
+  },
+  "knightTangledTrail": {
+    "title": "Tangled Trail",
+    "desc": "The selected knight bifurcates for one move: 2 destination cells are selected. On the next move you leave one knight."
+  },
+  "knightCustomsPath": {
+    "title": "Customs inspection",
+    "desc": "When moving with a knight, you choose one of two jumping routes; A random mod is removed from enemies along the route. The route is visible as a line."
+  },
+  "knightBucephalus": {
+    "title": "Bucephalus",
+    "desc": "If the chosen knight eats 3 enemy pieces, your king will be able to move as a knight once per game."
+  },
+  "knightHoofSmoke": {
+    "title": "Smoke from under the hooves",
+    "desc": "All squares on which the selected knight now stands are covered in fog for both players."
+  },
+  "knightDonkey": {
+    "title": "Donkey",
+    "desc": "The cells visited by the selected knight bind the piece for 1 move (like a “swamp”)."
+  },
+  "bishopInkTrail": {
+    "title": "ink trail",
+    "desc": "After the chosen bishop moves along the cells of the path for 1 turn, enemy pawns cannot move there."
+  },
+  "bishopGanesha": {
+    "title": "Ganesha",
+    "desc": "After the chosen bishop moves, it becomes a rook, then again a bishop - and so alternates."
+  },
+  "bishopHeretic": {
+    "title": "Heretic",
+    "desc": "Only if your pieces are smaller than the enemy's: the chosen bishop splits into 4 pawns on your side of the field."
+  },
+  "bishopRelicPower": {
+    "title": "The power of the relics",
+    "desc": "If the chosen elephant is taken, you have 3 half-moves: stand on the death square and leave - the elephant will be reborn without mods."
+  },
+  "bishopBlindingSacristy": {
+    "title": "Blinding sacristy",
+    "desc": "Capturing the chosen bishop blinds the square: the next one who stands there (not this bishop) does not attack for 1 move."
+  },
+  "bishopLayman": {
+    "title": "Layman",
+    "desc": "The chosen bishop does not capture the pawns; the pawns don't hit him."
+  },
+  "bishopProcession": {
+    "title": "Procession",
+    "desc": "The chosen bishop's move can move one allied pawn diagonally by 1 along the same beam, if free."
+  },
+  "bishopSchism": {
+    "title": "Church schism",
+    "desc": "The chosen bishop is divided into 2 half-bishops: each moves only along one of the two diagonals."
+  },
+  "bishopLambs": {
+    "title": "Lambs",
+    "desc": "The selected elephant protects all figures within a radius of 1 from cataclysms (for example, meteor shower)."
+  },
+  "bishopCartographer": {
+    "title": "Cartographer",
+    "desc": "Only during the fog of war: the bishop marks a square on its diagonal - the fog is removed from it forever for you."
+  },
+  "rookSeal": {
+    "title": "Seal",
+    "desc": "The chosen rook chooses the enemy non-king piece to attack: it does not move while the rook is alive or until the rook has made a move."
+  },
+  "rookIllDrive": {
+    "title": "I'll take you there",
+    "desc": "The next time the selected rook dismounts and then leaves the end square, a portal is created between the start and finish."
+  },
+  "rookCannotHide": {
+    "title": "You can't hide it",
+    "desc": "Only if the opponent hides the modes: the chosen rook reveals the modes of the pieces on its rank and file."
+  },
+  "queenCourtIntrigue": {
+    "title": "Court intrigue",
+    "desc": "The selected queen marks an enemy non-king piece outside a radius of 2 from its king: while the queen is alive, she cannot get closer than 2 to her king."
+  },
+  "queenFatherDream": {
+    "title": "Which my father never dreamed of",
+    "desc": "If the chosen queen receives 5 buff mods, you win outright."
+  },
+  "kingOwnHands": {
+    "title": "With your own hands",
+    "desc": "If your king is within 2 squares of the enemy king, you win. The mod can only be owned by one player."
+  },
+  "modeHolyRandom": {
+    "title": "Holy Random",
+    "desc": "Relevant for both. After a move, the piece has a 25% chance of changing type (same color). The king does not change and no one becomes king."
+  },
+  "modeZooShuffle": {
+    "title": "Shuffle at the Zoo",
+    "desc": "Each player's knights and bishops change places: knights on c and f, bishops on b and g."
+  },
+  "modeInsatiableHunger": {
+    "title": "Unquenchable Hunger",
+    "desc": "Queens of both players must take a piece every 5 of their moves, otherwise they die. You can take your own people, except the king."
+  },
+  "modeComeOn": {
+    "title": "Come on, come on",
+    "desc": "The piece that is the first to capture on the board immediately receives a mod out of the standings."
+  },
+  "modeVolcano": {
+    "title": "Volcano",
+    "desc": "Every 2 full turns, a volcano explodes on 2 visible random cells, destroying a piece. New cells are then selected."
+  },
+  "boardRestlessKings": {
+    "title": "Can't sit still",
+    "desc": "During each player's next 3 half-turns, his king must leave his square, otherwise that player loses."
+  },
+  "randomWarehouse": {
+    "title": "Warehouse",
+    "desc": "The next mod that your opponent loses from a piece, you can transfer to your own piece of the same type (if any); otherwise you wait for the right one."
+  },
+  "randomTwilightEclipse": {
+    "title": "Twilight. Saga. Eclipse",
+    "desc": "Random 4 of your pieces become invisible to the enemy for 10 of your half-moves."
+  },
+  "randomGestureMirror": {
+    "title": "Mirror of Gestures",
+    "desc": "Your opponent's next move after yours must end on a square of the same color as your last move."
+  },
+  "randomBlackMark": {
+    "title": "Black mark",
+    "desc": "A random enemy piece gets a mark: your next capture of that piece gives you two mod choices in a row."
+  }
+}

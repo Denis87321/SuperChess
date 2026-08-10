@@ -15,7 +15,11 @@ void main() {
       'dart',
       ['run', 'bin/server.dart'],
       workingDirectory: Directory.current.path,
-      environment: {...Platform.environment, 'PORT': '$port'},
+      environment: {
+        ...Platform.environment,
+        'PORT': '$port',
+        'GRACE_MS': '5000',
+      },
     );
     // Drain logs so the process does not block on a full pipe.
     server.stdout.transform(utf8.decoder).listen((_) {});
@@ -104,9 +108,128 @@ void main() {
     );
     expect(relayed['gameId'], gameId);
     expect(relayed['move'], isA<Map>());
+    expect(w['resumeToken'], isNotEmpty);
+    expect(b['resumeToken'], isNotEmpty);
 
     await white.sink.close();
     await black.sink.close();
+  });
+
+  test('disconnect enters grace and resume restores seat', () async {
+    final white = WebSocketChannel.connect(
+      Uri.parse('ws://127.0.0.1:$port/ws'),
+    );
+    final black = WebSocketChannel.connect(
+      Uri.parse('ws://127.0.0.1:$port/ws'),
+    );
+
+    final whiteMatched = Completer<Map<String, dynamic>>();
+    final blackMatched = Completer<Map<String, dynamic>>();
+    final blackSawDisconnect = Completer<Map<String, dynamic>>();
+    final blackSawReconnect = Completer<Map<String, dynamic>>();
+    final whiteResumeOk = Completer<Map<String, dynamic>>();
+
+    white.stream.listen((raw) {
+      final data = jsonDecode(raw as String) as Map<String, dynamic>;
+      if (data['type'] == 'matched' && !whiteMatched.isCompleted) {
+        whiteMatched.complete(data);
+      }
+    });
+    black.stream.listen((raw) {
+      final data = jsonDecode(raw as String) as Map<String, dynamic>;
+      if (data['type'] == 'matched' && !blackMatched.isCompleted) {
+        blackMatched.complete(data);
+      }
+      if (data['type'] == 'opponent_disconnected' &&
+          !blackSawDisconnect.isCompleted) {
+        blackSawDisconnect.complete(data);
+      }
+      if (data['type'] == 'opponent_reconnected' &&
+          !blackSawReconnect.isCompleted) {
+        blackSawReconnect.complete(data);
+      }
+    });
+
+    white.sink.add(jsonEncode({'type': 'find_game', 'name': 'Alice'}));
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    black.sink.add(jsonEncode({'type': 'find_game', 'name': 'Bob'}));
+
+    final w = await whiteMatched.future.timeout(const Duration(seconds: 5));
+    final b = await blackMatched.future.timeout(const Duration(seconds: 5));
+    expect(w['gameId'], b['gameId']);
+    final gameId = w['gameId'];
+    final resumeToken = w['resumeToken'] as String;
+
+    white.sink.add(
+      jsonEncode({
+        'type': 'move',
+        'gameId': gameId,
+        'move': {
+          'from': {'f': 4, 'r': 1},
+          'to': {'f': 4, 'r': 3},
+        },
+        'whiteMs': 290000,
+        'blackMs': 300000,
+      }),
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+
+    await white.sink.close();
+    final disc = await blackSawDisconnect.future.timeout(
+      const Duration(seconds: 5),
+    );
+    expect(disc['graceMs'], isA<int>());
+
+    final white2 = WebSocketChannel.connect(
+      Uri.parse('ws://127.0.0.1:$port/ws'),
+    );
+    white2.stream.listen((raw) {
+      final data = jsonDecode(raw as String) as Map<String, dynamic>;
+      if (data['type'] == 'resume_ok' && !whiteResumeOk.isCompleted) {
+        whiteResumeOk.complete(data);
+      }
+      if (data['type'] == 'pong') {
+        // heartbeat ok
+      }
+    });
+    white2.sink.add(jsonEncode({'type': 'ping', 't': 1}));
+    white2.sink.add(
+      jsonEncode({
+        'type': 'resume_game',
+        'gameId': gameId,
+        'resumeToken': resumeToken,
+      }),
+    );
+
+    final resume = await whiteResumeOk.future.timeout(
+      const Duration(seconds: 5),
+    );
+    expect(resume['color'], 'white');
+    expect(resume['eventLog'], isA<List>());
+    final log = resume['eventLog'] as List;
+    expect(log.any((e) => (e as Map)['type'] == 'move'), isTrue);
+
+    await blackSawReconnect.future.timeout(const Duration(seconds: 5));
+
+    await white2.sink.close();
+    await black.sink.close();
+  });
+
+  test('ping responds with pong', () async {
+    final client = WebSocketChannel.connect(
+      Uri.parse('ws://127.0.0.1:$port/ws'),
+    );
+    final pong = Completer<Map<String, dynamic>>();
+    client.stream.listen((raw) {
+      final data = jsonDecode(raw as String) as Map<String, dynamic>;
+      if (data['type'] == 'pong' && !pong.isCompleted) {
+        pong.complete(data);
+      }
+    });
+    client.sink.add(jsonEncode({'type': 'ping', 't': 42}));
+    final reply = await pong.future.timeout(const Duration(seconds: 5));
+    expect(reply['t'], 42);
+    await client.sink.close();
   });
 }
 

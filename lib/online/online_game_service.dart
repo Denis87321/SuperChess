@@ -8,19 +8,62 @@ class OnlineMatch {
     required this.gameId,
     required this.localColor,
     required this.opponentName,
+    this.resumeToken,
     this.rated = false,
     this.yourRating,
     this.opponentRating,
     this.opponentLoggedIn = false,
+    this.timeControlId = '5+0',
+    this.initialMs = 300000,
+    this.incrementMs = 0,
   });
 
   final String gameId;
   final PieceColor localColor;
   final String opponentName;
+  final String? resumeToken;
   final bool rated;
   final int? yourRating;
   final int? opponentRating;
   final bool opponentLoggedIn;
+  final String timeControlId;
+  final int initialMs;
+  final int incrementMs;
+}
+
+class OnlineLobbySnapshot extends OnlineEvent {
+  OnlineLobbySnapshot({required this.seeks, required this.count});
+  final List<Map<String, dynamic>> seeks;
+  final int count;
+}
+
+class OnlineIllegalMove extends OnlineEvent {
+  OnlineIllegalMove(this.message);
+  final String message;
+}
+
+class OnlineIllegalAction extends OnlineEvent {
+  OnlineIllegalAction(this.message, {this.action});
+  final String message;
+  final String? action;
+}
+
+class OnlineFairPlayAlert extends OnlineEvent {
+  OnlineFairPlayAlert({
+    required this.color,
+    required this.matchRate,
+    required this.samples,
+    this.soft = true,
+  });
+  final String color;
+  final double matchRate;
+  final int samples;
+  final bool soft;
+}
+
+class OnlineDmMessage extends OnlineEvent {
+  OnlineDmMessage(this.message);
+  final Map<String, dynamic> message;
 }
 
 sealed class OnlineEvent {}
@@ -38,8 +81,13 @@ class OnlineMatched extends OnlineEvent {
 }
 
 class OnlineOpponentMove extends OnlineEvent {
-  OnlineOpponentMove(this.move);
+  OnlineOpponentMove(this.move, {this.whiteMs, this.blackMs});
+
   final Move move;
+
+  /// Authoritative remaining times frozen by the mover at send time.
+  final int? whiteMs;
+  final int? blackMs;
 }
 
 class OnlineOpponentAbility extends OnlineEvent {
@@ -157,7 +205,53 @@ class OnlineClockSync extends OnlineEvent {
   final int blackMs;
 }
 
-class OnlineOpponentDisconnected extends OnlineEvent {}
+/// Local WebSocket dropped; auto-resume may be in progress.
+class OnlineConnectionLost extends OnlineEvent {}
+
+/// Opponent seat disconnected; [graceMs] until forfeit.
+class OnlineOpponentDisconnected extends OnlineEvent {
+  OnlineOpponentDisconnected({this.graceMs = 90000});
+
+  final int graceMs;
+}
+
+class OnlineOpponentReconnected extends OnlineEvent {}
+
+/// Grace expired / room closed without a clean game_over.
+class OnlineOpponentLeft extends OnlineEvent {}
+
+class OnlineResumeOk extends OnlineEvent {
+  OnlineResumeOk(this.match, {required this.eventLog});
+
+  final OnlineMatch match;
+  final List<Map<String, dynamic>> eventLog;
+}
+
+class OnlineResumeFailed extends OnlineEvent {
+  OnlineResumeFailed(this.message);
+  final String message;
+}
+
+class OnlinePrivateWaiting extends OnlineEvent {
+  OnlinePrivateWaiting(this.code);
+  final String code;
+}
+
+class OnlineSpectateOk extends OnlineEvent {
+  OnlineSpectateOk({
+    required this.gameId,
+    required this.eventLog,
+    this.roomCode,
+    this.whiteName,
+    this.blackName,
+  });
+
+  final String gameId;
+  final String? roomCode;
+  final String? whiteName;
+  final String? blackName;
+  final List<Map<String, dynamic>> eventLog;
+}
 
 class OnlineError extends OnlineEvent {
   OnlineError(this.message);
@@ -172,7 +266,38 @@ abstract class OnlineGameService {
   Future<void> findGame({
     String playerName = 'Player',
     String? token,
+    String timeControlId = '5+0',
+    bool? rated,
   });
+
+  void cancelSeek();
+
+  void subscribeLobby();
+
+  void requeue({
+    String playerName = 'Player',
+    String? token,
+    String timeControlId = '5+0',
+    bool? rated,
+  });
+
+  void presencePing(String? token);
+
+  void sendDm({required String toUserId, required String body});
+
+  void createPrivateRoom({String playerName = 'Player', String? token});
+
+  void joinPrivateRoom({
+    required String code,
+    String playerName = 'Player',
+    String? token,
+  });
+
+  void cancelPrivateRoom();
+
+  void spectatePrivateRoom(String code);
+
+  void leaveSpectate({String? gameId});
 
   void sendStartAbility(
     PieceColor color,
@@ -181,7 +306,7 @@ abstract class OnlineGameService {
     AbilityOffer? offer,
   });
 
-  void sendMove(Move move);
+  void sendMove(Move move, {int? whiteMs, int? blackMs});
 
   void sendAbility(
     GameAbility ability, {
@@ -231,6 +356,12 @@ abstract class OnlineGameService {
   void sendTakebackResponse({required bool accepted});
 
   void sendClockSync({required int whiteMs, required int blackMs});
+
+  /// Intentional leave (forfeit without grace). Cleares resume credentials.
+  void sendLeaveGame();
+
+  /// Clear stored resume credentials after a finished game.
+  Future<void> clearResumeSession();
 
   void dispose();
 }

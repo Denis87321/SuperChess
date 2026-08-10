@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../auth/auth_service.dart';
+import '../auth/platform_api.dart';
 import '../l10n/app_strings.dart';
 import '../theme/balatro_theme.dart';
+import 'analysis_screen.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key, required this.auth});
@@ -15,11 +18,69 @@ class HistoryScreen extends StatefulWidget {
 
 class _HistoryScreenState extends State<HistoryScreen> {
   late Future<List<HistoryGame>> _future;
+  late final PlatformApi _api = PlatformApi(widget.auth);
 
   @override
   void initState() {
     super.initState();
     _future = widget.auth.fetchHistory();
+  }
+
+  Future<void> _exportPgn(HistoryGame g) async {
+    final s = AppStrings.of(context);
+    try {
+      final pgn = await _api.getPgn(g.gameId);
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: BalatroTheme.felt,
+          title: Text(
+            s.exportPgn,
+            style: BalatroTheme.titleStyle.copyWith(fontSize: 16),
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: SelectableText(
+              pgn,
+              style: BalatroTheme.statusStyle.copyWith(
+                fontSize: 12,
+                color: BalatroTheme.cream,
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                await Clipboard.setData(ClipboardData(text: pgn));
+                if (ctx.mounted) Navigator.pop(ctx);
+              },
+              child: Text(s.copyCode),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(s.cancel),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$e')),
+      );
+    }
+  }
+
+  void _openAnalysis(HistoryGame g) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => AnalysisScreen(
+          auth: widget.auth,
+          gameId: g.gameId,
+        ),
+      ),
+    );
   }
 
   @override
@@ -128,13 +189,37 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     if (g.hasReplay) ...[
                       const SizedBox(height: 4),
                       Text(
-                        'Есть запись ходов',
+                        AppStrings.of(context).hasMoveRecord,
                         style: BalatroTheme.statusStyle.copyWith(
                           fontSize: 11,
                           color: BalatroTheme.gold.withValues(alpha: 0.75),
                         ),
                       ),
                     ],
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      children: [
+                        TextButton(
+                          onPressed: () => _exportPgn(g),
+                          child: Text(
+                            s.exportPgn,
+                            style: BalatroTheme.statusStyle.copyWith(
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => _openAnalysis(g),
+                          child: Text(
+                            s.analysis,
+                            style: BalatroTheme.statusStyle.copyWith(
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               );

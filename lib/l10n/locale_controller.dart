@@ -53,8 +53,13 @@ class LocaleController extends ChangeNotifier {
       return;
     }
     final platform = WidgetsBinding.instance.platformDispatcher.locale;
-    if (platform.languageCode.toLowerCase().startsWith('ru')) {
-      _resolved = const Locale('ru');
+    final code = platform.languageCode.toLowerCase();
+    const supported = {
+      'ru', 'en', 'es', 'de', 'fr', 'pt', 'uk', 'pl', 'tr', 'it',
+      'zh', 'ja', 'ko', 'vi', 'ar', 'hi',
+    };
+    if (supported.contains(code)) {
+      _resolved = Locale(code);
     } else {
       _resolved = const Locale('en');
     }

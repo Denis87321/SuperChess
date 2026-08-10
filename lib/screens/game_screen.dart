@@ -17,6 +17,7 @@ import '../l10n/models/piece.dart';
 import '../l10n/models/square.dart';
 import '../l10n/models/stockfish_ability_filter.dart';
 import '../online/game_clock.dart';
+import '../online/online_game_replayer.dart';
 import '../online/online_game_service.dart';
 import '../theme/balatro_theme.dart';
 import '../widgets/board_fx/burst_fx_overlay.dart';
@@ -32,7 +33,7 @@ import '../widgets/online_game_menu.dart';
 import '../widgets/online_player_bar.dart';
 import '../widgets/online_side_panel.dart';
 import '../widgets/skill_choice_sheet.dart';
-import 'matchmaking_screen.dart';
+import 'lobby_screen.dart';
 
 const _prefsRotateForBlackKey = 'rotate_for_black';
 const _onlineWideBreakpoint = 800.0;
@@ -62,6 +63,9 @@ class GameScreen extends StatefulWidget {
     this.yourRating,
     this.opponentRating,
     this.vsComputer = false,
+    this.initialClockMs = 5 * 60 * 1000,
+    this.incrementMs = 0,
+    this.timeControlId = '5+0',
   });
 
   final PieceColor? localColor;
@@ -75,6 +79,9 @@ class GameScreen extends StatefulWidget {
 
   /// Local game vs Stockfish (no mods for the bot; human still picks mods).
   final bool vsComputer;
+  final int initialClockMs;
+  final int incrementMs;
+  final String timeControlId;
 
   bool get isOnline => onlineService != null && localColor != null;
 
@@ -86,7 +93,7 @@ class GameScreen extends StatefulWidget {
 }
 
 class _GameScreenState extends State<GameScreen> {
-  late final ChessGame _game;
+  late ChessGame _game;
   late final StockfishPlayer? _stockfish;
   Square? _selectedSquare;
   int _selectedPieceIndex = 0;
@@ -110,7 +117,7 @@ class _GameScreenState extends State<GameScreen> {
   /// Локальная игра: при ходе чёрных переворачивать фигуры и текст на 180°.
   bool _rotateForBlack = false;
 
-  final GameClock _clock = GameClock();
+  late final GameClock _clock = GameClock(initialMs: widget.initialClockMs);
   Timer? _clockTimer;
   final List<ChatLine> _chat = [];
   int _unreadChat = 0;
@@ -121,6 +128,10 @@ class _GameScreenState extends State<GameScreen> {
   bool _gameResultReported = false;
   bool _rematchPending = false;
   bool _rematchIncoming = false;
+  bool _reconnecting = false;
+  bool _opponentDisconnected = false;
+  DateTime? _opponentGraceDeadline;
+  Timer? _graceUiTimer;
 
   final MoveHistoryLog _moveLog = MoveHistoryLog();
   /// `null` = live position; otherwise index into [_moveLog.plies].
@@ -196,10 +207,17 @@ class _GameScreenState extends State<GameScreen> {
     _skillChoiceTimer?.cancel();
     _clockTimer?.cancel();
     _chatToastTimer?.cancel();
+    _graceUiTimer?.cancel();
     _onlineSub?.cancel();
     _stockfish?.dispose();
     if (widget.isOnline) {
-      widget.onlineService!.dispose();
+      final service = widget.onlineService!;
+      if (!_game.isGameOver) {
+        service.sendLeaveGame();
+      } else {
+        unawaited(service.clearResumeSession());
+      }
+      service.dispose();
     }
     super.dispose();
   }
@@ -540,8 +558,27 @@ class _GameScreenState extends State<GameScreen> {
 
   void _onOnlineEvent(OnlineEvent event) {
     switch (event) {
+      case OnlineFairPlayAlert():
+        final pct = (event.matchRate * 100).toStringAsFixed(0);
+        _showMessage(
+          AppStrings.of(context).isRu
+              ? 'Fair-play: ${event.color} ≈$pct% совпадений с облачным движком (${event.samples} ходов)'
+              : 'Fair-play: ${event.color} ≈$pct% cloud-engine match (${event.samples} moves)',
+        );
+      case OnlineIllegalAction():
+        _showMessage(
+          AppStrings.of(context).isRu
+              ? 'Сервер отклонил действие: ${event.message}'
+              : 'Server rejected action: ${event.message}',
+        );
       case OnlineOpponentMove():
-        unawaited(_executeRemoteMove(event.move));
+        unawaited(
+          _executeRemoteMove(
+            event.move,
+            whiteMs: event.whiteMs,
+            blackMs: event.blackMs,
+          ),
+        );
       case OnlineOpponentAbility():
         _skillChoiceTimer?.cancel();
         setState(() {
@@ -551,6 +588,7 @@ class _GameScreenState extends State<GameScreen> {
           _refreshLastHistoryPly();
         });
         _checkStateHash(event.stateHash, 'ability');
+        _resumeClockAfterPhaseIfNeeded();
         unawaited(_tryExecutePremove());
       case OnlineOpponentStartAbility():
         setState(() {
@@ -577,6 +615,7 @@ class _GameScreenState extends State<GameScreen> {
           }
           _refreshLastHistoryPly();
         });
+        _resumeClockAfterPhaseIfNeeded();
         _checkStateHash(event.stateHash, 'ability_target');
         unawaited(_tryExecutePremove());
       case OnlineOpponentReaction():
@@ -600,6 +639,7 @@ class _GameScreenState extends State<GameScreen> {
           }
         }
         _checkStateHash(event.stateHash, 'reaction');
+        _resumeClockAfterPhaseIfNeeded();
       case OnlineOpponentReroll():
         setState(() {
           _game.rerollPendingOffers(event.color);
@@ -610,6 +650,7 @@ class _GameScreenState extends State<GameScreen> {
           _game.skipTurn();
         });
         _checkStateHash(event.stateHash, 'skip_turn');
+        _resumeClockAfterPhaseIfNeeded();
       case OnlineGameOver():
         _applyRemoteGameOver(event);
       case OnlineRematchOffer():
@@ -652,7 +693,7 @@ class _GameScreenState extends State<GameScreen> {
           });
           unawaited(_reportGameResultIfNeeded());
         } else {
-          _showMessage('Соперник отклонил ничью');
+          _showMessage(AppStrings.of(context).drawDeclined);
         }
       case OnlineTakebackOffer():
         unawaited(_onIncomingTakebackOffer());
@@ -668,23 +709,145 @@ class _GameScreenState extends State<GameScreen> {
           });
           _showMessage('Ход возвращён');
         } else {
-          _showMessage('Соперник отклонил возврат хода');
+          _showMessage(AppStrings.of(context).takebackDeclined);
         }
       case OnlineClockSync():
         setState(() {
+          final active =
+              _game.enginePhase == GameEnginePhase.play &&
+                  !_game.isGameOver &&
+                  !_opponentDisconnected &&
+                  !_reconnecting
+              ? _game.turn
+              : null;
           _clock.applySync(
             whiteMs: event.whiteMs,
             blackMs: event.blackMs,
+            active: active,
           );
         });
+        if (_game.enginePhase == GameEnginePhase.play &&
+            !_game.isGameOver &&
+            !_opponentDisconnected &&
+            !_reconnecting) {
+          _ensureClockRunning();
+        }
+      case OnlineConnectionLost():
+        setState(() {
+          _reconnecting = true;
+          _clock.pause();
+          _clockTimer?.cancel();
+        });
       case OnlineOpponentDisconnected():
-        _showMessage('Соперник отключился');
+        _beginOpponentGrace(event.graceMs);
+      case OnlineOpponentReconnected():
+        _endOpponentGrace(reconnected: true);
+      case OnlineOpponentLeft():
+        if (!_game.isGameOver) {
+          setState(() {
+            _opponentDisconnected = false;
+            _graceUiTimer?.cancel();
+            _clock.pause();
+            _clockTimer?.cancel();
+            _game.applyRemoteEnd(
+              winner: widget.localColor,
+              reason: GameEndReason.disconnect,
+              detail: 'opponent_left',
+            );
+          });
+          unawaited(_reportGameResultIfNeeded());
+        }
+      case OnlineResumeOk():
+        _applyResumeOk(event);
+      case OnlineResumeFailed():
+        setState(() => _reconnecting = false);
+        _showMessage(event.message);
       case OnlineError():
+        _showMessage(event.message);
+      case OnlineIllegalMove():
         _showMessage(event.message);
       case OnlineSearching():
       case OnlineMatched():
+      case OnlineLobbySnapshot():
+      case OnlineDmMessage():
+      case OnlinePrivateWaiting():
+      case OnlineSpectateOk():
         break;
     }
+  }
+
+  void _beginOpponentGrace(int graceMs) {
+    _graceUiTimer?.cancel();
+    setState(() {
+      _opponentDisconnected = true;
+      _opponentGraceDeadline =
+          DateTime.now().add(Duration(milliseconds: graceMs));
+      _clock.pause();
+      _clockTimer?.cancel();
+    });
+    _graceUiTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(() {});
+      final deadline = _opponentGraceDeadline;
+      if (deadline != null && !DateTime.now().isBefore(deadline)) {
+        _graceUiTimer?.cancel();
+      }
+    });
+  }
+
+  void _endOpponentGrace({required bool reconnected}) {
+    _graceUiTimer?.cancel();
+    setState(() {
+      _opponentDisconnected = false;
+      _opponentGraceDeadline = null;
+      _reconnecting = false;
+    });
+    if (reconnected) {
+      _showMessage('Соперник вернулся');
+      _syncClockSnapshot();
+      _ensureClockRunning();
+    }
+  }
+
+  void _applyResumeOk(OnlineResumeOk event) {
+    final replayed = OnlineGameReplayer.replay(event.eventLog);
+    setState(() {
+      _game = replayed.game;
+      _reconnecting = false;
+      _opponentDisconnected = false;
+      _opponentGraceDeadline = null;
+      _selectedSquare = null;
+      _selectedPieceIndex = 0;
+      _availableMoves = [];
+      _opponentChoosingSkill = _game.isAwaitingSkillChoice &&
+          _game.pendingSkillColor != null &&
+          _game.pendingSkillColor != widget.localColor;
+      _startFlowDone = !_game.isAwaitingStartChoice(widget.localColor!);
+      _modsFingerprint = collectModFingerprint(_game);
+      _modsBeforeLastPly = _modsFingerprint;
+      if (replayed.whiteMs != null && replayed.blackMs != null) {
+        final active =
+            _game.enginePhase == GameEnginePhase.play && !_game.isGameOver
+            ? _game.turn
+            : null;
+        _clock.applySync(
+          whiteMs: replayed.whiteMs!,
+          blackMs: replayed.blackMs!,
+          active: active,
+        );
+      }
+    });
+    if (_game.isGameOver) {
+      unawaited(_reportGameResultIfNeeded());
+      return;
+    }
+    if (_game.isAwaitingStartChoice(widget.localColor!)) {
+      unawaited(_runStartFlow());
+    } else if (_game.isAwaitingSkillChoice && _canPickSkill) {
+      setState(_beginSkillChoice);
+    }
+    _ensureClockRunning();
+    _showMessage('Соединение восстановлено');
   }
 
   void _applyRemoteGameOver(OnlineGameOver event) {
@@ -715,10 +878,15 @@ class _GameScreenState extends State<GameScreen> {
   void _ensureClockRunning() {
     if (!widget.isOnline) return;
     if (!_game.isReadyToPlay || _game.isGameOver) return;
+    if (_reconnecting || _opponentDisconnected) return;
     _clockTimer?.cancel();
     _clockTimer = Timer.periodic(const Duration(milliseconds: 200), (_) {
       if (!mounted || _game.isGameOver || !_game.isReadyToPlay) {
         _clockTimer?.cancel();
+        return;
+      }
+      if (_reconnecting || _opponentDisconnected) {
+        _clock.pause();
         return;
       }
       // Pause clock during skill/target/reaction phases.
@@ -750,12 +918,31 @@ class _GameScreenState extends State<GameScreen> {
     _maybeSendGameOver();
   }
 
-  void _syncClockAfterMove() {
+  /// Freeze remaining times and broadcast them (phase resume / fallback).
+  void _syncClockSnapshot() {
     if (!widget.isOnline) return;
+    _clock.pause();
     widget.onlineService?.sendClockSync(
       whiteMs: _clock.whiteMs,
       blackMs: _clock.blackMs,
     );
+  }
+
+  /// After a local phase action returns to normal play, share the frozen clock.
+  void _syncClockAfterPhaseIfNeeded() {
+    if (!widget.isOnline) return;
+    if (_game.isGameOver) return;
+    if (_game.enginePhase != GameEnginePhase.play) return;
+    _syncClockSnapshot();
+    _ensureClockRunning();
+  }
+
+  /// Remote phase events: resume local deadline once play resumes.
+  void _resumeClockAfterPhaseIfNeeded() {
+    if (!widget.isOnline) return;
+    if (_game.isGameOver || !_game.isReadyToPlay) return;
+    if (_game.enginePhase != GameEnginePhase.play) return;
+    _ensureClockRunning();
   }
 
   Future<void> _onIncomingDrawOffer() async {
@@ -815,25 +1002,25 @@ class _GameScreenState extends State<GameScreen> {
         return AlertDialog(
           backgroundColor: BalatroTheme.felt,
           title: Text(
-            'Вернуть ход?',
+            AppStrings.of(context).takebackQuestion,
             style: BalatroTheme.titleStyle.copyWith(fontSize: 16),
           ),
           content: Text(
-            'Соперник просит вернуть последний ход',
+            AppStrings.of(context).takebackIncoming,
             style: BalatroTheme.statusStyle.copyWith(fontSize: 13),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
               child: Text(
-                'Отклонить',
+                AppStrings.of(context).decline,
                 style: BalatroTheme.statusStyle.copyWith(fontSize: 13),
               ),
             ),
             TextButton(
               onPressed: () => Navigator.pop(context, true),
               child: Text(
-                'Принять',
+                AppStrings.of(context).accept,
                 style: BalatroTheme.statusStyle.copyWith(
                   fontSize: 13,
                   color: BalatroTheme.gold,
@@ -860,27 +1047,27 @@ class _GameScreenState extends State<GameScreen> {
   Future<void> _offerDraw() async {
     if (!widget.isOnline || _game.isGameOver) return;
     if (_awaitingDrawResponse) {
-      _showMessage('Ожидаем ответ на ничью');
+      _showMessage(AppStrings.of(context).drawWaiting);
       return;
     }
     _awaitingDrawResponse = true;
     widget.onlineService?.sendDrawOffer();
-    _showMessage('Предложение ничьи отправлено');
+    _showMessage(AppStrings.of(context).drawOfferSent);
   }
 
   Future<void> _offerTakeback() async {
     if (!widget.isOnline || _game.isGameOver) return;
     if (!_game.canTakeback) {
-      _showMessage('Нечего возвращать');
+      _showMessage(AppStrings.of(context).takebackNothing);
       return;
     }
     if (_awaitingTakebackResponse) {
-      _showMessage('Ожидаем ответ на возврат хода');
+      _showMessage(AppStrings.of(context).takebackWaiting);
       return;
     }
     _awaitingTakebackResponse = true;
     widget.onlineService?.sendTakebackOffer();
-    _showMessage('Запрос возврата хода отправлен');
+    _showMessage(AppStrings.of(context).takebackSent);
   }
 
   Future<void> _resignLocal() async {
@@ -1242,7 +1429,7 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   String? get _phaseBannerText {
-    if (_showEndOverlay) return 'Игра окончена · смотрите ходы справа';
+    if (_showEndOverlay) return AppStrings.of(context).gameOverWatchMoves;
     final stockfishBanner = _stockfishIssueBanner;
     if (stockfishBanner != null && _stockfishIssueIsError) {
       return stockfishBanner;
@@ -1351,12 +1538,37 @@ class _GameScreenState extends State<GameScreen> {
     }
     final auth = widget.auth;
     final name = auth?.username ?? AppStrings.of(context).anonymous;
-    widget.onlineService?.dispose();
+    final svc = widget.onlineService;
+    if (!_game.isGameOver) {
+      svc?.sendLeaveGame();
+    }
+    if (svc != null && auth != null) {
+      svc.requeue(
+        playerName: name,
+        token: auth.token,
+        timeControlId: widget.timeControlId,
+        rated: widget.rated,
+      );
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(
+          builder: (_) => LobbyScreen(
+            auth: auth,
+            initialTc: widget.timeControlId,
+            initialRated: widget.rated,
+          ),
+        ),
+      );
+      // Dispose old service after navigation — Lobby creates its own.
+      svc.dispose();
+      return;
+    }
+    svc?.dispose();
     Navigator.of(context).pushReplacement(
       MaterialPageRoute<void>(
-        builder: (_) => MatchmakingScreen(
-          playerName: name,
-          auth: auth,
+        builder: (_) => LobbyScreen(
+          auth: auth ?? AuthService(),
+          initialTc: widget.timeControlId,
+          initialRated: widget.rated,
         ),
       ),
     );
@@ -1889,6 +2101,7 @@ class _GameScreenState extends State<GameScreen> {
     } else if (_game.isAwaitingSkillChoice && _canPickSkill) {
       setState(_beginSkillChoice);
     } else {
+      _syncClockAfterPhaseIfNeeded();
       _maybeScheduleComputerMove();
       unawaited(_tryExecutePremove());
     }
@@ -1914,6 +2127,7 @@ class _GameScreenState extends State<GameScreen> {
       _availableMoves = [];
     });
     widget.onlineService?.sendSkipTurn(stateHash: _game.stateHash);
+    _syncClockAfterPhaseIfNeeded();
     _maybeSendGameOver();
     _maybeScheduleComputerMove();
   }
@@ -2028,6 +2242,7 @@ class _GameScreenState extends State<GameScreen> {
     } else if (_game.isAwaitingSkillChoice && _canPickSkill) {
       setState(_beginSkillChoice);
     } else {
+      _syncClockAfterPhaseIfNeeded();
       _maybeScheduleComputerMove();
       unawaited(_tryExecutePremove());
     }
@@ -2098,6 +2313,7 @@ class _GameScreenState extends State<GameScreen> {
     } else if (_game.isAwaitingSkillChoice && _canPickSkill) {
       setState(_beginSkillChoice);
     } else {
+      _syncClockAfterPhaseIfNeeded();
       _maybeScheduleComputerMove();
       unawaited(_tryExecutePremove());
     }
@@ -2158,6 +2374,7 @@ class _GameScreenState extends State<GameScreen> {
     if (_game.isAwaitingSkillChoice && _canPickSkill) {
       setState(_beginSkillChoice);
     } else {
+      _syncClockAfterPhaseIfNeeded();
       _maybeScheduleComputerMove();
       unawaited(_tryExecutePremove());
     }
@@ -2173,6 +2390,7 @@ class _GameScreenState extends State<GameScreen> {
       ability: ability,
       stateHash: _game.stateHash,
     );
+    _syncClockAfterPhaseIfNeeded();
     _maybeSendGameOver();
     _maybeScheduleComputerMove();
   }
@@ -2190,6 +2408,7 @@ class _GameScreenState extends State<GameScreen> {
       accepted: false,
       stateHash: _game.stateHash,
     );
+    _syncClockAfterPhaseIfNeeded();
     await _playPostMoveFx();
     if (!mounted) return;
     await _handleMoveResult(result);
@@ -2346,8 +2565,14 @@ class _GameScreenState extends State<GameScreen> {
       return;
     }
 
-    widget.onlineService?.sendMove(move);
-    _syncClockAfterMove();
+    // Freeze remaining times at the move boundary, then ship them with the move
+    // so the opponent applies the same snapshot when the turn flips.
+    _clock.pause();
+    widget.onlineService?.sendMove(
+      move,
+      whiteMs: _clock.whiteMs,
+      blackMs: _clock.blackMs,
+    );
     _ensureClockRunning();
 
     if (!move.isInquisitorStrip) {
@@ -2374,11 +2599,18 @@ class _GameScreenState extends State<GameScreen> {
     });
   }
 
-  Future<void> _executeRemoteMove(Move move) async {
-    if (_pieceFlight != null) {
-      await _pieceFlight!.completer.future;
-    }
+  Future<void> _executeRemoteMove(
+    Move move, {
+    int? whiteMs,
+    int? blackMs,
+  }) async {
     if (!mounted) return;
+
+    // Apply clock + board state immediately so we do not keep ticking the old
+    // side while waiting for a previous piece animation to finish.
+    if (whiteMs != null && blackMs != null) {
+      _clock.applySync(whiteMs: whiteMs, blackMs: blackMs);
+    }
 
     final movers = _game.piecesAt(move.from);
     final mover = movers.isEmpty
@@ -2408,6 +2640,11 @@ class _GameScreenState extends State<GameScreen> {
       result: recorded,
     );
     _ensureClockRunning();
+
+    if (_pieceFlight != null) {
+      await _pieceFlight!.completer.future;
+    }
+    if (!mounted) return;
 
     if (!move.isInquisitorStrip) {
       await _playBoardAnim(before, remote: true, moveHint: move);
@@ -2624,7 +2861,7 @@ class _GameScreenState extends State<GameScreen> {
                           ),
                         ),
                         subtitle: Text(
-                          'При ходе чёрных фигуры и текст переворачиваются на 180°, доска остаётся на месте',
+                          AppStrings.of(context).rotateForBlackHint,
                           style: BalatroTheme.statusStyle.copyWith(
                             fontSize: 11,
                             color: BalatroTheme.cream.withValues(alpha: 0.55),
@@ -2772,26 +3009,50 @@ class _GameScreenState extends State<GameScreen> {
         left: false,
         right: false,
         bottom: false,
-        child: onlineWide
-            ? Row(
-                children: [
-                  SizedBox(
-                    width: 240,
-                    child: OnlineChatPanel(
-                      messages: _chat,
-                      onSend: _sendChat,
+        child: Column(
+          children: [
+            if (_connectionBannerText != null)
+              Material(
+                color: BalatroTheme.appBar,
+                child: SizedBox(
+                  width: double.infinity,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    child: Text(
+                      _connectionBannerText!,
+                      textAlign: TextAlign.center,
+                      style: BalatroTheme.statusStyle.copyWith(
+                        fontSize: 13,
+                        color: BalatroTheme.gold,
+                      ),
                     ),
                   ),
-                  Expanded(
-                    child: _buildGameStack(
-                      bottomPad: bottomPad,
-                      modsOnTop: modsOnTop,
-                      showMobileChrome: false,
-                      showModsButton: false,
-                    ),
-                  ),
-                  if (webModsBeside) _buildActiveModsSidePanel(),
-                  OnlineSidePanel(
+                ),
+              ),
+            Expanded(
+              child: onlineWide
+                  ? Row(
+                      children: [
+                        SizedBox(
+                          width: 240,
+                          child: OnlineChatPanel(
+                            messages: _chat,
+                            onSend: _sendChat,
+                          ),
+                        ),
+                        Expanded(
+                          child: _buildGameStack(
+                            bottomPad: bottomPad,
+                            modsOnTop: modsOnTop,
+                            showMobileChrome: false,
+                            showModsButton: false,
+                          ),
+                        ),
+                        if (webModsBeside) _buildActiveModsSidePanel(),
+                        OnlineSidePanel(
                     opponentName: widget.opponentName ??
                         AppStrings.of(context).anonymous,
                     localName: AppStrings.of(context).you,
@@ -2837,8 +3098,24 @@ class _GameScreenState extends State<GameScreen> {
                     ),
                 ],
               ),
+            ),
+          ],
+        ),
       ),
     );
+  }
+
+  String? get _connectionBannerText {
+    if (!widget.isOnline || _game.isGameOver) return null;
+    if (_reconnecting) return 'Переподключение…';
+    if (_opponentDisconnected) {
+      final deadline = _opponentGraceDeadline;
+      if (deadline == null) return 'Соперник отключился';
+      final left = deadline.difference(DateTime.now()).inSeconds;
+      final secs = left < 0 ? 0 : left;
+      return 'Соперник отключился · ожидание $secs с';
+    }
+    return null;
   }
 
   Widget _buildBoard(double maxWidth, double maxHeight) {
@@ -3295,7 +3572,7 @@ class _GameScreenState extends State<GameScreen> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Выберите лёгкую фигуру для превращения',
+                              AppStrings.of(context).pickLightPiecePromote,
                               textAlign: TextAlign.center,
                               style: BalatroTheme.statusStyle.copyWith(
                                 fontSize: 13,
@@ -3360,7 +3637,7 @@ class _GameScreenState extends State<GameScreen> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Выберите маршрут прыжка коня',
+                              AppStrings.of(context).pickKnightJumpRoute,
                               style: BalatroTheme.statusStyle.copyWith(
                                 fontSize: 13,
                               ),
@@ -3423,7 +3700,7 @@ class _GameScreenState extends State<GameScreen> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Выберите пару блокирующих пешек',
+                              AppStrings.of(context).pickBlockingPawnPair,
                               style: BalatroTheme.statusStyle.copyWith(
                                 fontSize: 13,
                               ),
@@ -3498,13 +3775,14 @@ class _GameScreenState extends State<GameScreen> {
                           return 'Золотой трон — мод для короля';
                         }
                         final chooser = _game.pendingSkillColor;
+                        final s = AppStrings.of(context);
                         if (chooser == PieceColor.white) {
-                          return 'Волна модов — ход белых: выбери 1 из ${offers.length}';
+                          return s.modWavePick(s.white, offers.length);
                         }
                         if (chooser == PieceColor.black) {
-                          return 'Волна модов — ход чёрных: выбери 1 из ${offers.length}';
+                          return s.modWavePick(s.black, offers.length);
                         }
-                        return 'Выбери 1 из ${offers.length}';
+                        return s.modWavePick('', offers.length);
                       }(),
                       offers: _game.pendingCaptureOffers,
                       secondsLeft: _skillChoiceSecondsLeft,
@@ -3730,7 +4008,8 @@ class _GameScreenState extends State<GameScreen> {
                               : () async {
                                   // Drop on next empty-square tap via premove-like select.
                                   _showMessage(
-                                    'Выберите клетку для дропа (${type.name})',
+                                    AppStrings.of(context)
+                                        .crazyhouseDropPick(type.name),
                                   );
                                   // Store as pending drop using selected type in availableMoves hack:
                                   // use a 1-step flow: tap square to drop.

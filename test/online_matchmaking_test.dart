@@ -4,8 +4,8 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:super_chess/chess/move.dart';
-import 'package:super_chess/models/piece.dart';
-import 'package:super_chess/models/square.dart';
+import 'package:super_chess/l10n/models/piece.dart';
+import 'package:super_chess/l10n/models/square.dart';
 import 'package:super_chess/online/online_game_service.dart';
 import 'package:super_chess/online/websocket_online_service.dart';
 
@@ -71,9 +71,9 @@ void main() {
 
     await web.connect();
     await phone.connect();
-    await web.findGame(playerName: 'WebPlayer');
+    await web.findGame(playerName: 'WebPlayer', timeControlId: '5+0');
     await Future<void>.delayed(const Duration(milliseconds: 50));
-    await phone.findGame(playerName: 'PhonePlayer');
+    await phone.findGame(playerName: 'PhonePlayer', timeControlId: '5+0');
 
     final w = await webMatched.future.timeout(const Duration(seconds: 5));
     final p = await phoneMatched.future.timeout(const Duration(seconds: 5));
@@ -89,10 +89,17 @@ void main() {
 
     whiteClient.sendMove(
       const Move(from: Square(4, 1), to: Square(4, 3)),
+      whiteMs: 299_000,
+      blackMs: 300_000,
     );
     final relayed = await blackMoveFuture.timeout(const Duration(seconds: 5));
     expect(relayed.move.from, const Square(4, 1));
     expect(relayed.move.to, const Square(4, 3));
+    // Server clock is authoritative (client whiteMs/blackMs are hints only).
+    expect(relayed.whiteMs, isNotNull);
+    expect(relayed.blackMs, isNotNull);
+    expect(relayed.whiteMs!, greaterThan(290_000));
+    expect(relayed.blackMs!, greaterThan(290_000));
 
     web.dispose();
     phone.dispose();

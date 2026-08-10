@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../auth/auth_service.dart';
+import '../l10n/app_strings.dart';
 import '../theme/balatro_theme.dart';
 
 class RivalriesScreen extends StatefulWidget {
@@ -23,11 +24,12 @@ class _RivalriesScreenState extends State<RivalriesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     return Scaffold(
       backgroundColor: BalatroTheme.background,
       appBar: AppBar(
         title: Text(
-          'Счёт с соперниками',
+          s.rivalries,
           style: BalatroTheme.titleStyle.copyWith(fontSize: 18),
         ),
         backgroundColor: BalatroTheme.appBar,
@@ -45,7 +47,7 @@ class _RivalriesScreenState extends State<RivalriesScreen> {
           if (list.isEmpty) {
             return Center(
               child: Text(
-                'Пока нет матчей между залогиненными игроками',
+                s.noRivalriesYet,
                 textAlign: TextAlign.center,
                 style: BalatroTheme.statusStyle.copyWith(
                   color: BalatroTheme.cream.withValues(alpha: 0.6),

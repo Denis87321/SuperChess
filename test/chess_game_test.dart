@@ -2860,6 +2860,94 @@ void main() {
     expect(legal.any((m) => m.to == const Square(5, 5)), isTrue);
   });
 
+  test('scorching sun heats only on owner half-moves', () {
+    final game = _emptyReadyGame();
+    game.debugSetSunSquares({const Square(0, 1)});
+    game.debugSetPiece(
+      const Square(0, 1),
+      const Piece(
+        pieceId: 'wp',
+        type: PieceType.pawn,
+        color: PieceColor.white,
+        hasMoved: true,
+      ),
+    );
+
+    game.debugTickScorchingSun(PieceColor.white);
+    expect(game.pieceAt(const Square(0, 1))?.heatLevel, 1);
+
+    // Opponent half-move must not heat white's piece.
+    game.debugTickScorchingSun(PieceColor.black);
+    expect(game.pieceAt(const Square(0, 1))?.heatLevel, 1);
+
+    game.debugTickScorchingSun(PieceColor.white);
+    expect(game.pieceAt(const Square(0, 1))?.heatLevel, 2);
+    game.debugTickScorchingSun(PieceColor.white);
+    expect(game.pieceAt(const Square(0, 1)), isNull);
+  });
+
+  test('restless kings gives each side 3 own half-moves', () {
+    final game = _emptyReadyGame();
+    game.debugApplyOffer(
+      PieceColor.white,
+      const AbilityOffer(
+        ability: GameAbility.boardRestlessKings,
+        applyMode: AbilityApplyMode.boardWide,
+      ),
+    );
+    final whiteStart = game.findKing(PieceColor.white)!;
+
+    // Two white half-moves: still alive.
+    game.debugTickBoardRuleDurations(PieceColor.white);
+    game.debugTickBoardRuleDurations(PieceColor.white);
+    expect(game.isGameOver, isFalse);
+    expect(game.findKing(PieceColor.white), whiteStart);
+
+    // Black's three half-moves without leaving → black loses.
+    game.debugTickBoardRuleDurations(PieceColor.black);
+    game.debugTickBoardRuleDurations(PieceColor.black);
+    expect(game.isGameOver, isFalse);
+    game.debugTickBoardRuleDurations(PieceColor.black);
+    expect(game.isGameOver, isTrue);
+    expect(game.winnerColor, PieceColor.white);
+    expect(game.endDetail, 'restlessKings');
+  });
+
+  test('restless kings white expires on third own half-move', () {
+    final game = _emptyReadyGame();
+    game.debugApplyOffer(
+      PieceColor.white,
+      const AbilityOffer(
+        ability: GameAbility.boardRestlessKings,
+        applyMode: AbilityApplyMode.boardWide,
+      ),
+    );
+    // Black leaves immediately via tick cleanup after a king "move" simulation:
+    // remove black from restless tracking by ticking after clearing start.
+    game.debugSetPiece(game.findKing(PieceColor.black)!, null);
+    game.debugSetPiece(
+      const Square(6, 7),
+      const Piece(
+        pieceId: 'bk-moved',
+        type: PieceType.king,
+        color: PieceColor.black,
+        hasMoved: true,
+      ),
+    );
+    // Force black as already escaped: apply offer again would reset; instead
+    // three white ticks with king still on start should lose for white only
+    // if black is not checked. Clear black restless by moving king through
+    // debugApply path — use three white ticks; black timer still running but
+    // king square changed so when black expires they're fine.
+    game.debugTickBoardRuleDurations(PieceColor.white);
+    game.debugTickBoardRuleDurations(PieceColor.white);
+    expect(game.isGameOver, isFalse);
+    game.debugTickBoardRuleDurations(PieceColor.white);
+    expect(game.isGameOver, isTrue);
+    expect(game.winnerColor, PieceColor.black);
+    expect(game.endDetail, 'restlessKings');
+  });
+
   test('wasteland toll blocks trespasser on the next turn', () {
     final game = _emptyReadyGame();
     game.debugApplyOffer(
@@ -3038,5 +3126,38 @@ void main() {
     expect(game.turn, PieceColor.white);
     expect(game.mateVetoBanner, isNotNull);
     expect(game.pieceAt(const Square(2, 0))?.pieceId, 'wr');
+  });
+
+  test('astronomicon laser lasts 3 owner half-moves', () {
+    final game = _emptyReadyGame();
+    game.debugSetPiece(
+      const Square(0, 0),
+      const Piece(
+        pieceId: 'wr',
+        type: PieceType.rook,
+        color: PieceColor.white,
+        hasMoved: true,
+      ),
+    );
+    game.debugGrantAbility(const Square(0, 0), GameAbility.rookAstronomicon);
+    expect(game.laserFiles[0], 3);
+
+    game.debugTickLaser(PieceColor.black);
+    expect(game.laserFiles[0], 3);
+
+    game.debugTickLaser(PieceColor.white);
+    expect(game.laserFiles[0], 2);
+    game.debugTickLaser(PieceColor.white);
+    expect(game.laserFiles[0], 1);
+    game.debugTickLaser(PieceColor.white);
+    expect(game.isLaserFile(0), isFalse);
+  });
+
+  test('modeKingCenter is Tour de France', () {
+    expect(GameAbility.modeKingCenter.title, 'Тур де Франс');
+    expect(
+      GameAbility.modeKingCenter.description,
+      'Первый король, вставший на одну из центральных клеток, побеждает.',
+    );
   });
 }

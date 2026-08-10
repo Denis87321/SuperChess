@@ -462,4 +462,71 @@ void main() {
       AbilityApplyMode.capturingPiece,
     );
   });
+
+  test('pawnRansom omitted without a modded pawn', () {
+    final board = _boardWithBasics();
+    for (var seed = 0; seed < 60; seed++) {
+      final offers = AbilityCatalog(random: Random(seed)).pickPeriodicOffers(
+        forColor: PieceColor.white,
+        board: board,
+        rankCount: 8,
+        extraFilePlacement: ExtraFilePlacement.none,
+      );
+      expect(
+        offers.map((o) => o.ability),
+        isNot(contains(GameAbility.pawnRansom)),
+      );
+    }
+  });
+
+  test('rookAstronomicon requires rook on enemy-free file', () {
+    final blocked = _boardWithBasics();
+    blocked[0][0] = const Piece(
+      pieceId: 'wr',
+      type: PieceType.rook,
+      color: PieceColor.white,
+    );
+    // Enemy on same file → not eligible.
+    blocked[3][0] = const Piece(
+      pieceId: 'bp',
+      type: PieceType.pawn,
+      color: PieceColor.black,
+    );
+    for (var seed = 0; seed < 60; seed++) {
+      final offers = AbilityCatalog(random: Random(seed)).pickPeriodicOffers(
+        forColor: PieceColor.white,
+        board: blocked,
+        rankCount: 8,
+        extraFilePlacement: ExtraFilePlacement.none,
+      );
+      expect(
+        offers.map((o) => o.ability),
+        isNot(contains(GameAbility.rookAstronomicon)),
+      );
+    }
+
+    final clear = _boardWithBasics();
+    clear[0][0] = const Piece(
+      pieceId: 'wr',
+      type: PieceType.rook,
+      color: PieceColor.white,
+    );
+    // Ally on same file is OK.
+    clear[2][0] = const Piece(
+      pieceId: 'wp2',
+      type: PieceType.pawn,
+      color: PieceColor.white,
+    );
+    var seen = false;
+    for (var seed = 0; seed < 200 && !seen; seed++) {
+      final offers = AbilityCatalog(random: Random(seed)).pickPeriodicOffers(
+        forColor: PieceColor.white,
+        board: clear,
+        rankCount: 8,
+        extraFilePlacement: ExtraFilePlacement.none,
+      );
+      seen = offers.any((o) => o.ability == GameAbility.rookAstronomicon);
+    }
+    expect(seen, isTrue);
+  });
 }

@@ -196,6 +196,221 @@ class AuthDatabase {
     await _conn.execute(
       'ALTER TABLE games ADD COLUMN IF NOT EXISTS rivalry_applied BOOLEAN NOT NULL DEFAULT FALSE;',
     );
+    await _conn.execute('''
+      CREATE TABLE IF NOT EXISTS friendships (
+        user_low UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        user_high UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        requester_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        status TEXT NOT NULL CHECK (status IN ('pending','accepted')),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (user_low, user_high),
+        CHECK (user_low < user_high)
+      );
+    ''');
+
+    await _conn.execute(
+      'ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT;',
+    );
+    await _conn.execute(
+      'ALTER TABLE users ADD COLUMN IF NOT EXISTS country TEXT;',
+    );
+    await _conn.execute(
+      'ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT;',
+    );
+    await _conn.execute(
+      'ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ;',
+    );
+
+    await _conn.execute('''
+      CREATE TABLE IF NOT EXISTS user_ratings (
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        bucket TEXT NOT NULL,
+        rating INT NOT NULL DEFAULT 1500,
+        games INT NOT NULL DEFAULT 0,
+        PRIMARY KEY (user_id, bucket)
+      );
+    ''');
+    await _conn.execute('''
+      INSERT INTO user_ratings (user_id, bucket, rating, games)
+      SELECT id, 'blitz', rating, 0
+      FROM users u
+      WHERE NOT EXISTS (
+        SELECT 1 FROM user_ratings ur
+        WHERE ur.user_id = u.id AND ur.bucket = 'blitz'
+      );
+    ''');
+
+    await _conn.execute('''
+      CREATE TABLE IF NOT EXISTS follows (
+        follower_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        followee_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (follower_id, followee_id),
+        CHECK (follower_id <> followee_id)
+      );
+    ''');
+
+    await _conn.execute('''
+      CREATE TABLE IF NOT EXISTS friend_messages (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        from_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        to_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        body TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        read_at TIMESTAMPTZ
+      );
+    ''');
+
+    await _conn.execute(
+      'ALTER TABLE games ADD COLUMN IF NOT EXISTS pgn TEXT;',
+    );
+    await _conn.execute(
+      'ALTER TABLE games ADD COLUMN IF NOT EXISTS time_control TEXT;',
+    );
+    await _conn.execute(
+      'ALTER TABLE games ADD COLUMN IF NOT EXISTS analysis_json JSONB;',
+    );
+    await _conn.execute(
+      'ALTER TABLE games ADD COLUMN IF NOT EXISTS analysis_status TEXT;',
+    );
+
+    await _conn.execute(
+      'ALTER TABLE match_replays ADD COLUMN IF NOT EXISTS pgn TEXT;',
+    );
+
+    await _conn.execute('''
+      CREATE TABLE IF NOT EXISTS puzzles (
+        id TEXT PRIMARY KEY,
+        setup_json JSONB NOT NULL,
+        goal TEXT,
+        themes TEXT[] NOT NULL DEFAULT '{}',
+        rating INT NOT NULL DEFAULT 1500,
+        plays INT NOT NULL DEFAULT 0,
+        successes INT NOT NULL DEFAULT 0,
+        title_ru TEXT,
+        title_en TEXT
+      );
+    ''');
+
+    await _conn.execute('''
+      CREATE TABLE IF NOT EXISTS puzzle_attempts (
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        puzzle_id TEXT NOT NULL REFERENCES puzzles(id) ON DELETE CASCADE,
+        solved BOOLEAN NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    ''');
+
+    await _conn.execute('''
+      CREATE TABLE IF NOT EXISTS user_puzzle_rating (
+        user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        rating INT NOT NULL DEFAULT 1500,
+        streak INT NOT NULL DEFAULT 0,
+        last_day DATE
+      );
+    ''');
+
+    await _conn.execute('''
+      CREATE TABLE IF NOT EXISTS analysis_jobs (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        game_id TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        finished_at TIMESTAMPTZ,
+        error TEXT
+      );
+    ''');
+
+    await _conn.execute('''
+      CREATE TABLE IF NOT EXISTS clubs (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name TEXT NOT NULL UNIQUE,
+        description TEXT,
+        owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    ''');
+
+    await _conn.execute('''
+      CREATE TABLE IF NOT EXISTS club_members (
+        club_id UUID NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        role TEXT NOT NULL DEFAULT 'member',
+        PRIMARY KEY (club_id, user_id)
+      );
+    ''');
+
+    await _conn.execute('''
+      CREATE TABLE IF NOT EXISTS forum_categories (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        club_id UUID REFERENCES clubs(id) ON DELETE CASCADE,
+        title TEXT NOT NULL,
+        slug TEXT NOT NULL UNIQUE
+      );
+    ''');
+
+    await _conn.execute('''
+      CREATE TABLE IF NOT EXISTS forum_topics (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        category_id UUID NOT NULL REFERENCES forum_categories(id) ON DELETE CASCADE,
+        author_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        title TEXT NOT NULL,
+        pinned BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    ''');
+
+    await _conn.execute('''
+      CREATE TABLE IF NOT EXISTS forum_posts (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        topic_id UUID NOT NULL REFERENCES forum_topics(id) ON DELETE CASCADE,
+        author_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        body TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    ''');
+
+    await _conn.execute('''
+      CREATE TABLE IF NOT EXISTS user_devices (
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        token TEXT NOT NULL,
+        platform TEXT,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (user_id, token)
+      );
+    ''');
+
+    await _conn.execute('''
+      CREATE TABLE IF NOT EXISTS fairplay_samples (
+        id BIGSERIAL PRIMARY KEY,
+        game_id TEXT NOT NULL,
+        user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+        color TEXT NOT NULL,
+        fen TEXT NOT NULL,
+        played_uci TEXT NOT NULL,
+        best_uci TEXT NOT NULL,
+        matched BOOLEAN NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    ''');
+    await _conn.execute(
+      'CREATE INDEX IF NOT EXISTS fairplay_samples_game_idx '
+      'ON fairplay_samples (game_id);',
+    );
+
+    await _conn.execute('''
+      CREATE TABLE IF NOT EXISTS fairplay_flags (
+        game_id TEXT NOT NULL,
+        color TEXT NOT NULL,
+        user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+        match_rate DOUBLE PRECISION NOT NULL,
+        samples INT NOT NULL,
+        flagged BOOLEAN NOT NULL DEFAULT FALSE,
+        detail TEXT,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (game_id, color)
+      );
+    ''');
   }
 
   UserRecord _userFromRow(ResultRow row) {
@@ -769,6 +984,1286 @@ class AuthDatabase {
       'blackName': row[9] ?? 'Anonymous',
       'whiteUserId': row[10],
       'blackUserId': row[11],
+    };
+  }
+
+  Future<List<String>> listAbilitiesUsed(String userId) async {
+    final result = await _conn.execute(
+      Sql.named(
+        'SELECT ability FROM user_ability_usage '
+        'WHERE user_id = @id::uuid ORDER BY ability',
+      ),
+      parameters: {'id': userId},
+    );
+    return [for (final row in result) row[0]! as String];
+  }
+
+  Future<List<Map<String, dynamic>>> searchUsers(
+    String query,
+    String excludeUserId, {
+    int limit = 20,
+  }) async {
+    final q = query.trim();
+    if (q.isEmpty) return const [];
+    final result = await _conn.execute(
+      Sql.named('''
+        SELECT id::text, username, rating
+        FROM users
+        WHERE username_lower LIKE @q
+          AND id <> @exclude::uuid
+        ORDER BY username_lower
+        LIMIT @limit
+      '''),
+      parameters: {
+        'q': '${q.toLowerCase()}%',
+        'exclude': excludeUserId,
+        'limit': limit.clamp(1, 50),
+      },
+    );
+    return [
+      for (final row in result)
+        {
+          'id': row[0]! as String,
+          'username': row[1]! as String,
+          'rating': row[2] as int? ?? 1500,
+        },
+    ];
+  }
+
+  Future<List<Map<String, dynamic>>> listFriends(String userId) async {
+    final result = await _conn.execute(
+      Sql.named('''
+        SELECT u.id::text, u.username, u.rating
+        FROM friendships f
+        JOIN users u ON u.id = CASE
+          WHEN f.user_low = @id::uuid THEN f.user_high ELSE f.user_low END
+        WHERE (f.user_low = @id::uuid OR f.user_high = @id::uuid)
+          AND f.status = 'accepted'
+        ORDER BY u.username_lower
+      '''),
+      parameters: {'id': userId},
+    );
+    return [
+      for (final row in result)
+        {
+          'id': row[0]! as String,
+          'username': row[1]! as String,
+          'rating': row[2] as int? ?? 1500,
+        },
+    ];
+  }
+
+  Future<List<Map<String, dynamic>>> listPendingIncoming(String userId) async {
+    final result = await _conn.execute(
+      Sql.named('''
+        SELECT u.id::text, u.username, u.rating
+        FROM friendships f
+        JOIN users u ON u.id = f.requester_id
+        WHERE (f.user_low = @id::uuid OR f.user_high = @id::uuid)
+          AND f.status = 'pending'
+          AND f.requester_id <> @id::uuid
+        ORDER BY f.created_at DESC
+      '''),
+      parameters: {'id': userId},
+    );
+    return [
+      for (final row in result)
+        {
+          'id': row[0]! as String,
+          'username': row[1]! as String,
+          'rating': row[2] as int? ?? 1500,
+        },
+    ];
+  }
+
+  Future<List<Map<String, dynamic>>> listPendingOutgoing(String userId) async {
+    final result = await _conn.execute(
+      Sql.named('''
+        SELECT u.id::text, u.username, u.rating
+        FROM friendships f
+        JOIN users u ON u.id = CASE
+          WHEN f.user_low = @id::uuid THEN f.user_high ELSE f.user_low END
+        WHERE (f.user_low = @id::uuid OR f.user_high = @id::uuid)
+          AND f.status = 'pending'
+          AND f.requester_id = @id::uuid
+        ORDER BY f.created_at DESC
+      '''),
+      parameters: {'id': userId},
+    );
+    return [
+      for (final row in result)
+        {
+          'id': row[0]! as String,
+          'username': row[1]! as String,
+          'rating': row[2] as int? ?? 1500,
+        },
+    ];
+  }
+
+  /// Returns `{ok: true}` or `{error: String, status: int}`.
+  Future<Map<String, dynamic>> requestFriend(
+    String fromId,
+    String toUsername,
+  ) async {
+    final target = await findByUsername(toUsername.trim());
+    if (target == null) {
+      return {'error': 'User not found', 'status': 404};
+    }
+    if (target.id == fromId) {
+      return {'error': 'Cannot friend yourself', 'status': 400};
+    }
+
+    final low = fromId.compareTo(target.id) < 0 ? fromId : target.id;
+    final high = low == fromId ? target.id : fromId;
+
+    final existing = await _conn.execute(
+      Sql.named(
+        'SELECT status, requester_id::text FROM friendships '
+        'WHERE user_low = @low::uuid AND user_high = @high::uuid LIMIT 1',
+      ),
+      parameters: {'low': low, 'high': high},
+    );
+    if (existing.isNotEmpty) {
+      final status = existing.first[0] as String? ?? '';
+      final requesterId = existing.first[1] as String? ?? '';
+      if (status == 'accepted') {
+        return {'error': 'Already friends', 'status': 409};
+      }
+      if (status == 'pending') {
+        if (requesterId == fromId) {
+          return {'error': 'Request already sent', 'status': 409};
+        }
+        // Incoming pending request from the other user — auto-accept.
+        await _conn.execute(
+          Sql.named(
+            'UPDATE friendships SET status = \'accepted\' '
+            'WHERE user_low = @low::uuid AND user_high = @high::uuid '
+            'AND status = \'pending\'',
+          ),
+          parameters: {'low': low, 'high': high},
+        );
+        return {'ok': true, 'accepted': true};
+      }
+    }
+
+    try {
+      await _conn.execute(
+        Sql.named(
+          'INSERT INTO friendships (user_low, user_high, requester_id, status) '
+          'VALUES (@low::uuid, @high::uuid, @req::uuid, \'pending\')',
+        ),
+        parameters: {'low': low, 'high': high, 'req': fromId},
+      );
+      return {'ok': true};
+    } on ServerException catch (e) {
+      if (e.code == '23505') {
+        return {'error': 'Request already sent', 'status': 409};
+      }
+      rethrow;
+    }
+  }
+
+  /// Returns `{ok: true}` or `{error: String, status: int}`.
+  Future<Map<String, dynamic>> respondFriend(
+    String userId,
+    String otherUserId, {
+    required bool accept,
+  }) async {
+    if (userId == otherUserId) {
+      return {'error': 'Invalid user', 'status': 400};
+    }
+
+    final low = userId.compareTo(otherUserId) < 0 ? userId : otherUserId;
+    final high = low == userId ? otherUserId : userId;
+
+    final existing = await _conn.execute(
+      Sql.named(
+        'SELECT status, requester_id::text FROM friendships '
+        'WHERE user_low = @low::uuid AND user_high = @high::uuid LIMIT 1',
+      ),
+      parameters: {'low': low, 'high': high},
+    );
+    if (existing.isEmpty) {
+      return {'error': 'Request not found', 'status': 404};
+    }
+    final status = existing.first[0] as String? ?? '';
+    final requesterId = existing.first[1] as String? ?? '';
+    if (status != 'pending') {
+      return {'error': 'No pending request', 'status': 409};
+    }
+    if (requesterId == userId) {
+      return {'error': 'Cannot respond to your own request', 'status': 400};
+    }
+
+    if (accept) {
+      await _conn.execute(
+        Sql.named(
+          'UPDATE friendships SET status = \'accepted\' '
+          'WHERE user_low = @low::uuid AND user_high = @high::uuid '
+          'AND status = \'pending\'',
+        ),
+        parameters: {'low': low, 'high': high},
+      );
+    } else {
+      await _conn.execute(
+        Sql.named(
+          'DELETE FROM friendships '
+          'WHERE user_low = @low::uuid AND user_high = @high::uuid '
+          'AND status = \'pending\'',
+        ),
+        parameters: {'low': low, 'high': high},
+      );
+    }
+    return {'ok': true};
+  }
+
+  static const _ratingBuckets = ['bullet', 'blitz', 'rapid'];
+
+  Future<void> ensureUserRatings(String userId) async {
+    final user = await findById(userId);
+    final base = user?.rating ?? 1500;
+    for (final bucket in _ratingBuckets) {
+      await _conn.execute(
+        Sql.named(
+          'INSERT INTO user_ratings (user_id, bucket, rating, games) '
+          'VALUES (@id::uuid, @bucket, @rating, 0) '
+          'ON CONFLICT (user_id, bucket) DO NOTHING',
+        ),
+        parameters: {'id': userId, 'bucket': bucket, 'rating': base},
+      );
+    }
+  }
+
+  Future<Map<String, int>> getRatings(String userId) async {
+    await ensureUserRatings(userId);
+    final result = await _conn.execute(
+      Sql.named(
+        'SELECT bucket, rating FROM user_ratings WHERE user_id = @id::uuid',
+      ),
+      parameters: {'id': userId},
+    );
+    final out = <String, int>{};
+    for (final row in result) {
+      out[row[0]! as String] = row[1] as int? ?? 1500;
+    }
+    return out;
+  }
+
+  Future<int> ratingForBucket(String userId, String bucket) async {
+    await ensureUserRatings(userId);
+    final result = await _conn.execute(
+      Sql.named(
+        'SELECT rating FROM user_ratings '
+        'WHERE user_id = @id::uuid AND bucket = @bucket LIMIT 1',
+      ),
+      parameters: {'id': userId, 'bucket': bucket},
+    );
+    if (result.isEmpty) return 1500;
+    return result.first[0] as int? ?? 1500;
+  }
+
+  Future<void> touchPresence(String userId) async {
+    await _conn.execute(
+      Sql.named(
+        'UPDATE users SET last_seen_at = NOW() WHERE id = @id::uuid',
+      ),
+      parameters: {'id': userId},
+    );
+  }
+
+  Future<void> updateProfile({
+    required String userId,
+    String? bio,
+    String? country,
+    String? avatarUrl,
+  }) async {
+    await _conn.execute(
+      Sql.named('''
+        UPDATE users SET
+          bio = COALESCE(@bio, bio),
+          country = COALESCE(@country, country),
+          avatar_url = COALESCE(@avatar, avatar_url)
+        WHERE id = @id::uuid
+      '''),
+      parameters: {
+        'id': userId,
+        'bio': bio,
+        'country': country,
+        'avatar': avatarUrl,
+      },
+    );
+  }
+
+  Future<Map<String, dynamic>?> publicProfile(String username) async {
+    final result = await _conn.execute(
+      Sql.named('''
+        SELECT id::text, username, bio, country, avatar_url,
+               games_played, last_seen_at
+        FROM users
+        WHERE username_lower = @lower
+        LIMIT 1
+      '''),
+      parameters: {'lower': username.toLowerCase()},
+    );
+    if (result.isEmpty) return null;
+    final row = result.first;
+    final id = row[0]! as String;
+    final ratings = await getRatings(id);
+    final followers = await _conn.execute(
+      Sql.named(
+        'SELECT COUNT(*)::int FROM follows WHERE followee_id = @id::uuid',
+      ),
+      parameters: {'id': id},
+    );
+    final following = await _conn.execute(
+      Sql.named(
+        'SELECT COUNT(*)::int FROM follows WHERE follower_id = @id::uuid',
+      ),
+      parameters: {'id': id},
+    );
+    final lastSeen = row[6] as DateTime?;
+    return {
+      'id': id,
+      'username': row[1]! as String,
+      'bio': row[2] as String?,
+      'country': row[3] as String?,
+      'avatarUrl': row[4] as String?,
+      'ratings': ratings,
+      'gamesPlayed': row[5] as int? ?? 0,
+      'followers': followers.first[0] as int? ?? 0,
+      'following': following.first[0] as int? ?? 0,
+      'lastSeenAt': lastSeen?.toUtc().toIso8601String(),
+    };
+  }
+
+  Future<void> follow(String followerId, String followeeId) async {
+    if (followerId == followeeId) return;
+    await _conn.execute(
+      Sql.named(
+        'INSERT INTO follows (follower_id, followee_id) '
+        'VALUES (@follower::uuid, @followee::uuid) '
+        'ON CONFLICT DO NOTHING',
+      ),
+      parameters: {'follower': followerId, 'followee': followeeId},
+    );
+  }
+
+  Future<void> unfollow(String followerId, String followeeId) async {
+    await _conn.execute(
+      Sql.named(
+        'DELETE FROM follows '
+        'WHERE follower_id = @follower::uuid AND followee_id = @followee::uuid',
+      ),
+      parameters: {'follower': followerId, 'followee': followeeId},
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> listFollowers(String userId) async {
+    final result = await _conn.execute(
+      Sql.named('''
+        SELECT u.id::text, u.username, u.rating
+        FROM follows f
+        JOIN users u ON u.id = f.follower_id
+        WHERE f.followee_id = @id::uuid
+        ORDER BY f.created_at DESC
+      '''),
+      parameters: {'id': userId},
+    );
+    return [
+      for (final row in result)
+        {
+          'id': row[0]! as String,
+          'username': row[1]! as String,
+          'rating': row[2] as int? ?? 1500,
+        },
+    ];
+  }
+
+  Future<List<Map<String, dynamic>>> listFollowing(String userId) async {
+    final result = await _conn.execute(
+      Sql.named('''
+        SELECT u.id::text, u.username, u.rating
+        FROM follows f
+        JOIN users u ON u.id = f.followee_id
+        WHERE f.follower_id = @id::uuid
+        ORDER BY f.created_at DESC
+      '''),
+      parameters: {'id': userId},
+    );
+    return [
+      for (final row in result)
+        {
+          'id': row[0]! as String,
+          'username': row[1]! as String,
+          'rating': row[2] as int? ?? 1500,
+        },
+    ];
+  }
+
+  Future<Map<String, dynamic>> sendFriendMessage({
+    required String fromId,
+    required String toId,
+    required String body,
+  }) async {
+    final trimmed = body.trim();
+    if (trimmed.isEmpty) {
+      return {'error': 'Empty message', 'status': 400};
+    }
+    final result = await _conn.execute(
+      Sql.named('''
+        INSERT INTO friend_messages (from_id, to_id, body)
+        VALUES (@from::uuid, @to::uuid, @body)
+        RETURNING id::text, from_id::text, to_id::text, body, created_at, read_at
+      '''),
+      parameters: {'from': fromId, 'to': toId, 'body': trimmed},
+    );
+    final row = result.first;
+    return {
+      'id': row[0]! as String,
+      'fromId': row[1]! as String,
+      'toId': row[2]! as String,
+      'body': row[3]! as String,
+      'createdAt': (row[4]! as DateTime).toUtc().toIso8601String(),
+      'readAt': (row[5] as DateTime?)?.toUtc().toIso8601String(),
+    };
+  }
+
+  Future<List<Map<String, dynamic>>> listFriendMessages(
+    String userId,
+    String otherId, {
+    int limit = 50,
+  }) async {
+    final result = await _conn.execute(
+      Sql.named('''
+        SELECT id::text, from_id::text, to_id::text, body, created_at, read_at
+        FROM friend_messages
+        WHERE (from_id = @a::uuid AND to_id = @b::uuid)
+           OR (from_id = @b::uuid AND to_id = @a::uuid)
+        ORDER BY created_at DESC
+        LIMIT @limit
+      '''),
+      parameters: {
+        'a': userId,
+        'b': otherId,
+        'limit': limit.clamp(1, 200),
+      },
+    );
+    return [
+      for (final row in result)
+        {
+          'id': row[0]! as String,
+          'fromId': row[1]! as String,
+          'toId': row[2]! as String,
+          'body': row[3]! as String,
+          'createdAt': (row[4]! as DateTime).toUtc().toIso8601String(),
+          'readAt': (row[5] as DateTime?)?.toUtc().toIso8601String(),
+        },
+    ];
+  }
+
+  Future<void> saveGamePgn(String gameId, String pgn) async {
+    await _conn.execute(
+      Sql.named(
+        'UPDATE games SET pgn = @pgn WHERE id = @id',
+      ),
+      parameters: {'id': gameId, 'pgn': pgn},
+    );
+    await _conn.execute(
+      Sql.named(
+        'UPDATE match_replays SET pgn = @pgn WHERE game_id = @id',
+      ),
+      parameters: {'id': gameId, 'pgn': pgn},
+    );
+  }
+
+  Future<String?> getGamePgn(String gameId) async {
+    final fromGame = await _conn.execute(
+      Sql.named('SELECT pgn FROM games WHERE id = @id LIMIT 1'),
+      parameters: {'id': gameId},
+    );
+    if (fromGame.isNotEmpty) {
+      final pgn = fromGame.first[0] as String?;
+      if (pgn != null && pgn.isNotEmpty) return pgn;
+    }
+    final fromReplay = await _conn.execute(
+      Sql.named('SELECT pgn FROM match_replays WHERE game_id = @id LIMIT 1'),
+      parameters: {'id': gameId},
+    );
+    if (fromReplay.isEmpty) return null;
+    return fromReplay.first[0] as String?;
+  }
+
+  Future<void> upsertPuzzle({
+    required String id,
+    required Map<String, dynamic> setupJson,
+    String? goal,
+    List<String> themes = const [],
+    int rating = 1500,
+    String? titleRu,
+    String? titleEn,
+  }) async {
+    await _conn.execute(
+      Sql.named('''
+        INSERT INTO puzzles (
+          id, setup_json, goal, themes, rating, title_ru, title_en
+        ) VALUES (
+          @id, @setup::jsonb, @goal,
+          ARRAY(SELECT jsonb_array_elements_text(@themes::jsonb)),
+          @rating, @titleRu, @titleEn
+        )
+        ON CONFLICT (id) DO UPDATE SET
+          setup_json = EXCLUDED.setup_json,
+          goal = EXCLUDED.goal,
+          themes = EXCLUDED.themes,
+          rating = EXCLUDED.rating,
+          title_ru = EXCLUDED.title_ru,
+          title_en = EXCLUDED.title_en
+      '''),
+      parameters: {
+        'id': id,
+        'setup': jsonEncode(setupJson),
+        'goal': goal,
+        'themes': jsonEncode(themes),
+        'rating': rating,
+        'titleRu': titleRu,
+        'titleEn': titleEn,
+      },
+    );
+  }
+
+  Future<Map<String, dynamic>?> nextPuzzle({
+    String? userId,
+    List<String>? themes,
+  }) async {
+    final userRating = userId == null
+        ? 1500
+        : ((await getUserPuzzleRating(userId))['rating'] as int? ?? 1500);
+    final themeFilter = themes != null && themes.isNotEmpty;
+
+    final result = await _conn.execute(
+      Sql.named('''
+        SELECT p.id, p.setup_json, p.goal, p.themes, p.rating,
+               p.plays, p.successes, p.title_ru, p.title_en
+        FROM puzzles p
+        WHERE (
+          NOT @hasThemes OR
+          p.themes && ARRAY(SELECT jsonb_array_elements_text(@themes::jsonb))
+        )
+        AND (
+          @uid::text IS NULL OR NOT EXISTS (
+            SELECT 1 FROM puzzle_attempts a
+            WHERE a.user_id = CAST(@uid AS uuid)
+              AND a.puzzle_id = p.id
+              AND a.solved = TRUE
+              AND a.created_at > NOW() - INTERVAL '7 days'
+          )
+        )
+        ORDER BY ABS(p.rating - @rating), p.plays ASC, random()
+        LIMIT 1
+      '''),
+      parameters: {
+        'hasThemes': themeFilter,
+        'themes': jsonEncode(themes ?? const <String>[]),
+        'uid': userId,
+        'rating': userRating,
+      },
+    );
+    if (result.isEmpty) return null;
+    return _puzzleFromRow(result.first);
+  }
+
+  Map<String, dynamic> _puzzleFromRow(ResultRow row) {
+    return {
+      'id': row[0]! as String,
+      'setup': row[1],
+      'goal': row[2] as String?,
+      'themes': row[3] ?? const <String>[],
+      'rating': row[4] as int? ?? 1500,
+      'plays': row[5] as int? ?? 0,
+      'successes': row[6] as int? ?? 0,
+      'titleRu': row[7] as String?,
+      'titleEn': row[8] as String?,
+    };
+  }
+
+  Future<Map<String, dynamic>> recordPuzzleResult({
+    required String userId,
+    required String puzzleId,
+    required bool solved,
+  }) async {
+    final puzzleRow = await _conn.execute(
+      Sql.named(
+        'SELECT rating FROM puzzles WHERE id = @id LIMIT 1',
+      ),
+      parameters: {'id': puzzleId},
+    );
+    if (puzzleRow.isEmpty) {
+      return {'error': 'Puzzle not found', 'status': 404};
+    }
+    final puzzleRating = puzzleRow.first[0] as int? ?? 1500;
+
+    await _conn.execute(
+      Sql.named(
+        'INSERT INTO puzzle_attempts (user_id, puzzle_id, solved) '
+        'VALUES (@uid::uuid, @pid, @solved)',
+      ),
+      parameters: {
+        'uid': userId,
+        'pid': puzzleId,
+        'solved': solved,
+      },
+    );
+
+    await _conn.execute(
+      Sql.named(
+        'UPDATE puzzles SET '
+        'plays = plays + 1, '
+        'successes = successes + CASE WHEN @solved THEN 1 ELSE 0 END '
+        'WHERE id = @pid',
+      ),
+      parameters: {'pid': puzzleId, 'solved': solved},
+    );
+
+    final current = await getUserPuzzleRating(userId);
+    final rating = current['rating'] as int? ?? 1500;
+    final streak = current['streak'] as int? ?? 0;
+    final next = Elo.nextRating(
+      rating: rating,
+      opponentRating: puzzleRating,
+      score: solved ? 1.0 : 0.0,
+      gamesPlayed: (current['playsApprox'] as int?) ?? 0,
+    );
+    final today = DateTime.now().toUtc();
+    final lastDay = current['lastDay'] as String?;
+    final todayStr =
+        '${today.year.toString().padLeft(4, '0')}-'
+        '${today.month.toString().padLeft(2, '0')}-'
+        '${today.day.toString().padLeft(2, '0')}';
+    final newStreak = !solved
+        ? 0
+        : (lastDay == todayStr
+            ? streak
+            : (lastDay == _yesterdayUtc(today) ? streak + 1 : 1));
+
+    await _conn.execute(
+      Sql.named('''
+        INSERT INTO user_puzzle_rating (user_id, rating, streak, last_day)
+        VALUES (@id::uuid, @rating, @streak, @day::date)
+        ON CONFLICT (user_id) DO UPDATE SET
+          rating = EXCLUDED.rating,
+          streak = EXCLUDED.streak,
+          last_day = EXCLUDED.last_day
+      '''),
+      parameters: {
+        'id': userId,
+        'rating': next,
+        'streak': newStreak,
+        'day': todayStr,
+      },
+    );
+
+    return {
+      'rating': next,
+      'streak': newStreak,
+      'solved': solved,
+      'puzzleId': puzzleId,
+    };
+  }
+
+  String _yesterdayUtc(DateTime today) {
+    final y = today.subtract(const Duration(days: 1));
+    return '${y.year.toString().padLeft(4, '0')}-'
+        '${y.month.toString().padLeft(2, '0')}-'
+        '${y.day.toString().padLeft(2, '0')}';
+  }
+
+  Future<Map<String, dynamic>> getUserPuzzleRating(String userId) async {
+    final result = await _conn.execute(
+      Sql.named(
+        'SELECT rating, streak, last_day '
+        'FROM user_puzzle_rating WHERE user_id = @id::uuid LIMIT 1',
+      ),
+      parameters: {'id': userId},
+    );
+    if (result.isEmpty) {
+      await _conn.execute(
+        Sql.named(
+          'INSERT INTO user_puzzle_rating (user_id) '
+          'VALUES (@id::uuid) ON CONFLICT DO NOTHING',
+        ),
+        parameters: {'id': userId},
+      );
+      return {'rating': 1500, 'streak': 0, 'lastDay': null, 'playsApprox': 0};
+    }
+    final row = result.first;
+    final lastDay = row[2];
+    String? lastDayStr;
+    if (lastDay is DateTime) {
+      final d = lastDay.toUtc();
+      lastDayStr =
+          '${d.year.toString().padLeft(4, '0')}-'
+          '${d.month.toString().padLeft(2, '0')}-'
+          '${d.day.toString().padLeft(2, '0')}';
+    } else if (lastDay != null) {
+      lastDayStr = lastDay.toString().split(' ').first;
+    }
+    final attempts = await _conn.execute(
+      Sql.named(
+        'SELECT COUNT(*)::int FROM puzzle_attempts WHERE user_id = @id::uuid',
+      ),
+      parameters: {'id': userId},
+    );
+    return {
+      'rating': row[0] as int? ?? 1500,
+      'streak': row[1] as int? ?? 0,
+      'lastDay': lastDayStr,
+      'playsApprox': attempts.first[0] as int? ?? 0,
+    };
+  }
+
+  Future<String> enqueueAnalysis(String gameId) async {
+    await _conn.execute(
+      Sql.named(
+        'UPDATE games SET analysis_status = \'pending\' WHERE id = @id',
+      ),
+      parameters: {'id': gameId},
+    );
+    final result = await _conn.execute(
+      Sql.named('''
+        INSERT INTO analysis_jobs (game_id, status)
+        VALUES (@gid, 'pending')
+        RETURNING id::text
+      '''),
+      parameters: {'gid': gameId},
+    );
+    return result.first[0]! as String;
+  }
+
+  Future<Map<String, dynamic>?> getAnalysis(String gameId) async {
+    final result = await _conn.execute(
+      Sql.named('''
+        SELECT analysis_json, analysis_status
+        FROM games WHERE id = @id LIMIT 1
+      '''),
+      parameters: {'id': gameId},
+    );
+    if (result.isEmpty) return null;
+    final job = await _conn.execute(
+      Sql.named('''
+        SELECT id::text, status, created_at, finished_at, error
+        FROM analysis_jobs
+        WHERE game_id = @id
+        ORDER BY created_at DESC
+        LIMIT 1
+      '''),
+      parameters: {'id': gameId},
+    );
+    return {
+      'gameId': gameId,
+      'analysis': result.first[0],
+      'status': result.first[1] as String? ??
+          (job.isEmpty ? null : job.first[1] as String?),
+      if (job.isNotEmpty) ...{
+        'jobId': job.first[0]! as String,
+        'jobStatus': job.first[1] as String?,
+        'createdAt': (job.first[2] as DateTime?)?.toUtc().toIso8601String(),
+        'finishedAt': (job.first[3] as DateTime?)?.toUtc().toIso8601String(),
+        'error': job.first[4] as String?,
+      },
+    };
+  }
+
+  Future<void> setAnalysisResult({
+    required String jobId,
+    required String gameId,
+    Map<String, dynamic>? analysis,
+    String status = 'ready',
+    String? error,
+  }) async {
+    await _conn.execute(
+      Sql.named('''
+        UPDATE analysis_jobs SET
+          status = @status,
+          finished_at = NOW(),
+          error = @error
+        WHERE id = @job::uuid
+      '''),
+      parameters: {
+        'job': jobId,
+        'status': status,
+        'error': error,
+      },
+    );
+    await _conn.execute(
+      Sql.named('''
+        UPDATE games SET
+          analysis_status = @status,
+          analysis_json = CASE
+            WHEN @hasAnalysis THEN @analysis::jsonb
+            ELSE analysis_json
+          END
+        WHERE id = @gid
+      '''),
+      parameters: {
+        'gid': gameId,
+        'status': status,
+        'hasAnalysis': analysis != null,
+        'analysis': jsonEncode(analysis ?? const <String, dynamic>{}),
+      },
+    );
+  }
+
+  Future<Map<String, dynamic>> createClub({
+    required String name,
+    required String ownerId,
+    String? description,
+  }) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) {
+      return {'error': 'Name required', 'status': 400};
+    }
+    try {
+      final result = await _conn.execute(
+        Sql.named('''
+          INSERT INTO clubs (name, description, owner_id)
+          VALUES (@name, @desc, @owner::uuid)
+          RETURNING id::text, name, description, owner_id::text, created_at
+        '''),
+        parameters: {
+          'name': trimmed,
+          'desc': description,
+          'owner': ownerId,
+        },
+      );
+      final row = result.first;
+      final clubId = row[0]! as String;
+      await _conn.execute(
+        Sql.named(
+          'INSERT INTO club_members (club_id, user_id, role) '
+          'VALUES (@club::uuid, @user::uuid, \'owner\') '
+          'ON CONFLICT DO NOTHING',
+        ),
+        parameters: {'club': clubId, 'user': ownerId},
+      );
+      return {
+        'id': clubId,
+        'name': row[1]! as String,
+        'description': row[2] as String?,
+        'ownerId': row[3]! as String,
+        'createdAt': (row[4]! as DateTime).toUtc().toIso8601String(),
+      };
+    } on ServerException catch (e) {
+      if (e.code == '23505') {
+        return {'error': 'Club name taken', 'status': 409};
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> joinClub(String clubId, String userId, {String role = 'member'}) async {
+    await _conn.execute(
+      Sql.named(
+        'INSERT INTO club_members (club_id, user_id, role) '
+        'VALUES (@club::uuid, @user::uuid, @role) '
+        'ON CONFLICT DO NOTHING',
+      ),
+      parameters: {'club': clubId, 'user': userId, 'role': role},
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> listClubs({int limit = 50}) async {
+    final result = await _conn.execute(
+      Sql.named('''
+        SELECT c.id::text, c.name, c.description, c.owner_id::text, c.created_at,
+               COUNT(m.user_id)::int AS members
+        FROM clubs c
+        LEFT JOIN club_members m ON m.club_id = c.id
+        GROUP BY c.id
+        ORDER BY c.created_at DESC
+        LIMIT @limit
+      '''),
+      parameters: {'limit': limit.clamp(1, 200)},
+    );
+    return [
+      for (final row in result)
+        {
+          'id': row[0]! as String,
+          'name': row[1]! as String,
+          'description': row[2] as String?,
+          'ownerId': row[3]! as String,
+          'createdAt': (row[4]! as DateTime).toUtc().toIso8601String(),
+          'members': row[5] as int? ?? 0,
+        },
+    ];
+  }
+
+  Future<Map<String, dynamic>?> getClub(String clubId) async {
+    final result = await _conn.execute(
+      Sql.named('''
+        SELECT c.id::text, c.name, c.description, c.owner_id::text, c.created_at,
+               u.username
+        FROM clubs c
+        JOIN users u ON u.id = c.owner_id
+        WHERE c.id = @id::uuid
+        LIMIT 1
+      '''),
+      parameters: {'id': clubId},
+    );
+    if (result.isEmpty) return null;
+    final row = result.first;
+    final members = await _conn.execute(
+      Sql.named('''
+        SELECT u.id::text, u.username, m.role
+        FROM club_members m
+        JOIN users u ON u.id = m.user_id
+        WHERE m.club_id = @id::uuid
+        ORDER BY m.role, u.username_lower
+      '''),
+      parameters: {'id': clubId},
+    );
+    return {
+      'id': row[0]! as String,
+      'name': row[1]! as String,
+      'description': row[2] as String?,
+      'ownerId': row[3]! as String,
+      'createdAt': (row[4]! as DateTime).toUtc().toIso8601String(),
+      'ownerName': row[5]! as String,
+      'members': [
+        for (final m in members)
+          {
+            'id': m[0]! as String,
+            'username': m[1]! as String,
+            'role': m[2]! as String,
+          },
+      ],
+    };
+  }
+
+  Future<List<Map<String, dynamic>>> listCategories({String? clubId}) async {
+    final result = await _conn.execute(
+      Sql.named('''
+        SELECT id::text, club_id::text, title, slug
+        FROM forum_categories
+        WHERE (@club::text IS NULL AND club_id IS NULL)
+           OR (@club::text IS NOT NULL AND club_id = CAST(@club AS uuid))
+        ORDER BY title
+      '''),
+      parameters: {'club': clubId},
+    );
+    return [
+      for (final row in result)
+        {
+          'id': row[0]! as String,
+          'clubId': row[1] as String?,
+          'title': row[2]! as String,
+          'slug': row[3]! as String,
+        },
+    ];
+  }
+
+  Future<Map<String, dynamic>> createTopic({
+    required String categoryId,
+    required String authorId,
+    required String title,
+    bool pinned = false,
+  }) async {
+    final trimmed = title.trim();
+    if (trimmed.isEmpty) {
+      return {'error': 'Title required', 'status': 400};
+    }
+    final result = await _conn.execute(
+      Sql.named('''
+        INSERT INTO forum_topics (category_id, author_id, title, pinned)
+        VALUES (@cat::uuid, @author::uuid, @title, @pinned)
+        RETURNING id::text, category_id::text, author_id::text, title, pinned, created_at
+      '''),
+      parameters: {
+        'cat': categoryId,
+        'author': authorId,
+        'title': trimmed,
+        'pinned': pinned,
+      },
+    );
+    final row = result.first;
+    return {
+      'id': row[0]! as String,
+      'categoryId': row[1]! as String,
+      'authorId': row[2]! as String,
+      'title': row[3]! as String,
+      'pinned': row[4] as bool? ?? false,
+      'createdAt': (row[5]! as DateTime).toUtc().toIso8601String(),
+    };
+  }
+
+  Future<List<Map<String, dynamic>>> listTopics(String categoryId, {int limit = 50}) async {
+    final result = await _conn.execute(
+      Sql.named('''
+        SELECT t.id::text, t.category_id::text, t.author_id::text,
+               t.title, t.pinned, t.created_at, u.username
+        FROM forum_topics t
+        JOIN users u ON u.id = t.author_id
+        WHERE t.category_id = @cat::uuid
+        ORDER BY t.pinned DESC, t.created_at DESC
+        LIMIT @limit
+      '''),
+      parameters: {
+        'cat': categoryId,
+        'limit': limit.clamp(1, 200),
+      },
+    );
+    return [
+      for (final row in result)
+        {
+          'id': row[0]! as String,
+          'categoryId': row[1]! as String,
+          'authorId': row[2]! as String,
+          'title': row[3]! as String,
+          'pinned': row[4] as bool? ?? false,
+          'createdAt': (row[5]! as DateTime).toUtc().toIso8601String(),
+          'authorName': row[6]! as String,
+        },
+    ];
+  }
+
+  Future<Map<String, dynamic>> createPost({
+    required String topicId,
+    required String authorId,
+    required String body,
+  }) async {
+    final trimmed = body.trim();
+    if (trimmed.isEmpty) {
+      return {'error': 'Body required', 'status': 400};
+    }
+    final result = await _conn.execute(
+      Sql.named('''
+        INSERT INTO forum_posts (topic_id, author_id, body)
+        VALUES (@topic::uuid, @author::uuid, @body)
+        RETURNING id::text, topic_id::text, author_id::text, body, created_at
+      '''),
+      parameters: {
+        'topic': topicId,
+        'author': authorId,
+        'body': trimmed,
+      },
+    );
+    final row = result.first;
+    return {
+      'id': row[0]! as String,
+      'topicId': row[1]! as String,
+      'authorId': row[2]! as String,
+      'body': row[3]! as String,
+      'createdAt': (row[4]! as DateTime).toUtc().toIso8601String(),
+    };
+  }
+
+  Future<List<Map<String, dynamic>>> listPosts(String topicId, {int limit = 100}) async {
+    final result = await _conn.execute(
+      Sql.named('''
+        SELECT p.id::text, p.topic_id::text, p.author_id::text,
+               p.body, p.created_at, u.username
+        FROM forum_posts p
+        JOIN users u ON u.id = p.author_id
+        WHERE p.topic_id = @topic::uuid
+        ORDER BY p.created_at ASC
+        LIMIT @limit
+      '''),
+      parameters: {
+        'topic': topicId,
+        'limit': limit.clamp(1, 500),
+      },
+    );
+    return [
+      for (final row in result)
+        {
+          'id': row[0]! as String,
+          'topicId': row[1]! as String,
+          'authorId': row[2]! as String,
+          'body': row[3]! as String,
+          'createdAt': (row[4]! as DateTime).toUtc().toIso8601String(),
+          'authorName': row[5]! as String,
+        },
+    ];
+  }
+
+  Future<void> registerDevice({
+    required String userId,
+    required String token,
+    String? platform,
+  }) async {
+    final t = token.trim();
+    if (t.isEmpty) return;
+    await _conn.execute(
+      Sql.named('''
+        INSERT INTO user_devices (user_id, token, platform, updated_at)
+        VALUES (@id::uuid, @token, @platform, NOW())
+        ON CONFLICT (user_id, token) DO UPDATE SET
+          platform = COALESCE(EXCLUDED.platform, user_devices.platform),
+          updated_at = NOW()
+      '''),
+      parameters: {
+        'id': userId,
+        'token': t,
+        'platform': platform,
+      },
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> devicesForUser(String userId) async {
+    final result = await _conn.execute(
+      Sql.named('''
+        SELECT token, platform, updated_at
+        FROM user_devices
+        WHERE user_id = @id::uuid
+        ORDER BY updated_at DESC
+      '''),
+      parameters: {'id': userId},
+    );
+    return [
+      for (final row in result)
+        {
+          'token': row[0]! as String,
+          'platform': row[1] as String?,
+          'updatedAt': (row[2]! as DateTime).toUtc().toIso8601String(),
+        },
+    ];
+  }
+
+  Future<void> insertFairPlaySample({
+    required String gameId,
+    String? userId,
+    required String color,
+    required String fen,
+    required String playedUci,
+    required String bestUci,
+    required bool matched,
+  }) async {
+    await _conn.execute(
+      Sql.named('''
+        INSERT INTO fairplay_samples (
+          game_id, user_id, color, fen, played_uci, best_uci, matched
+        ) VALUES (
+          @gameId, @userId::uuid, @color, @fen, @played, @best, @matched
+        )
+      '''),
+      parameters: {
+        'gameId': gameId,
+        'userId': userId,
+        'color': color,
+        'fen': fen,
+        'played': playedUci,
+        'best': bestUci,
+        'matched': matched,
+      },
+    );
+  }
+
+  Future<void> upsertFairPlayFlag({
+    required String gameId,
+    String? userId,
+    required String color,
+    required double matchRate,
+    required int samples,
+    String? detail,
+    bool flagged = true,
+  }) async {
+    await _conn.execute(
+      Sql.named('''
+        INSERT INTO fairplay_flags (
+          game_id, color, user_id, match_rate, samples, flagged, detail, updated_at
+        ) VALUES (
+          @gameId, @color, @userId::uuid, @rate, @samples, @flagged, @detail, NOW()
+        )
+        ON CONFLICT (game_id, color) DO UPDATE SET
+          user_id = COALESCE(EXCLUDED.user_id, fairplay_flags.user_id),
+          match_rate = EXCLUDED.match_rate,
+          samples = EXCLUDED.samples,
+          flagged = EXCLUDED.flagged OR fairplay_flags.flagged,
+          detail = COALESCE(EXCLUDED.detail, fairplay_flags.detail),
+          updated_at = NOW()
+      '''),
+      parameters: {
+        'gameId': gameId,
+        'color': color,
+        'userId': userId,
+        'rate': matchRate,
+        'samples': samples,
+        'flagged': flagged,
+        'detail': detail,
+      },
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> listFairPlayFlags({int limit = 50}) async {
+    final result = await _conn.execute(
+      Sql.named('''
+        SELECT game_id, color, user_id::text, match_rate, samples, flagged, detail, updated_at
+        FROM fairplay_flags
+        WHERE flagged = TRUE
+        ORDER BY updated_at DESC
+        LIMIT @limit
+      '''),
+      parameters: {'limit': limit},
+    );
+    return [
+      for (final row in result)
+        {
+          'gameId': row[0]! as String,
+          'color': row[1]! as String,
+          'userId': row[2] as String?,
+          'matchRate': (row[3]! as num).toDouble(),
+          'samples': row[4]! as int,
+          'flagged': row[5]! as bool,
+          'detail': row[6] as String?,
+          'updatedAt': (row[7]! as DateTime).toUtc().toIso8601String(),
+        },
+    ];
+  }
+
+  Future<Map<String, dynamic>?> getFairPlayReport(String gameId) async {
+    final flags = await _conn.execute(
+      Sql.named('''
+        SELECT color, user_id::text, match_rate, samples, flagged, detail, updated_at
+        FROM fairplay_flags
+        WHERE game_id = @gameId
+        ORDER BY color
+      '''),
+      parameters: {'gameId': gameId},
+    );
+    final samples = await _conn.execute(
+      Sql.named('''
+        SELECT color, played_uci, best_uci, matched, created_at
+        FROM fairplay_samples
+        WHERE game_id = @gameId
+        ORDER BY id ASC
+        LIMIT 200
+      '''),
+      parameters: {'gameId': gameId},
+    );
+    if (flags.isEmpty && samples.isEmpty) return null;
+    return {
+      'gameId': gameId,
+      'sides': [
+        for (final row in flags)
+          {
+            'color': row[0]! as String,
+            'userId': row[1] as String?,
+            'matchRate': (row[2]! as num).toDouble(),
+            'samples': row[3]! as int,
+            'flagged': row[4]! as bool,
+            'detail': row[5] as String?,
+            'updatedAt': (row[6]! as DateTime).toUtc().toIso8601String(),
+          },
+      ],
+      'recentSamples': [
+        for (final row in samples)
+          {
+            'color': row[0]! as String,
+            'playedUci': row[1]! as String,
+            'bestUci': row[2]! as String,
+            'matched': row[3]! as bool,
+            'at': (row[4]! as DateTime).toUtc().toIso8601String(),
+          },
+      ],
     };
   }
 }

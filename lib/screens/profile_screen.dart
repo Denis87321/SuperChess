@@ -1,15 +1,70 @@
 import 'package:flutter/material.dart';
 
 import '../auth/auth_service.dart';
+import '../auth/platform_api.dart';
 import '../l10n/app_strings.dart';
 import '../theme/balatro_theme.dart';
+import 'friends_screen.dart';
 import 'history_screen.dart';
+import 'public_profile_screen.dart';
 import 'rivalries_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key, required this.auth});
 
   final AuthService auth;
+
+  Future<void> _editBio(BuildContext context) async {
+    final s = AppStrings.of(context);
+    final ctrl = TextEditingController();
+    try {
+      if (auth.username != null) {
+        final profile = await PlatformApi(auth).getProfile(auth.username!);
+        ctrl.text = '${profile['bio'] ?? ''}';
+      }
+    } catch (_) {}
+    if (!context.mounted) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: BalatroTheme.felt,
+        title: Text(s.bio, style: BalatroTheme.titleStyle.copyWith(fontSize: 16)),
+        content: TextField(
+          controller: ctrl,
+          maxLines: 4,
+          style: BalatroTheme.statusStyle,
+          decoration: InputDecoration(
+            hintText: s.bio,
+            filled: true,
+            fillColor: BalatroTheme.background,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(s.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(s.isRu ? 'Сохранить' : 'Save'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await PlatformApi(auth).updateProfile(bio: ctrl.text.trim());
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(s.isRu ? 'Сохранено' : 'Saved')),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$e')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -97,6 +152,44 @@ class ProfileScreen extends StatelessWidget {
                   ],
                 ),
               ),
+              if (auth.isLoggedIn && auth.username != null) ...[
+                const SizedBox(height: 24),
+                OutlinedButton(
+                  onPressed: () => _editBio(context),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: BalatroTheme.cream,
+                    side: BorderSide(
+                      color: BalatroTheme.cream.withValues(alpha: 0.35),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: Text(s.bio, style: BalatroTheme.statusStyle),
+                ),
+                const SizedBox(height: 10),
+                OutlinedButton(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => PublicProfileScreen(
+                          auth: auth,
+                          username: auth.username!,
+                        ),
+                      ),
+                    );
+                  },
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: BalatroTheme.cream,
+                    side: BorderSide(
+                      color: BalatroTheme.cream.withValues(alpha: 0.35),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: Text(
+                    s.isRu ? 'Публичный профиль' : 'Public profile',
+                    style: BalatroTheme.statusStyle,
+                  ),
+                ),
+              ],
               const SizedBox(height: 24),
               FilledButton(
                 onPressed: () {
@@ -118,6 +211,24 @@ class ProfileScreen extends StatelessWidget {
                 onPressed: () {
                   Navigator.of(context).push(
                     MaterialPageRoute<void>(
+                      builder: (_) => FriendsScreen(auth: auth),
+                    ),
+                  );
+                },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: BalatroTheme.cream,
+                  side: BorderSide(
+                    color: BalatroTheme.cream.withValues(alpha: 0.35),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+                child: Text(s.friends, style: BalatroTheme.statusStyle),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
                       builder: (_) => RivalriesScreen(auth: auth),
                     ),
                   );
@@ -129,10 +240,7 @@ class ProfileScreen extends StatelessWidget {
                   ),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
-                child: Text(
-                  'Счёт с соперниками',
-                  style: BalatroTheme.statusStyle,
-                ),
+                child: Text(s.rivalries, style: BalatroTheme.statusStyle),
               ),
             ],
           ),

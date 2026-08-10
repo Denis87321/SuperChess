@@ -1,0 +1,13 @@
+name: super_chess_engine
+description: Pure-Dart chess + mods engine shared by SuperChess client and server
+publish_to: 'none'
+
+environment:
+  sdk: ^3.12.0
+
+dependencies:
+  meta: ^1.16.0
+
+dev_dependencies:
+  test: ^1.25.0
+  lints: ^6.0.0

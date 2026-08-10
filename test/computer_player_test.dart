@@ -1,13 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:super_chess/chess/chess_game.dart';
 import 'package:super_chess/chess/computer_player.dart';
-import 'package:super_chess/models/piece.dart';
+import 'package:super_chess/l10n/models/piece.dart';
 
 void main() {
   test('vs-computer game skips black start abilities', () {
-    final game = ChessGame(
-      abilityChoosingColors: const {PieceColor.white},
-    );
+    final game = ChessGame(abilityChoosingColors: const {PieceColor.white});
     expect(game.isAwaitingStartChoice(PieceColor.black), isFalse);
     expect(game.isAwaitingStartChoice(PieceColor.white), isTrue);
     expect(game.isReadyToPlay, isFalse);
@@ -18,9 +16,7 @@ void main() {
   });
 
   test('computer player returns a legal move', () {
-    final game = ChessGame(
-      abilityChoosingColors: const {PieceColor.white},
-    );
+    final game = ChessGame(abilityChoosingColors: const {PieceColor.white});
     final offer = game.startOffersFor(PieceColor.white).first;
     game.applyStartAbility(PieceColor.white, offer.ability, remoteOffer: offer);
 

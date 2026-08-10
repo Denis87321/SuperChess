@@ -3,13 +3,21 @@ import 'package:flutter/material.dart';
 import '../auth/auth_service.dart';
 import '../l10n/app_strings.dart';
 import '../l10n/locale_controller.dart';
-import '../models/piece.dart';
+import '../l10n/models/piece.dart';
+import '../l10n/supported_locales.dart';
 import '../theme/balatro_theme.dart';
 import 'game_screen.dart';
 import 'login_screen.dart';
+import 'clubs_screen.dart';
+import 'forum_screen.dart';
+import 'lobby_screen.dart';
 import 'matchmaking_screen.dart';
+import 'mod_browser_screen.dart';
+import 'private_room_screen.dart';
 import 'profile_screen.dart';
+import 'puzzle_list_screen.dart';
 import 'register_screen.dart';
+import 'tutorial_screen.dart';
 
 bool _langSelected(LocaleController c, String code) {
   if (c.preference == code) return true;
@@ -30,14 +38,9 @@ class HomeScreen extends StatelessWidget {
   final LocaleController localeController;
 
   void _playOnline(BuildContext context) {
-    final s = AppStrings.of(context);
-    final name = auth.username ?? s.anonymous;
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => MatchmakingScreen(
-          playerName: name,
-          auth: auth,
-        ),
+        builder: (_) => LobbyScreen(auth: auth),
       ),
     );
   }
@@ -112,25 +115,24 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-                ListTile(
-                  title: Text(s.languageRu, style: BalatroTheme.statusStyle),
-                  trailing: _langSelected(localeController, 'ru')
-                      ? const Icon(Icons.check, color: BalatroTheme.gold)
-                      : null,
-                  onTap: () {
-                    localeController.setPreference('ru');
-                    Navigator.pop(context);
-                  },
-                ),
-                ListTile(
-                  title: Text(s.languageEn, style: BalatroTheme.statusStyle),
-                  trailing: _langSelected(localeController, 'en')
-                      ? const Icon(Icons.check, color: BalatroTheme.gold)
-                      : null,
-                  onTap: () {
-                    localeController.setPreference('en');
-                    Navigator.pop(context);
-                  },
+                SizedBox(
+                  height: 220,
+                  child: ListView(
+                    children: [
+                      for (final e in kLocaleLabels.entries)
+                        ListTile(
+                          dense: true,
+                          title: Text(e.value, style: BalatroTheme.statusStyle),
+                          trailing: _langSelected(localeController, e.key)
+                              ? const Icon(Icons.check, color: BalatroTheme.gold)
+                              : null,
+                          onTap: () {
+                            localeController.setPreference(e.key);
+                            Navigator.pop(context);
+                          },
+                        ),
+                    ],
+                  ),
                 ),
                 if (auth.isLoggedIn) ...[
                   const Divider(color: Color(0x33F5E6C8)),
@@ -199,6 +201,8 @@ class HomeScreen extends StatelessWidget {
                         height: 1.05,
                       ),
                     ),
+                    const SizedBox(height: 12),
+                    const TutorialHomeCta(),
                     const Spacer(flex: 2),
                     LayoutBuilder(
                       builder: (context, constraints) {
@@ -237,6 +241,97 @@ class HomeScreen extends StatelessWidget {
                         );
                       },
                     ),
+                    const SizedBox(height: 20),
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _LinkChip(
+                          label: s.tutorial,
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => const TutorialScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                        _LinkChip(
+                          label: s.mods,
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => ModBrowserScreen(auth: auth),
+                              ),
+                            );
+                          },
+                        ),
+                        _LinkChip(
+                          label: s.puzzles,
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => PuzzleListScreen(auth: auth),
+                              ),
+                            );
+                          },
+                        ),
+                        _LinkChip(
+                          label: s.privateRoom,
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => PrivateRoomScreen(auth: auth),
+                              ),
+                            );
+                          },
+                        ),
+                        _LinkChip(
+                          label: s.joinByCode,
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => PrivateRoomScreen(auth: auth),
+                              ),
+                            );
+                          },
+                        ),
+                        _LinkChip(
+                          label: s.spectate,
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => PrivateRoomScreen(
+                                  auth: auth,
+                                  spectateOnly: true,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        _LinkChip(
+                          label: s.clubs,
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => ClubsScreen(auth: auth),
+                              ),
+                            );
+                          },
+                        ),
+                        _LinkChip(
+                          label: s.forum,
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => ForumScreen(auth: auth),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
                     const Spacer(flex: 3),
                   ],
                 ),
@@ -245,6 +340,30 @@ class HomeScreen extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _LinkChip extends StatelessWidget {
+  const _LinkChip({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton(
+      onPressed: onTap,
+      style: TextButton.styleFrom(
+        foregroundColor: BalatroTheme.cream.withValues(alpha: 0.85),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        minimumSize: const Size(0, 32),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      child: Text(
+        label,
+        style: BalatroTheme.statusStyle.copyWith(fontSize: 12),
+      ),
     );
   }
 }

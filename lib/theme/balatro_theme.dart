@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../models/piece.dart';
+import '../l10n/models/piece.dart';
 
 abstract final class BalatroTheme {
   static const background = Color(0xFF141820);

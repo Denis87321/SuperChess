@@ -101,7 +101,9 @@ class _MatchmakingScreenState extends State<MatchmakingScreen> {
         );
       case OnlineError():
         setState(() => _status = event.message);
-      case OnlineOpponentDisconnected():
+      case OnlineConnectionLost():
+        setState(() => _status = 'Потеря связи…');
+      case OnlineOpponentLeft():
         setState(() => _status = s.opponentLeft);
       default:
         break;
