@@ -14,6 +14,17 @@ Web Service на free **засыпает ~после 15 минут**. Первы
 
 ---
 
+## Важно: два разных деплоя
+
+| Что | Как попадает на прод |
+|-----|----------------------|
+| **Сайт** (Flutter Web) | `.\scripts\build_web.ps1 -Push` → папка `public/` в git |
+| **API** (матчмейкинг, auth, Elo, authority) | обычный `git push` кода в `server/` (+ `packages/super_chess_engine/`) → Render Web Service `superchess-api` сам пересобирает Docker |
+
+`build_web.ps1` **не** обновляет API. Без пуша `server/` на GitHub Render продолжает крутить старый бэкенд.
+
+---
+
 ## 1. Postgres + API
 
 В [render.yaml](../render.yaml) уже описаны `superchess-db` и `DATABASE_URL` / `JWT_SECRET` для `superchess-api`.

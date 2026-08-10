@@ -1,1 +1,1 @@
-export '../l10n/models/piece.dart';
+export 'package:super_chess_engine/src/models/piece.dart';

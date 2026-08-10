@@ -1,1 +1,1 @@
-export '../l10n/models/ability_group.dart';
+export 'package:super_chess_engine/src/models/ability_group.dart';
