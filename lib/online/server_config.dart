@@ -6,7 +6,7 @@ const String kServerUrlDefine = String.fromEnvironment(
 );
 
 /// Production default after Render deploy.
-const String kProductionServerUrl = 'wss://superchess-api.onrender.com/ws';
+const String kProductionServerUrl = 'wss://superchess-api-qqpu.onrender.com/ws';
 
 /// Local development defaults (desktop / web on the same machine).
 const String kLocalServerUrl = 'ws://127.0.0.1:8080/ws';
