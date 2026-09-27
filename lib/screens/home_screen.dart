@@ -159,94 +159,96 @@ class HomeScreen extends StatelessWidget {
       listenable: Listenable.merge([auth, localeController]),
       builder: (context, _) {
         return Scaffold(
-          body: DecoratedBox(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF0E1218),
-                  BalatroTheme.background,
-                  Color(0xFF1A2433),
-                ],
-              ),
-            ),
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _TopBar(
-                      auth: auth,
-                      strings: s,
-                      onLogin: () => _openLogin(context),
-                      onRegister: () => _openRegister(context),
-                      onProfile: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => ProfileScreen(auth: auth),
-                          ),
-                        );
-                      },
-                      onSettings: () => _showSettingsSheet(context),
-                    ),
-                    const SizedBox(height: 28),
-                    Text(
-                      s.appTitle.toUpperCase(),
-                      textAlign: TextAlign.center,
-                      style: BalatroTheme.titleStyle.copyWith(
-                        fontSize: 42,
-                        letterSpacing: 4,
-                        height: 1.05,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    const TutorialHomeCta(),
-                    const Spacer(flex: 2),
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        final maxW = constraints.maxWidth;
-                        final center = (maxW * 0.38).clamp(118.0, 168.0);
-                        final side = center * 0.78;
-                        final gap = (maxW * 0.03).clamp(8.0, 14.0);
-                        return Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            _ModeTile(
-                              size: side,
-                              label: s.playLocal,
-                              accent: BalatroTheme.gold,
-                              filled: false,
-                              onTap: () => _playLocal(context),
-                            ),
-                            SizedBox(width: gap),
-                            _ModeTile(
-                              size: center,
-                              label: s.playOnline,
-                              accent: BalatroTheme.accent,
-                              filled: true,
-                              onTap: () => _playOnline(context),
-                            ),
-                            SizedBox(width: gap),
-                            _ModeTile(
-                              size: side,
-                              label: s.playComputer,
-                              accent: BalatroTheme.cream,
-                              filled: false,
-                              onTap: () => _playComputer(context),
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 20),
-                    Wrap(
-                      alignment: WrapAlignment.center,
-                      spacing: 8,
-                      runSpacing: 8,
+          backgroundColor: BalatroTheme.background,
+          body: SafeArea(
+            child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 18),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 760),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        _TopBar(
+                          auth: auth,
+                          strings: s,
+                          onLogin: () => _openLogin(context),
+                          onRegister: () => _openRegister(context),
+                          onProfile: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => ProfileScreen(auth: auth),
+                              ),
+                            );
+                          },
+                          onSettings: () => _showSettingsSheet(context),
+                        ),
+                        const SizedBox(height: 56),
+                        Text(
+                          s.appTitle,
+                          style: BalatroTheme.titleStyle.copyWith(
+                            fontSize: 40,
+                            letterSpacing: -0.5,
+                            height: 1,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          s.playOnline,
+                          style: BalatroTheme.statusStyle.copyWith(
+                            fontSize: 14,
+                            color: BalatroTheme.cream.withValues(alpha: 0.52),
+                          ),
+                        ),
+                        const SizedBox(height: 22),
+                        const TutorialHomeCta(),
+                        const Spacer(flex: 2),
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            final maxW = constraints.maxWidth;
+                            final center = (maxW * 0.34).clamp(124.0, 190.0);
+                            final side = center * 0.82;
+                            final gap = (maxW * 0.025).clamp(8.0, 16.0);
+                            return Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                _ModeTile(
+                                  size: side,
+                                  label: s.playLocal,
+                                  icon: Icons.people_outline_rounded,
+                                  accent: BalatroTheme.gold,
+                                  filled: false,
+                                  onTap: () => _playLocal(context),
+                                ),
+                                SizedBox(width: gap),
+                                _ModeTile(
+                                  size: center,
+                                  label: s.playOnline,
+                                  icon: Icons.public_rounded,
+                                  accent: BalatroTheme.accent,
+                                  filled: true,
+                                  onTap: () => _playOnline(context),
+                                ),
+                                SizedBox(width: gap),
+                                _ModeTile(
+                                  size: side,
+                                  label: s.playComputer,
+                                  icon: Icons.smart_toy_outlined,
+                                  accent: BalatroTheme.cream,
+                                  filled: false,
+                                  onTap: () => _playComputer(context),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 28),
+                        Wrap(
+                          alignment: WrapAlignment.start,
+                          spacing: 4,
+                          runSpacing: 2,
+                          children: [
                         _LinkChip(
                           label: s.tutorial,
                           onTap: () {
@@ -330,13 +332,14 @@ class HomeScreen extends StatelessWidget {
                             );
                           },
                         ),
+                          ],
+                        ),
+                        const Spacer(flex: 2),
                       ],
                     ),
-                    const Spacer(flex: 3),
-                  ],
+                  ),
                 ),
               ),
-            ),
           ),
         );
       },
@@ -459,6 +462,7 @@ class _ModeTile extends StatelessWidget {
   const _ModeTile({
     required this.size,
     required this.label,
+    required this.icon,
     required this.accent,
     required this.filled,
     required this.onTap,
@@ -466,13 +470,14 @@ class _ModeTile extends StatelessWidget {
 
   final double size;
   final String label;
+  final IconData icon;
   final Color accent;
   final bool filled;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final radius = BorderRadius.circular(14);
+    final radius = BorderRadius.circular(10);
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -484,32 +489,35 @@ class _ModeTile extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: radius,
             color: filled
-                ? accent.withValues(alpha: 0.92)
-                : BalatroTheme.felt.withValues(alpha: 0.85),
+                ? accent
+                : BalatroTheme.felt,
             border: Border.all(
-              color: accent.withValues(alpha: filled ? 0.95 : 0.55),
-              width: filled ? 2.2 : 1.4,
+              color: accent.withValues(alpha: filled ? 1 : 0.32),
+              width: filled ? 0 : 1,
             ),
-            boxShadow: [
-              BoxShadow(
-                color: accent.withValues(alpha: filled ? 0.28 : 0.12),
-                blurRadius: filled ? 22 : 12,
-                offset: const Offset(0, 8),
-              ),
-            ],
           ),
           child: Center(
             child: Padding(
-              padding: EdgeInsets.all(size * 0.1),
-              child: Text(
-                label,
-                textAlign: TextAlign.center,
-                style: BalatroTheme.titleStyle.copyWith(
-                  fontSize: filled ? 15 : 12,
-                  letterSpacing: 1.2,
-                  height: 1.25,
-                  color: filled ? BalatroTheme.ink : accent,
-                ),
+              padding: EdgeInsets.all(size * 0.08),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    icon,
+                    size: size * 0.22,
+                    color: filled ? BalatroTheme.ink : accent,
+                  ),
+                  SizedBox(height: size * 0.08),
+                  Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    style: BalatroTheme.titleStyle.copyWith(
+                      fontSize: filled ? 15 : 12,
+                      height: 1.2,
+                      color: filled ? BalatroTheme.ink : accent,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

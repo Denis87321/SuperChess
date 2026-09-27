@@ -96,7 +96,7 @@ class _SuperChessAppState extends State<SuperChessApp>
         theme: ThemeData(
           brightness: Brightness.dark,
           scaffoldBackgroundColor: BalatroTheme.background,
-          colorScheme: ColorScheme.dark(
+          colorScheme: const ColorScheme.dark(
             primary: BalatroTheme.accent,
             secondary: BalatroTheme.gold,
             surface: BalatroTheme.felt,
@@ -104,6 +104,36 @@ class _SuperChessAppState extends State<SuperChessApp>
           appBarTheme: const AppBarTheme(
             backgroundColor: BalatroTheme.appBar,
             foregroundColor: BalatroTheme.cream,
+            elevation: 0,
+            centerTitle: false,
+          ),
+          cardTheme: CardThemeData(
+            color: BalatroTheme.felt,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: BalatroTheme.cream.withValues(alpha: 0.08)),
+            ),
+          ),
+          dividerTheme: DividerThemeData(
+            color: BalatroTheme.cream.withValues(alpha: 0.1),
+            thickness: 1,
+          ),
+          inputDecorationTheme: InputDecorationTheme(
+            filled: true,
+            fillColor: BalatroTheme.felt,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: BalatroTheme.cream.withValues(alpha: 0.08)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: BalatroTheme.accent),
+            ),
           ),
           useMaterial3: true,
         ),
