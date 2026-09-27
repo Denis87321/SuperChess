@@ -2,6 +2,17 @@
 
 Chess with mods — SuperChess (Flutter).
 
+## Docs
+
+| Document | About |
+|----------|--------|
+| [docs/HOSTING.md](docs/HOSTING.md) | Deploy (Render, web build) |
+| [docs/MOBILE_PUSH.md](docs/MOBILE_PUSH.md) | Mobile push notifications |
+| [docs/ASSETS.md](docs/ASSETS.md) | Visual assets — **chess piece art from Lichess Caliente** |
+| [docs/modifications.txt](docs/modifications.txt) | List of mods / abilities |
+
+Piece SVGs: [`assets/pieces/caliente/`](assets/pieces/caliente/) — sourced from [lichess-org/lila `public/piece/caliente`](https://github.com/lichess-org/lila/tree/master/public/piece/caliente) (CC BY-NC-SA 4.0). Details in [docs/ASSETS.md](docs/ASSETS.md).
+
 ## Play online (local)
 
 ```powershell
