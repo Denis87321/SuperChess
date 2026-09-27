@@ -13,7 +13,8 @@ Chess with mods — SuperChess (Flutter).
 
 Piece SVGs: [`assets/pieces/caliente/`](assets/pieces/caliente/) — sourced from [lichess-org/lila `public/piece/caliente`](https://github.com/lichess-org/lila/tree/master/public/piece/caliente) (CC BY-NC-SA 4.0). Details in [docs/ASSETS.md](docs/ASSETS.md).
 
-## Play online (local)
+## Play online  
+## (local)
 
 ```powershell
 cd server
