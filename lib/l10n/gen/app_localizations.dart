@@ -216,12 +216,6 @@ abstract class AppLocalizations {
   /// **'Mods'**
   String get mods;
 
-  /// No description provided for @tutorial.
-  ///
-  /// In en, this message translates to:
-  /// **'Tutorial'**
-  String get tutorial;
-
   /// No description provided for @timeControl.
   ///
   /// In en, this message translates to:

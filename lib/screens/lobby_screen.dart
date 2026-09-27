@@ -201,7 +201,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         : _seek,
                     style: FilledButton.styleFrom(
                       backgroundColor:
-                          _searching ? Colors.redAccent : BalatroTheme.accent,
+                          _searching ? BalatroTheme.accentSoft : BalatroTheme.accent,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     child: Text(

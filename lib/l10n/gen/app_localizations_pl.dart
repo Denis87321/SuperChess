@@ -54,9 +54,6 @@ class AppLocalizationsPl extends AppLocalizations {
   String get mods => 'Mods';
 
   @override
-  String get tutorial => 'Tutorial';
-
-  @override
   String get timeControl => 'Time control';
 
   @override

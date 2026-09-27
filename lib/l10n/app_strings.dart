@@ -157,8 +157,6 @@ class AppStrings {
   String get white => isRu ? 'Белые' : 'White';
   String get black => isRu ? 'Чёрные' : 'Black';
 
-  String get tutorial =>
-      _useArb ? _l10n!.tutorial : (isRu ? 'Обучение' : 'Tutorial');
   String get mods => _useArb ? _l10n!.mods : (isRu ? 'Моды' : 'Mods');
   String get puzzles =>
       _useArb ? _l10n!.puzzles : (isRu ? 'Задачи' : 'Puzzles');
@@ -184,14 +182,8 @@ class AppStrings {
   String get noFriends => isRu ? 'Пока нет друзей' : 'No friends yet';
   String get seenMod => isRu ? 'Встречался' : 'Encountered';
   String get newMod => isRu ? 'Новый' : 'New';
-  String get startTutorialGame =>
-      isRu ? 'Учебная партия' : 'Practice game';
-  String get tutorialDone => isRu ? 'Понятно' : 'Got it';
   String get next => isRu ? 'Далее' : 'Next';
   String get skip => isRu ? 'Пропустить' : 'Skip';
-  String get tryTutorialCta => isRu
-      ? 'Впервые здесь? Пройдите короткое обучение'
-      : 'New here? Take a short tutorial';
   String get puzzleSolved => isRu ? 'Решено!' : 'Solved!';
   String get puzzleFailed => isRu ? 'Не то решение' : 'Not quite';
   String get puzzleHint => isRu ? 'Подсказка' : 'Hint';
@@ -246,9 +238,6 @@ class AppStrings {
   String crazyhouseDropPick(String type) => isRu
       ? 'Выберите клетку для дропа ($type)'
       : 'Pick a square to drop ($type)';
-  String get tutorialBanner => isRu
-      ? 'Учебная партия — моды как в обычной игре'
-      : 'Practice game — mods work as usual';
   String get timeControl => isRu ? 'Контроль времени' : 'Time control';
   String get openSeeks => isRu ? 'Открытые поиски' : 'Open seeks';
   String get noSeeks => isRu ? 'Пока никто не ищет' : 'No open seeks yet';

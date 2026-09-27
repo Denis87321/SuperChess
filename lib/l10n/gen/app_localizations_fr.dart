@@ -21,7 +21,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get playComputer => 'Ordinateur';
 
   @override
-  String get settings => 'Paramètres';
+  String get settings => 'ParamГЁtres';
 
   @override
   String get language => 'Langue';
@@ -33,7 +33,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get register => 'Inscription';
 
   @override
-  String get logout => 'Déconnexion';
+  String get logout => 'DГ©connexion';
 
   @override
   String get profile => 'Profil';
@@ -48,19 +48,16 @@ class AppLocalizationsFr extends AppLocalizations {
   String get forum => 'Forum';
 
   @override
-  String get puzzles => 'Problèmes';
+  String get puzzles => 'ProblГЁmes';
 
   @override
   String get mods => 'Mods';
 
   @override
-  String get tutorial => 'Tutoriel';
-
-  @override
   String get timeControl => 'Cadence';
 
   @override
-  String get openSeeks => 'Parties cherchées';
+  String get openSeeks => 'Parties cherchГ©es';
 
   @override
   String get noSeeks => 'Aucune recherche';

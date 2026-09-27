@@ -12,92 +12,89 @@ class AppLocalizationsRu extends AppLocalizations {
   String get appTitle => 'SuperChess';
 
   @override
-  String get playOnline => 'Играть онлайн';
+  String get playOnline => 'РРіСЂР°С‚СЊ РѕРЅР»Р°Р№РЅ';
 
   @override
-  String get playLocal => 'Локально';
+  String get playLocal => 'Р›РѕРєР°Р»СЊРЅРѕ';
 
   @override
-  String get playComputer => 'Компьютер';
+  String get playComputer => 'РљРѕРјРїСЊСЋС‚РµСЂ';
 
   @override
-  String get settings => 'Настройки';
+  String get settings => 'РќР°СЃС‚СЂРѕР№РєРё';
 
   @override
-  String get language => 'Язык';
+  String get language => 'РЇР·С‹Рє';
 
   @override
-  String get login => 'Войти';
+  String get login => 'Р’РѕР№С‚Рё';
 
   @override
-  String get register => 'Регистрация';
+  String get register => 'Р РµРіРёСЃС‚СЂР°С†РёСЏ';
 
   @override
-  String get logout => 'Выйти';
+  String get logout => 'Р’С‹Р№С‚Рё';
 
   @override
-  String get profile => 'Профиль';
+  String get profile => 'РџСЂРѕС„РёР»СЊ';
 
   @override
-  String get friends => 'Друзья';
+  String get friends => 'Р”СЂСѓР·СЊСЏ';
 
   @override
-  String get clubs => 'Клубы';
+  String get clubs => 'РљР»СѓР±С‹';
 
   @override
-  String get forum => 'Форум';
+  String get forum => 'Р¤РѕСЂСѓРј';
 
   @override
-  String get puzzles => 'Задачи';
+  String get puzzles => 'Р—Р°РґР°С‡Рё';
 
   @override
-  String get mods => 'Моды';
+  String get mods => 'РњРѕРґС‹';
 
   @override
-  String get tutorial => 'Обучение';
+  String get timeControl => 'РљРѕРЅС‚СЂРѕР»СЊ РІСЂРµРјРµРЅРё';
 
   @override
-  String get timeControl => 'Контроль времени';
+  String get openSeeks => 'РћС‚РєСЂС‹С‚С‹Рµ РїРѕРёСЃРєРё';
 
   @override
-  String get openSeeks => 'Открытые поиски';
+  String get noSeeks => 'РџРѕРєР° РЅРёРєС‚Рѕ РЅРµ РёС‰РµС‚';
 
   @override
-  String get noSeeks => 'Пока никто не ищет';
+  String get rating => 'Р РµР№С‚РёРЅРі';
 
   @override
-  String get rating => 'Рейтинг';
+  String get analysis => 'РђРЅР°Р»РёР·';
 
   @override
-  String get analysis => 'Анализ';
+  String get exportPgn => 'РЎРєР°С‡Р°С‚СЊ PGN';
 
   @override
-  String get exportPgn => 'Скачать PGN';
+  String get follow => 'РџРѕРґРїРёСЃР°С‚СЊСЃСЏ';
 
   @override
-  String get follow => 'Подписаться';
+  String get unfollow => 'РћС‚РїРёСЃР°С‚СЊСЃСЏ';
 
   @override
-  String get unfollow => 'Отписаться';
+  String get messages => 'РЎРѕРѕР±С‰РµРЅРёСЏ';
 
   @override
-  String get messages => 'Сообщения';
+  String get bio => 'Рћ СЃРµР±Рµ';
 
   @override
-  String get bio => 'О себе';
+  String get onlineNow => 'Р’ СЃРµС‚Рё';
 
   @override
-  String get onlineNow => 'В сети';
+  String get offline => 'РќРµ РІ СЃРµС‚Рё';
 
   @override
-  String get offline => 'Не в сети';
+  String get cancel => 'РћС‚РјРµРЅРёС‚СЊ';
 
   @override
-  String get cancel => 'Отменить';
+  String get accept => 'РџСЂРёРЅСЏС‚СЊ';
 
   @override
-  String get accept => 'Принять';
-
-  @override
-  String get decline => 'Отклонить';
+  String get decline => 'РћС‚РєР»РѕРЅРёС‚СЊ';
 }

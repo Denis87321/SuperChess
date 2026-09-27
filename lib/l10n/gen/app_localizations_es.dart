@@ -12,7 +12,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get appTitle => 'SuperChess';
 
   @override
-  String get playOnline => 'Jugar en línea';
+  String get playOnline => 'Jugar en lГ­nea';
 
   @override
   String get playLocal => 'Local';
@@ -54,22 +54,19 @@ class AppLocalizationsEs extends AppLocalizations {
   String get mods => 'Mods';
 
   @override
-  String get tutorial => 'Tutorial';
-
-  @override
   String get timeControl => 'Control de tiempo';
 
   @override
-  String get openSeeks => 'Búsquedas abiertas';
+  String get openSeeks => 'BГєsquedas abiertas';
 
   @override
-  String get noSeeks => 'Nadie busca aún';
+  String get noSeeks => 'Nadie busca aГєn';
 
   @override
   String get rating => 'Elo';
 
   @override
-  String get analysis => 'Análisis';
+  String get analysis => 'AnГЎlisis';
 
   @override
   String get exportPgn => 'Exportar PGN';
@@ -87,7 +84,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get bio => 'Bio';
 
   @override
-  String get onlineNow => 'En línea';
+  String get onlineNow => 'En lГ­nea';
 
   @override
   String get offline => 'Desconectado';

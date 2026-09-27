@@ -17,7 +17,6 @@ import 'private_room_screen.dart';
 import 'profile_screen.dart';
 import 'puzzle_list_screen.dart';
 import 'register_screen.dart';
-import 'tutorial_screen.dart';
 
 bool _langSelected(LocaleController c, String code) {
   if (c.preference == code) return true;
@@ -200,8 +199,6 @@ class HomeScreen extends StatelessWidget {
                             color: BalatroTheme.cream.withValues(alpha: 0.52),
                           ),
                         ),
-                        const SizedBox(height: 22),
-                        const TutorialHomeCta(),
                         const Spacer(flex: 2),
                         LayoutBuilder(
                           builder: (context, constraints) {
@@ -249,16 +246,6 @@ class HomeScreen extends StatelessWidget {
                           spacing: 4,
                           runSpacing: 2,
                           children: [
-                        _LinkChip(
-                          label: s.tutorial,
-                          onTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute<void>(
-                                builder: (_) => const TutorialScreen(),
-                              ),
-                            );
-                          },
-                        ),
                         _LinkChip(
                           label: s.mods,
                           onTap: () {

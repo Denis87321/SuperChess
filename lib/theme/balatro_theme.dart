@@ -3,26 +3,26 @@ import 'package:flutter/material.dart';
 import '../l10n/models/piece.dart';
 
 abstract final class BalatroTheme {
-  static const background = Color(0xFF111517);
-  static const felt = Color(0xFF1A2022);
-  static const appBar = Color(0xFF111517);
-  static const accent = Color(0xFFE07A5F);
-  static const accentSoft = Color(0xFFF0A18B);
-  static const gold = Color(0xFFD8B36A);
-  static const cream = Color(0xFFF1EEE8);
-  static const ink = Color(0xFF111517);
+  static const background = Color(0xFF0F141A);
+  static const felt = Color(0xFF18222D);
+  static const appBar = Color(0xFF0F141A);
+  static const accent = Color(0xFF4C8DCC);
+  static const accentSoft = Color(0xFF78B0E2);
+  static const gold = Color(0xFFD2B36D);
+  static const cream = Color(0xFFF0F3F7);
+  static const ink = Color(0xFF0F141A);
 
-  static const lightSquare = Color(0xFFD8CBB8);
-  static const darkSquare = Color(0xFF756354);
-  static const selectedSquare = Color(0xFFE07A5F);
-  static const moveHint = Color(0x88E07A5F);
-  static const checkHighlight = Color(0xCCD56C55);
+  static const lightSquare = Color(0xFFC9D6E2);
+  static const darkSquare = Color(0xFF52687D);
+  static const selectedSquare = Color(0xFF4C8DCC);
+  static const moveHint = Color(0x884C8DCC);
+  static const checkHighlight = Color(0xCC3C73AA);
 
-  static const boardBorder = Color(0xFF343B3D);
-  static const boardGlow = Color(0x22E07A5F);
+  static const boardBorder = Color(0xFF304252);
+  static const boardGlow = Color(0x224C8DCC);
 
   static Color pieceFill(PieceColor color) =>
-      color == PieceColor.white ? cream : const Color(0xFF2B2520);
+      color == PieceColor.white ? cream : const Color(0xFF202B38);
 
   static Color pieceStroke(PieceColor color) =>
       color == PieceColor.white ? ink : cream;
